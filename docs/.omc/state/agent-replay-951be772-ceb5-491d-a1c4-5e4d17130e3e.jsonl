@@ -1,0 +1,3 @@
+{"t":0,"agent":"abacken","agent_type":"backend","event":"agent_stop","success":true,"duration_ms":0}
+{"t":0,"agent":"aqa-5a7","agent_type":"qa","event":"agent_stop","success":true,"duration_ms":0}
+{"t":0,"agent":"afronte","agent_type":"frontend","event":"agent_stop","success":true,"duration_ms":0}
