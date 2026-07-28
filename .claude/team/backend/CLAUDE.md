@@ -32,21 +32,21 @@ docs/ZeroWiki-ERD-초안.md
 docs/검증-백엔드-ERD-API-정합성.md
 ```
 
-읽기만: `docs/**` 나머지, `frontend/**`, `qa/**`
+읽기만: `docs/**` 나머지, `.claude/team/frontend/**`, `.claude/team/qa/**`
 
 `docs/ZeroWiki-API-명세-초안.md` 변경은 리더에게 `절 번호 + 현재 문안 + 제안 문안 + 근거`로 요청한다(헌법 제1조 2항).
 
 ## 3. 기술 결정 (기획서 20절 확정 사항)
 
-| 영역 | 선택 | 비고 |
-| --- | --- | --- |
-| 언어·런타임 | Java 21+ | |
-| 프레임워크 | Spring Boot, Spring Security, Spring Data JPA | 모듈러 모놀리스 |
-| DB | PostgreSQL | 실시간 서비스의 기준 데이터 저장소 |
-| 마이그레이션 | Flyway | |
-| 검색 | PostgreSQL 전문 검색(키워드) + pgvector(의미 검색 보조) | 전용 벡터 DB 미사용 |
-| 큐 | PostgreSQL 기반 작업 큐 | API 서버와 Worker는 **별도 프로세스** |
-| 파일 저장 | S3 호환 (Cloudflare R2 등) | 원본·Import 아카이브 |
+| 영역         | 선택                                                    | 비고                                  |
+| ------------ | ------------------------------------------------------- | ------------------------------------- |
+| 언어·런타임  | Java 21+                                                |                                       |
+| 프레임워크   | Spring Boot, Spring Security, Spring Data JPA           | 모듈러 모놀리스                       |
+| DB           | PostgreSQL                                              | 실시간 서비스의 기준 데이터 저장소    |
+| 마이그레이션 | Flyway                                                  |                                       |
+| 검색         | PostgreSQL 전문 검색(키워드) + pgvector(의미 검색 보조) | 전용 벡터 DB 미사용                   |
+| 큐           | PostgreSQL 기반 작업 큐                                 | API 서버와 Worker는 **별도 프로세스** |
+| 파일 저장    | S3 호환 (Cloudflare R2 등)                              | 원본·Import 아카이브                  |
 
 **사용 금지 (기획서 20절):** Redis, Kafka, Kubernetes, 마이크로서비스, 전용 벡터 DB. 필요하다고 판단되면 도입하지 말고 리더에게 근거와 함께 제안한다.
 
@@ -69,12 +69,12 @@ docs/검증-백엔드-ERD-API-정합성.md
 
 `docs/검증-백엔드-ERD-API-정합성.md` 5절 기준. **BLOCKER 없음.**
 
-| 심각도 | 항목 | 조치 |
-| --- | --- | --- |
-| MAJOR | 낙관적 락 `revision` 필드 부재 | `libraries`, `change_sets`, `library_constitution_versions`에 추가 |
-| MAJOR | `idempotency_records` 엔터티 부재 | 신규 추가 |
-| MAJOR | 복합 인덱스 15개 이상 미정의 | API 필터 패턴에 맞춰 정의 |
-| MINOR | ChangeSet `risk_level` 판정 기준 미확정 | 권고안 작성 후 리더 에스컬레이션 |
+| 심각도 | 항목                                    | 조치                                                               |
+| ------ | --------------------------------------- | ------------------------------------------------------------------ |
+| MAJOR  | 낙관적 락 `revision` 필드 부재          | `libraries`, `change_sets`, `library_constitution_versions`에 추가 |
+| MAJOR  | `idempotency_records` 엔터티 부재       | 신규 추가                                                          |
+| MAJOR  | 복합 인덱스 15개 이상 미정의            | API 필터 패턴에 맞춰 정의                                          |
+| MINOR  | ChangeSet `risk_level` 판정 기준 미확정 | 권고안 작성 후 리더 에스컬레이션                                   |
 
 미확정 계약(헌법 제3조 — 단독 확정 금지): ERD 8절 10건 중 backend 의견 대기 항목은 1, 2, 3, 5, 6, 7, 8번. API 명세 18절 중 1, 2, 3, 4번.
 
