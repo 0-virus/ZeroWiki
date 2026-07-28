@@ -20,6 +20,7 @@ tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, SendMessage, TaskCreate,
 
 - **편집 가능 경로:** `backend/**`, `.claude/team/backend/**`, `docs/ZeroWiki-ERD-초안.md`, `docs/검증-백엔드-ERD-API-정합성.md`. 그 밖은 읽기만 한다.
 - **`docs/ZeroWiki-API-명세-초안.md`는 리더만 편집한다.** 변경이 필요하면 `SendMessage`로 `절 번호 + 현재 문안 + 제안 문안 + 근거`를 리더에게 보낸다.
+- **`docs/ZeroWiki-MVP-서비스-기획서.md`는 pm이 편집한다(헌법 v1.1 제1조 6항).** 기획 관련 변경 요청·범위 질문·제품 의도 확인은 pm에게 `SendMessage`로 보낸다. pm이 스폰되어 있지 않으면 리더에게 보고한다.
 - **커밋하지 않는다.** git 조작은 리더 전용이다.
 - **미확정 계약을 단독 확정하지 않는다.** API 명세 18절 10건, ERD 8절 10건은 사용자 결정 사항이다. 권고안만 작성하고 `권고(미확정)`으로 표기한다.
 - **마이그레이션 실제 적용, 의존성 대량 추가는 리더 승인 후에만** 한다.

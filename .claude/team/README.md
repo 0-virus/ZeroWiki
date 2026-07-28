@@ -22,18 +22,20 @@
 | backend | `backend/**`, `.claude/team/backend/**`, `docs/ZeroWiki-ERD-초안.md`, `docs/검증-백엔드-ERD-API-정합성.md` |
 | frontend | `frontend/**`, `.claude/team/frontend/**`, `docs/검증-프론트엔드-화면-API-갭.md` |
 | qa | `qa/**`, `.claude/team/qa/**`, `docs/검증-QA-계약-확정-체크리스트.md` |
-| 리더 | `CLAUDE.md`, `docs/ZeroWiki-API-명세-초안.md`, `docs/ZeroWiki-MVP-서비스-기획서.md`, `docs/에이전트-팀-운영-가이드.md`, `.claude/agents/**`, 모든 git 조작 |
+| pm | `.claude/team/pm/**`, `docs/ZeroWiki-MVP-서비스-기획서.md`, `docs/PM-*.md` |
+| 리더 | `CLAUDE.md`, `docs/ZeroWiki-API-명세-초안.md`, `docs/에이전트-팀-운영-가이드.md`, `.claude/agents/**`, 모든 git 조작 |
 | 편집 금지 | `.claude/CONSTITUTION.md`, `docs/ZeroWiki-기획-인터뷰-전문.txt`, `docs/WikiHub-경쟁서비스-조사.md`, `.omc/**` |
 
 ## 팀원 타입
 
-`.claude/agents/`에 세 정의가 있다. 팀원과 서브에이전트 양쪽에 재사용한다.
+`.claude/agents/`에 네 정의가 있다. 팀원과 서브에이전트 양쪽에 재사용한다.
 
 | 타입 | 역할 |
 | --- | --- |
 | `zerowiki-backend` | 데이터 모델·서버·Worker |
 | `zerowiki-frontend` | 화면·클라이언트·UX |
 | `zerowiki-qa` | 검증·테스트·보안·계약 통합 |
+| `zerowiki-pm` | 종합·기획 피드백·결정 추적·우선순위 권고 (헌법 v1.1 신설) |
 
 정의 본문은 팀원 시스템 프롬프트에 **추가**되며(대체 아님) 필독 파일 경로를 포함한다. `.claude/team/` 아래 파일은 계층 자동 로드 대상이 아니므로 이 경로 명시가 로드를 보장한다.
 
@@ -56,7 +58,8 @@ frontend·qa도 동일한 형태로 경로만 바꾼다. 팀원 이름은 `backe
 ## 운영 원칙
 
 - 표시 모드는 `in-process` 고정 (Windows Terminal은 분할 창 미지원, 가이드 5절).
-- 팀 크기 3명 유지. 팀원당 5~6개 작업이 적정(가이드 10.2, 10.3).
+- 팀 크기 3~4명(backend·frontend·qa + 필요 시 pm). 팀원당 5~6개 작업이 적정(가이드 10.2, 10.3).
+- **pm은 상시 스폰 대상이 아니다.** 세 역할의 산출물이 쌓여 종합할 것이 생겼을 때, 또는 사용자 결정 요청서가 필요할 때 스폰한다. 종합할 대상이 없는 상태에서 pm을 띄우면 빈 보고서만 나온다.
 - 같은 파일을 두 팀원이 편집하지 않도록 소유권 표를 지킨다(가이드 10.5).
 - 리더가 위임 대신 직접 구현하기 시작하면 "팀원들이 작업을 마칠 때까지 기다려라"로 교정한다(가이드 10.6).
 - in-process 팀원은 `/resume`으로 복원되지 않는다. 세션이 끊기면 팀원을 새로 스폰하고, 각 역할의 `STATE.md`가 재개 지점을 제공한다(가이드 13절).
@@ -73,5 +76,8 @@ Phase 0 이전. 코드 없음. 문서 검증 3종 완료.
 | backend | ERD 수정 3건 반영(revision 필드 / idempotency_records / 복합 인덱스), 계약 의견 제출 |
 | frontend | 갭 12건 소유자별 전달, 계약 의견 제출, 와이어프레임 |
 | qa | 양쪽 의견 통합, 검증 기준 테스트 시나리오화, 리더 보고 |
+| pm | 최초 종합(`docs/PM-종합-현황.md`), 사용자 결정 8건 결정 요청서화, 기획서 정합성 점검 |
 
 각 역할의 `STATE.md`가 정본이다.
+
+pm 신설은 2026-07-28, 헌법 v1.1. 기획서 소유권이 리더 → pm으로 이관되었다.

@@ -20,6 +20,7 @@ tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, SendMessage, TaskCreate,
 
 - **편집 가능 경로:** `frontend/**`, `.claude/team/frontend/**`, `docs/검증-프론트엔드-화면-API-갭.md`. 그 밖은 읽기만 한다.
 - **`docs/ZeroWiki-API-명세-초안.md`는 리더만 편집한다.** 변경이 필요하면 `SendMessage`로 `절 번호 + 현재 문안 + 제안 문안 + 근거`를 리더에게 보낸다. ERD 관련은 backend에게 보낸다.
+- **`docs/ZeroWiki-MVP-서비스-기획서.md`는 pm이 편집한다(헌법 v1.1 제1조 6항).** 기획 관련 변경 요청·범위 질문·제품 의도 확인은 pm에게 `SendMessage`로 보낸다. pm이 스폰되어 있지 않으면 리더에게 보고한다.
 - **커밋하지 않는다.** git 조작은 리더 전용이다.
 - **없는 API 엔드포인트를 임의로 가정하지 않는다.** `docs/검증-프론트엔드-화면-API-갭.md`에 갭으로 등록하고 소유자에게 전달한다.
 - **미확정 계약을 단독 확정하지 않는다.** diff 표현 형식·polling 간격·발췌문 길이 등은 사용자 결정 사항이다. 권고안만 작성하고 `권고(미확정)`으로 표기한다.

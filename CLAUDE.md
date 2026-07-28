@@ -19,6 +19,7 @@
 | backend | `.claude/team/backend/CLAUDE.md` | `.claude/team/backend/STATE.md` | `.claude/team/backend/WORKLOG.md` |
 | frontend | `.claude/team/frontend/CLAUDE.md` | `.claude/team/frontend/STATE.md` | `.claude/team/frontend/WORKLOG.md` |
 | qa | `.claude/team/qa/CLAUDE.md` | `.claude/team/qa/STATE.md` | `.claude/team/qa/WORKLOG.md` |
+| pm | `.claude/team/pm/CLAUDE.md` | `.claude/team/pm/STATE.md` | `.claude/team/pm/WORKLOG.md` |
 
 팀 운영 방법(스폰 프롬프트 템플릿, 작업 분할 원칙)은 `.claude/team/README.md`, 에이전트 팀 기능 자체의 사용법은 `docs/에이전트-팀-운영-가이드.md`에 있다.
 
@@ -26,7 +27,7 @@
 
 | 문서 | 내용 |
 | --- | --- |
-| `docs/ZeroWiki-MVP-서비스-기획서.md` | 제품 정의·원칙·MVP 범위·Phase (진실 1순위) |
+| `docs/ZeroWiki-MVP-서비스-기획서.md` | 제품 정의·원칙·MVP 범위·Phase (진실 1순위, pm 전용 편집) |
 | `docs/ZeroWiki-ERD-초안.md` | 데이터 모델 (8절 = 미확정 10건) |
 | `docs/ZeroWiki-API-명세-초안.md` | REST API 계약 (18절 = 미확정 10건, 리더 전용 편집) |
 | `docs/검증-백엔드-ERD-API-정합성.md` | 백엔드 교차 검증 결과 |
