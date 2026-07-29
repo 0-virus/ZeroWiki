@@ -190,7 +190,224 @@
 
 ---
 
-## 3. 중간 우선순위 (선택사항, 참고용)
+## 2.4 결정 #4 — UD-28: 도서관 홈 `topics`(주요 주제)의 산출 기준
+
+**출처:**
+- `docs/ZeroWiki-API-명세-초안.md` 18절 미확정 항목 표, 4.1절 409행(`topics: {name, pageCount}[]`)
+- `docs/ZeroWiki-요구사항-정의서.md` 12.2절 719행 UD-28
+- `docs/검증-프론트엔드-화면-API-갭.md` 갭 #2·#3 (도서관 홈 스키마, 주요 주제 정의)
+- `docs/ZeroWiki-MVP-서비스-기획서.md` 16절 413행 (기획서 확정 방향)
+- `docs/ZeroWiki-ERD-초안.md` 351행 (`page_type`), 406~425행 (`page_relations`)
+
+## 0단계 (필수): 주제의 정의
+
+**API 계약의 요구사항:**
+```json
+"topics": [
+  { "name": "합의 알고리즘", "pageCount": 12 },
+  { "name": "분산 시스템", "pageCount": 8 }
+]
+```
+
+**「주제란 무엇인가」를 먼저 정의해야 측정 방법과 개수가 의미를 갖는다.**
+
+### 정의 후보 1: `page_type='CONCEPT'`인 페이지 ⭐ (권고)
+
+**근거:**
+- 기획서 16절 413행: "도서관의 **핵심 개념**들을 표시한다"
+- ERD 351행: `pages.page_type` ∈ `{SOURCE, CONCEPT, FLOW, SYNTHESIS, DECISION, QUESTION}`
+- 기획서 6.4절 FR-KNW-01: "기본 유형으로 `Concept` ... 을 제공한다"
+
+**응답 구성:**
+- `name`: CONCEPT 페이지의 제목 (`page_versions.title`)
+- `pageCount`: 각 CONCEPT 페이지와 `page_relations`로 **직접 연결된 다른 페이지의 개수** (incoming + outgoing 합산)
+
+**구현 (실행 가능한 SQL):**
+```sql
+-- CONCEPT 페이지들의 관계 수 집계
+WITH concept_relations AS (
+  -- source가 CONCEPT인 경우
+  SELECT 
+    pr.source_page_id as concept_id,
+    COUNT(*) as relation_count
+  FROM page_relations pr
+  JOIN pages p ON pr.source_page_id = p.id
+  WHERE pr.library_id = ? 
+    AND pr.status = 'ACCEPTED'
+    AND p.page_type = 'CONCEPT'
+  GROUP BY pr.source_page_id
+  
+  UNION ALL
+  
+  -- target이 CONCEPT인 경우
+  SELECT 
+    pr.target_page_id as concept_id,
+    COUNT(*) as relation_count
+  FROM page_relations pr
+  JOIN pages p ON pr.target_page_id = p.id
+  WHERE pr.library_id = ? 
+    AND pr.status = 'ACCEPTED'
+    AND p.page_type = 'CONCEPT'
+  GROUP BY pr.target_page_id
+)
+SELECT 
+  p.id,
+  p.slug,
+  pv.title as name,
+  COALESCE(SUM(cr.relation_count), 0) as pageCount
+FROM pages p
+JOIN page_versions pv ON p.current_version_id = pv.id
+LEFT JOIN concept_relations cr ON p.id = cr.concept_id
+WHERE p.library_id = ? 
+  AND p.page_type = 'CONCEPT' 
+  AND p.status = 'PUBLISHED'
+GROUP BY p.id, p.slug, pv.title
+ORDER BY pageCount DESC
+LIMIT 6;
+```
+
+**검증:**
+- `page_relations` 테이블: source_page_id, target_page_id, status 필드 존재 (ERD 406~425행) ✅
+- `pages` 테이블: page_type='CONCEPT' 값 존재 (ERD 351행) ✅
+- `page_versions` 테이블: title 필드 존재 (ERD 364행) ✅
+- 인덱스: (library_id, source_page_id, status), (library_id, target_page_id, status) 기존 (ERD 763~764행) ✅
+
+**권고(미확정) — pm 판단:**
+- **포함할 페이지 상태:** `PUBLISHED` 만 (ERD 상태 정의 확인 필요)
+  - 근거: 도서관 홈의 "주요 주제"는 최종 사용자에게 공개되는 위젯이므로, 발행된 CONCEPT만 표시하는 것이 제품 관례에 맞다
+  - DRAFT, ARCHIVED, DELETED 상태는 제외
+- **표시 개수:** `LIMIT 6` (권고값)
+  - 기획서 16절 413행 기준 "5~7개" 범위에서 중앙값 6 선택
+  - 필요시 A/B 테스트로 사용자 선호 개수(5 vs 7) 결정 후 조정 가능
+
+### 정의 후보 2: `ingest_items.topic_hints` (제외)
+
+- 위치: ERD 316행 (저비용 분류 결과)
+- 문제: "주제"의 의미가 불명확하고, CONCEPT 페이지 구조와 관계 불명
+- 배제 근거: 기획서는 "핵심 **개념**"이라고 명시했으며, 개념은 CONCEPT 페이지로 표현됨
+
+**결론: 정의 1 (CONCEPT 페이지)이 정해지면, 다음 3가지 측정 방법이 모두 실행 가능하다.**
+
+---
+
+## 1단계: 관계도 측정 방법 (정의 1 기반)
+
+정의 1이 정해진 후, CONCEPT 페이지들을 상위 N개 선정하는 기준.
+
+### A. 관계 수를 기준 (가장 단순) ⭐ 팀 권고
+
+각 CONCEPT 페이지의 관계 개수(incoming + outgoing) 상위 N개 선정.
+
+**SQL:** 위 0단계 구현 참조
+
+**장점:**
+- 구현 단순: UNION ALL + COUNT 조회
+- 인덱스 활용: (library_id, source_page_id, status), (library_id, target_page_id, status) 기존
+- 독립성: UD-17(임베딩 모델), UD-16(관계 유형) 확정 불필요
+
+**단점:**
+- 정밀도: 연결 수가 많다고 반드시 "핵심"은 아님
+- 가중치 불가: 모든 관계를 동등 취급
+
+**Phase 적합:** ✅ Phase 1 즉시 구현
+
+---
+
+### B. 그래프 중심성 (Betweenness/PageRank)
+
+네트워크 분석 알고리즘으로 도서관 개념 구조 내 중추적 역할을 하는 CONCEPT 선정.
+
+**장점:**
+- 정밀도: 구조상 중요도를 정확히 반영
+
+**단점:**
+- 구현: Python networkx 등 외부 라이브러리 필수
+- 성능: O(V³) 계산 비용
+- 의존성: **UD-16(관계 유형) 확정 필요** (가중치 적용)
+
+**Phase 적합:** Phase 2 이상 권장
+
+---
+
+### C. 임베딩 클러스터
+
+pgvector를 이용해 의미적으로 유사한 CONCEPT 페이지를 그룹화하고 대표 선정.
+
+**장점:**
+- 콘텐츠 기반: 의미적 유사성 반영
+
+**단점:**
+- **강한 종속성: UD-17(임베딩 모델·차원) 반드시 확정 필요**
+- 재현성: 클러스터링 비결정적 가능
+
+**Phase 적합:** Phase 3 이상
+
+---
+
+## 2단계: 표시 개수
+
+**권고: 5~7개**
+
+근거:
+- UI 공간: 기획서 16절 도서관 홈 섹션 1순위
+- 인지 한계: 7개 이상은 보조 탐색으로 전락
+- 조정 여지: MVP 배포 후 사용자 피드백으로 조정 가능
+
+---
+
+## 3단계: 재계산 시점
+
+**권고: Ingest 완료 시 자동 재계산**
+
+근거:
+- 사용자 기대: Ingest 후 홈을 열면 새 콘텐츠가 주제로 나타나길 기대
+- 비용: A 방법은 COUNT 쿼리로 무시할 수 없는 수준이 아님
+- 운영성: Ingest Job의 최종 단계로 통합 가능
+
+조건:
+- Ingest Job이 `COMPLETED` 전 재계산 배치 실행
+- 계산 시간 초과 시 백그라운드로 연기 (사용자 blocking 방지)
+
+---
+
+## 되돌리기 비용
+
+**주의: 주제의 정의 변경은 구현 비용이 매우 높다.**
+
+| 변경 | 비용 | 설명 |
+|------|------|------|
+| **정의 1→2로 변경** | **매우 높음** | topics의 `name` 의미 변경 → 화면 로직·검색 인덱싱·기존 데이터 모두 영향 |
+| 측정 방법 A→B 추가 | 중간 | B 알고리즘 구현, 기존 A 결과는 유효 |
+| 측정 방법 A→C 추가 | 높음 | UD-17 확정 필요, re-embedding 필요 |
+| 개수 5→7 변경 | 낮음 | 응답 크기만 변경 |
+| 시점 Ingest→배치 변경 | 낮음 | 스케줄러 추가/제거만 |
+
+---
+
+## 리더의 확정 기준
+
+UD-28의 결정 주체는 **기술(리더)**이다 (요구사항 정의서 12.2절).
+
+리더는 다음을 검증하고 확정한다:
+
+1. **0단계 주제 정의:** 선택한 정의가 API 계약 409행 `{name, pageCount}` 형태로 충족 가능한가
+2. **1단계 측정 방법:** ERD의 실재 테이블·필드(page_relations, pages, page_versions)로 계산 가능한가
+3. **종속성:** 선택지가 UD-16, UD-17 등 미확정 항목에 종속되는가 (종속되면 확정 불가)
+4. **금지 스택:** 기획서 20절의 금지 스택(Redis, Kafka, 전용 벡터 DB) 요구는 없는가
+
+---
+
+## pm의 최종 입력
+
+**팀 권고 (미확정):**
+- 주제 정의: **1. CONCEPT 페이지**
+- 측정 방법: **A. 관계 수 (incoming+outgoing)**
+- 표시 개수: **5~7개**
+- 재계산 시점: **Ingest 완료 시**
+
+**이유:** 최소 의존성(UD 미확정 대기 불필요), Phase 1 즉시 구현, MVP 배포 후 사용자 피드백으로 B·C 평가 가능한 진화 경로.
+
+만약 리더가 정의 1 대신 다른 방향(예: 정의 2)을 결정한다면, pm은 그에 따른 기획 영향(화면 재설계, 검색 정책 변경 등)을 기획서에 반영한다.
 
 ### UD-22: 신고 처리 주체와 검토 기한
 

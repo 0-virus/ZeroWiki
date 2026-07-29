@@ -424,7 +424,22 @@ knowledgeStatus: VERIFIED_FACT | SOURCE_CLAIM | AI_SYNTHESIS | USER_JUDGMENT | H
 
 주제에 속한 페이지 목록은 홈 응답에 넣지 않는다. 사용자가 주제를 선택하면 `GET /libraries/{libraryId}/pages?topic=합의%20알고리즘`으로 조회한다. 홈 응답에 주제별 페이지를 미리 담으면 응답이 커지는데, 사용자는 대개 한두 주제만 열어본다.
 
-**`topics`의 산출 기준은 아직 확정되지 않았다(`UD-28`).** 기획서 16절은 "AI가 도서관의 콘텐츠를 분석해 관계도가 높은 주제를 자동 선정한다"고 방향을 정했으나, 관계도를 무엇으로 측정하는지(관계 수·중심성·임베딩 클러스터 크기), 몇 개를 표시하는지, 언제 재계산하는지가 미정이다. 확정 전에는 빈 배열을 반환해도 계약 위반이 아니다.
+**`topics`의 산출 기준은 확정되었다(`UD-28`, 2026-07-29 리더 기술 확정).**
+
+| 항목 | 확정 내용 |
+| --- | --- |
+| 주제의 정의 | `pages.page_type = 'CONCEPT'`인 페이지. 기획서 16절 "핵심 개념", `FR-KNW-01`의 `Concept` 유형과 같다 |
+| `name` | 해당 CONCEPT 페이지의 현재 버전 제목(`page_versions.title`) |
+| `pageCount` | 그 CONCEPT 페이지와 `page_relations`로 직접 연결된 페이지 수. incoming·outgoing을 합산하며 `status = 'ACCEPTED'`인 관계만 센다 |
+| 대상 필터 | `pages.status = 'PUBLISHED'`. 초안·보관·삭제 페이지는 제외한다 |
+| 표시 개수 | `pageCount` 내림차순 상위 **6개** |
+| 재계산 시점 | **변경 세트 apply 트랜잭션 커밋 후 비동기 배치.** Ingest 완료 시점이 아니다 — `page_relations`는 변경 세트가 적용될 때 기록되기 때문이다. 계산이 지연되면 백그라운드로 연기하고 사용자 요청을 막지 않는다 |
+
+Phase 1에서 구현한다. **`UD-16`(관계 유형 목록)·`UD-17`(임베딩 모델)에 종속되지 않는다** — 관계 유형을 구분하지 않고 개수만 세며 임베딩을 쓰지 않는다. 그래프 중심성이나 임베딩 클러스터 방식은 Phase 2 이후 재평가 대상이다.
+
+근거는 `docs/PM-미확정결정-우선순위.md` 2.4절(pm 기획 관점 권고)과 backend의 구현 검토(인덱스 `(library_id, source_page_id, status, created_at DESC)`·`(library_id, target_page_id, status, created_at DESC)`로 충당, 상태 머신 충돌 없음)다. **재계산 시점은 backend가 pm 권고안의 "Ingest 완료 시"를 수정한 것을 채택했다.**
+
+CONCEPT 페이지가 없는 도서관은 빈 배열을 반환한다. 이는 계약 위반이 아니다.
 
 ### 4.2 운영 헌법
 
@@ -1470,7 +1485,6 @@ enum은 문자열로 노출하며 서버 내부 Java enum 이름과 API 값을 �
 | `UD-01` | 파일당·ZIP당·Import당 최대 크기와 문서 수 | 5.2, `413` 응답 | 사용자 |
 | `UD-02` | Access Token과 Refresh Token의 수명 | 2.1, 3.1 | 사용자 |
 | `UD-03` | Free·Basic·Advanced 처리량 단위 | 12 | 사용자 |
-| `UD-28` | 도서관 홈 `topics`의 산출 기준 | 4.1 | 기획(pm) |
 | `UD-06` | 사용자 직접 편집 중 안전 변경의 자동 적용 여부 | 7.1 | 사용자 |
 | `UD-07` | 검색 결과 원본 발췌문 최대 길이 | 9.1, 7.2 | 사용자 |
 | `UD-08` | 공개 URL slug 충돌과 변경 정책 | 14.1 | 기술 |
@@ -1489,6 +1503,7 @@ ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26
 | `UD-27` | 전문 용어는 초회 등장 1회 병기, 정의·핵심 주장에는 유지 | 사용자 | 2.8절 |
 | `UD-04` | `Retry-After` 우선 + 클라이언트 기본값(Ingest 2초 / AI 답변 1초 / Lint·Export 5초). 최대 생성 시간은 `UD-25`에 종속 | 기술(리더) | 2.7절 |
 | `UD-05` | Phase 1은 스냅샷 반환 + 클라이언트 계산, Phase 2에 서버 구조화 블록 diff 추가 | 기술(리더) | 7.1절 |
+| `UD-28` | 주제 = `page_type='CONCEPT'` 페이지. `pageCount`는 `ACCEPTED` 관계 양방향 합산, `PUBLISHED`만 대상, 상위 6개. 재계산은 변경 세트 apply 커밋 후 비동기 | 기술(리더) | 4.1절 |
 
 `UD-04`·`UD-05`는 frontend 권고(2026-07-29)를 근거로 리더가 확정했다. 두 항목은 요구사항 정의서 12.1절에서 결정 주체가 **기술**이므로 사용자 결정을 기다리지 않는다.
 
