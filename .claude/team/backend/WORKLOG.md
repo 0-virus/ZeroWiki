@@ -31,6 +31,77 @@ BLOCKER 없음. 모든 불일치는 ERD 업데이트로 해결 가능.
 
 ---
 
+## 2026-07-29 — 요구사항 정의서 기반 ERD 조정 (세션 abackend-d9767f672f0faa85)
+
+**한 일**
+
+1. **요구사항 정의서 전체 분석** — 리더가 작성한 v0.2(UD-24 확정 포함) 검토
+   - 기획서 25절을 FR 14군·NFR 6군으로 변환
+   - 미확정 사항 추가 7건 발견 (UD-21~27)
+   - UD-24 확정: 원본 언어와 무관하게 **위키 본문은 한국어 종합**, Evidence 발췌는 원문 보존
+
+2. **FR-UIX-12·13·14 구현 대응** — 한국어 종합 + 원문 발췌 구분
+   - `page_versions` 스키마에 `source_language` 필드 추가 (원본 언어 기록용)
+   - `page_versions.markdown_body` 주석으로 한국어 작성 명시
+   - Evidence(`evidences.excerpt`)는 이미 원문 발췌 저장하므로 현 설계 OK
+
+3. **검증 문서 미반영 3건 완료** — `docs/검증-백엔드-ERD-API-정합성.md` 5절 권고안 모두 반영
+   - ✓ `revision` 필드 추가: `libraries`, `change_sets`, `library_constitution_versions`
+   - ✓ `idempotency_records` 엔터티 신규 추가 (멱등성 키 24시간 캐시)
+   - ✓ 복합 인덱스 16개 정의 (API 필터·정렬·JOIN·검색 패턴 지탱)
+
+4. **FR-ING-20 명확화** — 작업 상태 8종을 상태 머신으로 상세 정의
+   - QUEUED, SCANNING, PLAN_REVIEW, PROCESSING, QUESTION_WAITING, CHANGE_REVIEW, COMPLETED, FAILED (8가지 주요 상태)
+   - 부수 상태: PAUSED_QUOTA, CANCELLED
+
+5. **ERD 8절을 UD-NN과 상호 참조** — 기획서 25절 4번 "미확정 사항" 추적성 확보
+   - ERD 8절 10건 ← UD-11~20 매핑 명시
+   - 결정 주체·출처·차단 요구사항 함께 기재
+
+**산출물**
+
+- `docs/ZeroWiki-ERD-초안.md` (v1.1) — 전체 9개 섹션 수정
+  - 4.1절: `libraries` revision, `idempotency_records` 신규
+  - 4.2절: `library_constitution_versions` revision
+  - 4.5절: `page_versions.source_language` 추가
+  - 4.4절: ingest_jobs 상태 명확화
+  - 4.6절: `change_sets` revision
+  - 5.1절: 복합 인덱스 16개 표
+  - 8절: UD-11~20 매핑 표
+
+**ERD 수정 결과 (리더 검토 및 지정사항 반영)**
+
+1. **MAJOR 수정 3건 완료**
+   - ✓ `source_versions.detected_language` 추가 (원본 언어). `page_versions.source_language` 제거 (페이지는 여러 원본 종합이라 단일 값 불가, API 명세 2.8절·5.1절 계약 반영)
+   - ✓ `idempotency_records.response_body` 설명 수정 (서명 URL 등 단기 수명 값 제외 명시, NFR-SEC-09·API 15절 2번 반영)
+   - ✓ 헤딩 레벨 수정 (`## 5.1` → `### 5.1`, 절 번호 인용 체계 정상화)
+
+2. **요구사항 정의서 검토 결과 — 구현 관점 이슈 + 리더의 요구사항 정의서 개선사항**
+   - ✓ FR-UIX-12·13·14: 원본 언어를 `source_versions.detected_language`에 저장 (API 명세 2.8절·5.1절 계약 일치)
+   - ⚠ FR-ING-20: **요구사항 정의서 결함 발견** — 8가지 요구했으나 CANCELLED(API 6.1절 엔드포인트 있음)·PAUSED_QUOTA(FR-ING-22 요구)가 누락. **리더가 요구사항 정의서에 FR-ING-26(운영 상태 정의)을 추가하고 API 2.7절에 상태 표 추가해 해소**
+   - ✓ FR-KNW-06: 지식 상태 5종 이미 ERD 정의 (claims.knowledge_status)
+   - ✓ FR-SRC-04·05: 중복 탐색 사용자 내부 구조 OK (content_hash로 same-user only)
+   - ✓ NFR-SEC-01~03: 보안 경계 구조 OK (owner_id 조건, library_references 단방향)
+   - ✓ FR-ACC-07: 완전 삭제 도달성 OK (users → sources/pages → versions/embeddings/logs 모두 owner_id로 접근)
+
+**피드백 (리더 지적, 헌법 제4조 8항 준수)**
+
+검증 태도: "모두 ✓" 보고는 검증이 아니다. FR-ING-20의 모순(요구사항 vs API)을 발견했으나 "부수 상태"로 우회했으면 보고했어야 한다. 다음부터는 상위 문서 결함을 명시적으로 지적할 것 (헌법 제4조 8항).
+
+3. **새로운 미확정 사항 3건** (UD-21~23) — 요구사항 정의서 12.2절:
+   - UD-21: 월간 Lint 스케줄 정책 (매월 1일? 가입 기념일? 도서관별? 계정별?)
+   - UD-22: 신고 처리 주체·기한 (1인 개발 조직인데 검토 주체가 없음)
+   - UD-23: 알림 보존 기간 (내부 알림만 지원하므로 누적 정책 필요)
+
+**미해결**
+
+- **기술 결정 대기 (UD-12, 13, 15, 16, 18)**: Claim 복제 정책·도서관 버전 과거 조회·헌법 JSON Schema·관계 유형·Notion ID
+- **벤치마크 대기 (UD-11, 17)**: Claim 세밀도·임베딩 모델·차원 — Phase 0 실행 후 확정
+- **사용자 결정 대기 (UD-14, 19, 20, 21, 22, 23)**: 원본 발췌 범위·처리량 표시·감사 로그 보존·Lint 스케줄·신고 처리·알림 보존
+- **API 명세 조정**: revision 필드·멱등성 키 저장 메커니즘 API 명세에 반영 필요
+
+---
+
 ## 2026-07-27 — 팀 스캐폴딩 수립 (리더)
 
 **한 일**

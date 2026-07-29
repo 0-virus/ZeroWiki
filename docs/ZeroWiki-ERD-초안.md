@@ -33,6 +33,7 @@
 ```mermaid
 erDiagram
     USERS ||--o{ AUTH_SESSIONS : has
+    USERS ||--o{ IDEMPOTENCY_RECORDS : creates
     USERS ||--o{ LIBRARIES : owns
     USERS ||--o{ SOURCES : owns
     USERS ||--o{ NOTIFICATIONS : receives
@@ -118,6 +119,26 @@ erDiagram
 | `user_agent` | text | 선택적 보안 감사 정보 |
 | `created_at` | timestamptz | 생성 시각 |
 
+#### `idempotency_records`
+
+생성·명령 작업의 멱등성 키를 저장한다. 24시간 동안 같은 요청에 같은 결과를 반환한다 (API 2.5절, 검증 3.2절, FR-ING-24).
+
+| 컬럼 | 타입 | 제약/설명 |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `user_id` | uuid | FK → `users.id` |
+| `idempotency_key` | varchar(255) | 클라이언트 지정 키 |
+| `request_path` | text | 엔드포인트 경로 |
+| `request_body_hash` | char(64) | SHA-256 (요청 본문 해시). 같은 키로 다른 본문 재전송 시 409 IDEMPOTENCY_KEY_REUSED |
+| `response_status` | integer | 이전 응답 상태 코드 |
+| `response_body` | jsonb | 이전 응답 본문 캐시. **서명 URL·다운로드 URL·토큰 등 단기 수명 값은 제외하고 저장한다.** 재요청 시 서버가 해당 필드를 새로 발급해 채운다 (NFR-SEC-09, API 2.5절, API 15절 2번) |
+| `created_at` | timestamptz | 생성 시각 |
+| `expires_at` | timestamptz | 24시간 후 자동 삭제 대상 |
+
+인덱스:
+- UNIQUE(`user_id`, `idempotency_key`)
+- `(expires_at)` — 배치 정리용
+
 ### 4.2 도서관과 운영 헌법
 
 #### `libraries`
@@ -133,6 +154,7 @@ erDiagram
 | `current_constitution_version_id` | uuid | FK → `library_constitution_versions.id`, 순환 FK는 후행 추가 |
 | `current_library_version_id` | uuid | FK → `library_versions.id`, 아직 미발행이면 NULL |
 | `status` | varchar(20) | `ACTIVE`, `ARCHIVED`, `DELETION_PENDING` |
+| `revision` | bigint | 낙관적 잠금용 버전. PATCH/PUT 등 수정 시 증가 (API 2.6절, 검증 3.1절) |
 | `created_at` | timestamptz | 생성 시각 |
 | `updated_at` | timestamptz | 수정 시각 |
 
@@ -163,6 +185,7 @@ erDiagram
 | `natural_language_rules` | text | 사용자에게 보여주는 자연어 규칙 |
 | `change_reason` | text | 생성 또는 변경 이유 |
 | `created_by_type` | varchar(20) | `ONBOARDING`, `USER`, `FEEDBACK`, `SYSTEM` |
+| `revision` | bigint | 낙관적 잠금용 버전. 선택(현재 버전 사용 시에만 증가) (검증 3.1절) |
 | `created_at` | timestamptz | 생성 시각 |
 
 #### `library_references`
@@ -212,6 +235,7 @@ erDiagram
 | `media_type` | varchar(120) | MIME type |
 | `byte_size` | bigint | 파일 크기 |
 | `extracted_text_key` | text | 파싱된 텍스트 객체 키 |
+| `detected_language` | varchar(10) | 감지된 원본 언어 (BCP 47 형식, 예: `en`, `ko`, `ja`). 발췌문 표기와 Ingest 프롬프트 구성에 사용. 페이지 생성 언어를 바꾸지 않는다 (FR-UIX-12·13, 요구사항 정의서 5.15절, API 2.8절·5.1절). 감지 실패 시 NULL. |
 | `source_metadata` | jsonb | 파일명, URL, 작성자, 외부 수정 시각 등 |
 | `capture_method` | varchar(30) | `UPLOAD`, `IMPORT`, `CLIP`, `MANUAL` |
 | `captured_at` | timestamptz | 수집 시각 |
@@ -259,11 +283,28 @@ erDiagram
 | `started_at` | timestamptz | 시작 시각 |
 | `completed_at` | timestamptz | 종료 시각 |
 
-상태:
+상태 (FR-ING-20 8종, 요구사항 정의서 5.5.3절):
 
-`QUEUED → SCANNING → PLAN_REVIEW → PROCESSING → QUESTION_WAITING 또는 CHANGE_REVIEW → COMPLETED`
+**기본 흐름:** `QUEUED (대기) → SCANNING (스캔) → PLAN_REVIEW (계획 승인 대기) → PROCESSING (처리) → QUESTION_WAITING (질문 대기) 또는 CHANGE_REVIEW (변경 승인 대기) → COMPLETED (완료)`
 
-어느 처리 상태에서든 `PAUSED_QUOTA`, `CANCELLED`, `FAILED`로 이동할 수 있다.
+**상태 정의:**
+
+| 상태 | 설명 |
+| --- | --- |
+| `QUEUED` | 초기 상태. 작업 대기 중 |
+| `SCANNING` | 1단계 저비용 스캔 중 |
+| `PLAN_REVIEW` | 처리 계획 승인 대기 |
+| `PROCESSING` | 2단계 고품질 처리 중 |
+| `QUESTION_WAITING` | 맥락 불분명 항목 사용자 질문 대기 (FR-ING-05) |
+| `CHANGE_REVIEW` | 변경 세트 검토 및 승인 대기 |
+| `COMPLETED` | 작업 완료 |
+| `FAILED` | 작업 실패 (재시도 불가 또는 재시도 소진) |
+
+**부수 상태 (흐름 중 언제든 진입 가능):**
+- `PAUSED_QUOTA` — 처리량 부족으로 일시 중단. 사용자 구매 후 PROCESSING 재개 (FR-ING-22)
+- `CANCELLED` — 사용자가 작업 취소
+
+→ 전체 8가지 주요 상태 (QUEUED, SCANNING, PLAN_REVIEW, PROCESSING, QUESTION_WAITING, CHANGE_REVIEW, COMPLETED, FAILED) + 부수 상태
 
 #### `ingest_items`
 
@@ -322,7 +363,7 @@ erDiagram
 | `page_id` | uuid | FK → `pages.id` |
 | `version_no` | integer | 페이지 내 순번 |
 | `title` | text | 제목 |
-| `markdown_body` | text | 사용자 표시 본문 |
+| `markdown_body` | text | 사용자 표시 본문. **한국어로 작성** (FR-UIX-12, UD-24 확정) |
 | `summary` | text | 검색·목록용 요약 |
 | `content_hash` | char(64) | 내용 해시 |
 | `change_set_id` | uuid | 이 버전을 만든 변경 세트 |
@@ -414,6 +455,7 @@ erDiagram
 | `summary` | text | 변경 이유와 영향 |
 | `risk_level` | varchar(20) | `SAFE`, `REVIEW`, `HIGH` |
 | `status` | varchar(30) | `DRAFT`, `READY_FOR_REVIEW`, `PARTIALLY_APPROVED`, `APPROVED`, `REJECTED`, `APPLIED`, `SUPERSEDED` |
+| `revision` | bigint | 낙관적 잠금용 버전. 검토·적용 시 증가 (API 2.6절, 검증 3.1절) |
 | `base_library_version_id` | uuid | 변경 계산 기준 버전 |
 | `created_at` | timestamptz | 생성 시각 |
 | `reviewed_at` | timestamptz | 검토 완료 시각 |
@@ -704,6 +746,31 @@ UNIQUE(`content_type`, `content_id`, `chunk_no`, `embedding_model`)
 
 응용 계층은 검색할 때 반드시 `owner_id`와 접근 가능한 `library_id`를 함께 조건으로 사용한다.
 
+### 5.1 복합 인덱스와 쿼리 최적화 (검증 4절)
+
+API 주요 필터 패턴을 지탱하는 인덱스. 기본 FK 인덱스 외 추가 필요.
+
+| 테이블 | 인덱스 | 용도 |
+| --- | --- | --- |
+| `sources` | `(owner_id, source_type, updated_at DESC)` | 사용자 내 원본 목록 필터·정렬 |
+| `sources` | `(content_hash)` | ✓ 이미 정의 — 중복 탐색 |
+| `library_sources` | `(library_id, linked_at DESC)` | 도서관 내 원본 조회 |
+| `library_sources` | `(source_id)` | 원본 삭제 시 참조 확인 |
+| `pages` | `(library_id, page_type, status, updated_at DESC)` | 페이지 목록 필터·정렬 |
+| `page_versions` | GIN(tsvector_column) | PostgreSQL 전문 검색 (생성 컬럼 필요) |
+| `change_sets` | `(library_id, status, risk_level, created_at DESC)` | 변경 세트 목록 필터 |
+| `lint_runs` | `(library_id, status, created_at DESC)` | Lint 실행 목록 |
+| `messages` | `(conversation_id, created_at)` | 대화 메시지 시간순 조회 |
+| `page_relations` | `(library_id, source_page_id, status, created_at DESC)` | 페이지별 관계 조회 (출발지) |
+| `page_relations` | `(library_id, target_page_id, status, created_at DESC)` | 페이지별 관계 조회 (도착지) |
+| `audit_logs` | `(library_id, created_at DESC)` | 도서관 활동 피드 |
+| `audit_logs` | `(actor_user_id, created_at DESC)` | 사용자 행위 추적 (선택) |
+| `usage_ledger` | `(user_id, occurred_at DESC)` | 사용량 원장 집계 |
+| `content_embeddings` | `(owner_id, library_id, content_type)` | 의미 검색 필터 |
+| `content_embeddings` | `(embedding)` ivfflat 또는 hnsw | pgvector 의미 검색. 차원·인덱스 타입은 UD-17 확정 후 결정 (검증 4.3절) |
+
+---
+
 ## 6. 주요 정합성 규칙
 
 1. 모든 도서관 하위 데이터는 `library.owner_id`를 통해 동일 사용자에게 귀속되어야 한다.
@@ -734,13 +801,17 @@ FK는 기본적으로 `RESTRICT`를 사용한다. 계정 완전 삭제 작업에
 
 ## 8. 구현 전에 확정할 사항
 
-1. Claim을 모든 문장에서 생성할지, 중요한 주장에만 생성할지
-2. 페이지 버전마다 Claim을 복제할지, 변경되지 않은 Claim을 재사용할지
-3. 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지
-4. 원본 발췌문 저장이 저작권·개인정보 정책상 허용되는 최대 범위
-5. 구조화 헌법의 JSON Schema
-6. 관계 유형의 초기 고정 목록과 사용자 정의 허용 시점
-7. pgvector 임베딩 모델과 차원
-8. Notion Import의 외부 ID 및 재가져오기 중복 판정 정책
-9. 처리량의 사용자 표시 단위와 실제 토큰 원장의 환산 규칙
-10. 감사 로그의 보존 기간과 관리자 접근 정책
+**요구사항 정의서 12절 미확정(UD-NN)과 상호 참조. 어떤 에이전트도 단독 확정할 수 없다 (헌법 제3조).**
+
+| # | 항목 | UD 참조 | 출처 | 결정 주체 |
+| --- | --- | --- | --- | --- |
+| 1 | Claim을 모든 문장에서 생성할지, 중요한 주장에만 생성할지 | UD-11 | FR-KNW-11, 기획서 25절 4번 | 벤치마크 |
+| 2 | 페이지 버전마다 Claim을 복제할지, 변경되지 않은 Claim을 재사용할지 | UD-12 | FR-CHG-09 | 기술 |
+| 3 | 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지 | UD-13 | NFR-DAT-06 | 기술 |
+| 4 | 원본 발췌문 저장이 저작권·개인정보 정책상 허용되는 최대 범위 | UD-14 | NFR-DAT-07, FR-PUB-02 | 사용자 |
+| 5 | 구조화 헌법의 JSON Schema | UD-15 | FR-LIB-11, 요구사항 정의서 5.2절 | 기술 |
+| 6 | 관계 유형의 초기 고정 목록과 사용자 정의 허용 시점 | UD-16 | FR-KNW-12 | 기술 |
+| 7 | pgvector 임베딩 모델과 차원 | UD-17 | FR-SCH-06, 검증 4.3절 | 벤치마크 |
+| 8 | Notion Import의 외부 ID 및 재가져오기 중복 판정 정책 | UD-18 | FR-INP-03 | 기술 |
+| 9 | 처리량의 사용자 표시 단위와 실제 토큰 원장의 환산 규칙 | UD-19 | FR-BIL-07 | 사용자 |
+| 10 | 감사 로그의 보존 기간과 관리자 접근 정책 | UD-20 | NFR-SEC-10 | 사용자 |

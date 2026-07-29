@@ -1,8 +1,11 @@
 # ZeroWiki REST API 명세 초안
 
 작성일: 2026-07-27  
+최종 수정: 2026-07-29 (요구사항 정의서 0.2 기준 조정)  
 상태: MVP API 계약 초안  
-기준 문서: `ZeroWiki-MVP-서비스-기획서.md`, `ZeroWiki-ERD-초안.md`
+기준 문서: `ZeroWiki-MVP-서비스-기획서.md`(1순위), `ZeroWiki-요구사항-정의서.md`(요구사항 근거), `ZeroWiki-ERD-초안.md`
+
+이 문서의 각 계약은 `docs/ZeroWiki-요구사항-정의서.md`의 FR·NFR ID를 근거로 갖는다. 요구사항 정의서와 충돌하면 요구사항 정의서가 우선하며, 충돌은 이 문서의 결함으로 간주한다. 미확정 값은 `UD-NN`으로 참조하며 같은 문서 12절에 정의되어 있다.
 
 ## 1. 목적과 범위
 
@@ -24,7 +27,9 @@ API 원칙:
 6. 원본과 발행된 버전은 수정 API를 제공하지 않는다.
 7. 의미 있는 본문 수정은 즉시 반영하지 않고 변경 세트를 만든다.
 8. 모든 도서관 API에서 소유권 또는 공개 권한을 서버가 검증한다.
-9. 클라이언트는 LLM 공급자명이나 실제 모델명을 지정하지 않고 제품 처리 모드만 전달한다.
+9. 클라이언트는 LLM 공급자명이나 실제 모델명을 지정하지 않고 제품 처리 모드만 전달한다. (FR-ING-13, FR-UIX-11)
+10. **위키 콘텐츠는 한국어로 생성한다.** 원본 언어와 무관하게 페이지 본문·제목·요약·주장 문장은 한국어다. (FR-UIX-12, 2026-07-29 사용자 확정)
+11. **원본에서 인용한 발췌문은 번역하지 않고 원문 그대로 반환한다.** `excerpt`, `locator`가 가리키는 텍스트는 원본 언어를 유지한다. 번역된 발췌는 근거로서 효력이 없다. (FR-UIX-13)
 
 ## 2. 공통 규약
 
@@ -148,6 +153,16 @@ API 원칙:
 
 같은 사용자, 같은 경로, 같은 키의 요청은 24시간 동안 같은 결과를 반환한다. 동일 키로 다른 본문을 보내면 `409 IDEMPOTENCY_KEY_REUSED`를 반환한다.
 
+서버 동작 (ERD 4.1절 `idempotency_records` 대응):
+
+1. 키를 `(사용자, 키)` 단위로 저장하고 요청 본문 해시를 함께 기록한다.
+2. 같은 키·같은 본문 해시의 재요청은 **저장된 응답을 그대로 반환**한다. 처리를 다시 실행하지 않으며 사용량을 차감하지 않는다(FR-ING-24).
+3. 같은 키·다른 본문 해시는 `409 IDEMPOTENCY_KEY_REUSED`.
+4. 첫 요청이 아직 처리 중이면 `409 IDEMPOTENCY_KEY_IN_PROGRESS`를 반환한다.
+5. 레코드는 24시간 후 만료된다.
+
+**저장 응답에서 제외할 값:** 서명 URL, 다운로드 URL, 토큰 등 **수명이 짧거나 재사용되면 안 되는 값은 캐시하지 않는다**(NFR-SEC-09). 해당 필드를 포함하는 응답은 캐시 시 필드를 제거하고, 재요청 시 서버가 새로 발급해 채운다. 만료된 서명 URL을 그대로 돌려주면 클라이언트가 실패하고, 유효한 URL을 장기 보관하면 접근 통제가 무력화된다.
+
 ### 2.6 낙관적 잠금
 
 변경 가능한 주요 리소스는 응답에 `revision`을 포함한다. 수정 요청은 다음 중 하나를 사용한다.
@@ -185,7 +200,76 @@ If-Match: "7"
 - `PURCHASE_QUOTA`
 - `RETRY_FAILED_ITEMS`
 
-MVP 웹 클라이언트는 polling을 기본으로 한다. 작업 조회 시 `Retry-After`를 반환할 수 있다. 추후 SSE를 추가한다.
+MVP 웹 클라이언트는 polling을 기본으로 한다. 작업 조회 시 `Retry-After`를 반환할 수 있다. 추후 SSE를 추가한다. polling 간격과 최대 생성 시간은 `UD-04 미확정`이다.
+
+`status`는 요구사항 FR-ING-20의 작업 상태 8종과 다음과 같이 대응한다. 이 매핑 밖의 상태 값을 추가하지 않는다.
+
+| 요구사항 상태 (FR-ING-20) | API `status` | `nextAction` |
+| --- | --- | --- |
+| 대기 | `QUEUED` | 없음 |
+| 스캔 | `SCANNING` | 없음 |
+| 계획 승인 대기 | `PLAN_REVIEW` | `APPROVE_PLAN` |
+| 처리 | `PROCESSING` | 없음 |
+| 질문 대기 | `QUESTION_REVIEW` | `ANSWER_QUESTIONS` |
+| 변경 승인 대기 | `CHANGE_REVIEW` | `REVIEW_CHANGES` |
+| 완료 | `COMPLETED` | 없음 |
+| 실패 | `FAILED` | `RETRY_FAILED_ITEMS` |
+
+정상 흐름 8종 외에 **운영 상태 2종**이 있다(FR-ING-26). 어느 단계에서든 진입할 수 있다.
+
+| 요구사항 상태 (FR-ING-26) | API `status` | `nextAction` | 재개 |
+| --- | --- | --- | --- |
+| 취소됨 | `CANCELLED` | 없음 | 불가. 새 작업을 만든다 |
+| 처리량 보류 | `PAUSED_QUOTA` | `PURCHASE_QUOTA` | 구매 후 중단 시점 단계로 복귀 |
+
+`PAUSED_QUOTA`는 `FAILED`와 구별된다. **실패는 종결 상태이고 보류는 재개 가능한 상태다.** 처리량 부족을 `FAILED`로 기록하면 사용자가 구매 후에도 작업을 이어갈 수 없다.
+
+`PAUSED_QUOTA`에서 복귀할 때 서버는 중단 시점의 단계(`SCANNING`·`PROCESSING` 등)로 돌아가며, 이미 처리한 항목을 다시 과금하지 않는다(FR-ING-24).
+
+### 2.8 공통 enum과 언어 규약
+
+#### 처리 모드 (FR-ING-13)
+
+```text
+processingMode: FAST | STANDARD | PRECISE
+```
+
+사용자 표시 문구는 `빠른 처리`·`표준 처리`·`정밀 처리`다. **응답 어디에도 LLM 공급자명·모델명·모델 버전을 포함하지 않는다.** 내부 모델 라우팅은 서버 책임이다.
+
+#### 지식 상태 (FR-KNW-06)
+
+```text
+knowledgeStatus: VERIFIED_FACT | SOURCE_CLAIM | AI_SYNTHESIS | USER_JUDGMENT | HYPOTHESIS
+```
+
+5종 고정이다. 확장은 요구사항 변경을 거친다.
+
+#### 언어 (FR-UIX-12, FR-UIX-13)
+
+| 필드 | 언어 | 설명 |
+| --- | --- | --- |
+| 페이지 `title`, `markdownBody`, `summary` | 항상 한국어 | 원본 언어와 무관하게 한국어로 종합 |
+| 주장 `statement` | 항상 한국어 | 동일 |
+| Evidence `excerpt` | **원본 언어** | 번역하지 않는다 |
+| 원본 `title` | 원본 언어 | 원문 제목을 보존한다 |
+
+원본 응답에는 감지된 원본 언어를 `detectedLanguage`(BCP 47, 예: `en`, `ko`)로 포함한다. 감지에 실패하면 `null`을 반환하며, 이 경우에도 위키 생성 언어는 한국어다.
+
+#### 전문 용어 병기 (FR-UIX-14, 2026-07-29 사용자 확정)
+
+한국어로 종합할 때 전문 용어는 **처음 등장하는 자리에서 1회만** 원어를 병기한다.
+
+```text
+주의 기제(attention mechanism)는 신경망이 입력의 특정 부분에 집중하는 메커니즘이다.
+주의 기제는 트랜스포머의 핵심이며, 자기 주의(self-attention)로 확장된다.
+```
+
+- 형식: `한국어(원어)`. 원어는 원본 표기를 그대로 쓴다
+- 같은 페이지 안에서 이미 병기한 용어는 이후 한국어로만 쓴다
+- 새 개념이 등장하면 그 용어에 대해 다시 1회 병기한다
+- **정의 섹션과 핵심 주장에는 병기를 유지한다** — 사용자가 해당 부분만 읽어도 원어를 알 수 있어야 한다
+
+병기는 생성 시점의 콘텐츠 규칙이므로 API 응답에 별도 필드를 두지 않는다. 클라이언트는 `markdownBody`에 포함된 병기를 그대로 렌더링한다.
 
 ## 3. 인증과 계정
 
@@ -377,7 +461,11 @@ MVP에서는 동일 사용자 소유 도서관만 연결할 수 있다.
 GET /sources?type=WEB&libraryId=<uuid>&q=consensus&limit=20
 ```
 
-원본 내용 수정 API는 제공하지 않는다. 같은 URL 재클리핑이나 새 파일 업로드는 `source_versions`를 추가한다.
+원본 내용 수정 API는 제공하지 않는다(FR-SRC-06). 같은 URL 재클리핑이나 새 파일 업로드는 `source_versions`를 추가한다.
+
+원본 응답에는 `detectedLanguage`(BCP 47)를 포함한다. 이 값은 발췌문 표기와 Ingest 프롬프트 구성에 쓰이며, **위키 생성 언어를 바꾸지 않는다**(FR-UIX-12). 원본 `title`은 원문 제목을 보존한다.
+
+`DELETE /sources/{sourceId}`는 참조 중인 원본에 대해 `409`와 참조하는 도서관 목록을 반환한다(FR-SRC-08).
 
 ### 5.2 파일 업로드
 
@@ -648,12 +736,15 @@ GET /libraries/{libraryId}/pages?type=CONCEPT&status=PUBLISHED&topic=consensus&q
           "page": 2,
           "section": "2"
         },
-        "excerpt": "..."
+        "excerpt": "Raft separates leader election from log replication.",
+        "excerptLanguage": "en"
       }
     ]
   }
 }
 ```
+
+`statement`는 한국어로 생성된 주장이고 `excerpt`는 **원본 언어 그대로**인 발췌다(FR-UIX-12·13). 두 값의 언어가 다른 것은 정상이며, 클라이언트는 `excerptLanguage`로 원문 표기를 구분한다. `excerpt` 최대 길이는 `UD-07 미확정`, 저작권상 허용 범위는 `UD-14 미확정`이다.
 
 ### 7.3 관계와 모순
 
@@ -693,6 +784,21 @@ GET /libraries/{libraryId}/relations?pageId=<uuid>&status=ACCEPTED&since=2026-07
 }
 ```
 
+`feedbackType` enum은 요구사항 FR-FBK-01의 6종과 대응한다.
+
+```text
+feedbackType: DIFFERENT_TOPIC | NOT_CAUSAL | WEAK_SOURCE | IRRELEVANT | DUPLICATE_CONCEPT | OTHER
+```
+
+`scope`는 FR-FBK-02·03을 표현한다.
+
+| `scope` | 적용 범위 | 기본값 |
+| --- | --- | --- |
+| `LIBRARY` | 현재 도서관의 운영 헌법과 이후 AI 판단에만 반영 | **기본값** |
+| `ALL_LIBRARIES` | 사용자의 모든 도서관에 공통 선호로 적용 | 사용자가 명시적으로 선택할 때만 |
+
+`scope`를 생략하면 `LIBRARY`다. 서버가 사용자 동의 없이 `ALL_LIBRARIES`로 확대하지 않는다(FR-FBK-02).
+
 ## 8. 변경 검토와 버전
 
 ### 8.1 변경 세트
@@ -711,6 +817,30 @@ GET /libraries/{libraryId}/relations?pageId=<uuid>&status=ACCEPTED&since=2026-07
 ```text
 GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
 ```
+
+변경 세트 응답은 낙관적 잠금을 위해 `revision`을 포함한다(2.6절, ERD 4.6절 `change_sets.revision`). 클라이언트는 이 값을 검토·적용 요청의 `expectedRevision`·`expectedChangeSetRevision`에 그대로 넣는다.
+
+```json
+{
+  "data": {
+    "id": "b63466af-62f3-477a-8258-e2aa23044c9c",
+    "libraryId": "cc9be2b2-acde-4554-b3fd-2599d3f2ad18",
+    "status": "READY_FOR_REVIEW",
+    "riskLevel": "HIGH",
+    "summary": "Raft 자료 20건 Ingest 결과",
+    "baseLibraryVersionNo": 12,
+    "counts": {
+      "total": 34,
+      "safe": 28,
+      "review": 4,
+      "high": 2
+    },
+    "revision": 4
+  }
+}
+```
+
+`revision`을 노출하는 리소스는 `libraries`, `change_sets`, 그리고 현재 버전을 직접 수정하는 운영 헌법이다. 조회 응답에서 받은 값을 그대로 되돌려 보내지 않으면 `409 VERSION_CONFLICT`가 발생한다.
 
 검토 요청:
 
@@ -731,10 +861,26 @@ GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
       "changeItemId": "d626b320-c8b2-4690-bd98-97ef364df65a",
       "decision": "DEFER",
       "comment": "추가 원본을 확인한 뒤 결정합니다."
+    },
+    {
+      "changeItemId": "5a1c8e77-3b90-4a2e-9f11-0c6d84b2f5aa",
+      "decision": "REQUEST_CHANGES",
+      "comment": "결론은 맞지만 근거를 원 논문으로 교체해 다시 제안해주세요."
     }
   ]
 }
 ```
+
+`decision` enum은 요구사항 FR-CHG-05의 4종과 일대일 대응한다.
+
+| 요구사항 (FR-CHG-05) | `decision` | 서버 동작 |
+| --- | --- | --- |
+| 승인 | `APPROVE` | 적용 대상에 포함 |
+| 거절 | `REJECT` | 적용하지 않고 종결. 거절 사유는 운영 헌법 학습에 반영 (FR-FBK-04) |
+| 수정 요청 | `REQUEST_CHANGES` | 적용하지 않고 항목을 재생성 대상으로 표시. `comment`가 재생성 입력이 된다 |
+| 판단 보류 | `DEFER` | 적용하지 않고 검토 대기로 유지. 변경 세트는 미완결 상태로 남는다 |
+
+`REQUEST_CHANGES`가 하나라도 있으면 변경 세트는 `apply` 후에도 완결되지 않고 재생성 결과를 기다린다. `comment`는 `REQUEST_CHANGES`와 `REJECT`에서 필수다.
 
 안전한 항목 일괄 승인:
 
@@ -949,7 +1095,28 @@ GET /libraries/{libraryId}/search?q=raft+leader+election&types=PAGE,CLAIM,SOURCE
 }
 ```
 
-대량 Ingest 후 전체 Lint는 서버가 자동 생성한다. 월간 Lint는 스케줄러가 생성하며 중복 실행을 막는다.
+`checks`를 생략하면 전체 검사를 실행한다. enum은 요구사항 FR-LNT-05의 12종과 일대일 대응한다.
+
+| 요구사항 검사 항목 (기획서 13절) | `checks` 값 |
+| --- | --- |
+| 깨진 연결 | `BROKEN_LINK` |
+| 고아 페이지 | `ORPHAN_PAGE` |
+| 중복 개념 | `DUPLICATE_CONCEPT` |
+| 상호 참조 누락 | `MISSING_BACKLINK` |
+| 출처 없는 주요 주장 | `MISSING_EVIDENCE` |
+| 출처 간 모순 | `CONTRADICTION` |
+| 최신 자료에 의해 낡은 주장 | `STALE_CLAIM` |
+| 낮은 신뢰도의 핵심 주장 | `LOW_CONFIDENCE_CORE_CLAIM` |
+| 도서관 목적과 무관한 연결 | `OFF_PURPOSE_RELATION` |
+| 운영 헌법과 실제 구조의 불일치 | `CONSTITUTION_DRIFT` |
+| 포크 원본의 새 버전과 반영 필요성 | `FORK_SOURCE_UPDATED` |
+| 지식 흐름상 중요한 공백 | `KNOWLEDGE_GAP` |
+
+`FORK_SOURCE_UPDATED`는 Phase 3 이후에만 결과를 생성한다.
+
+대량 Ingest 후 전체 Lint는 서버가 자동 생성한다(FR-LNT-01). 월간 Lint는 스케줄러가 생성하며 중복 실행을 막는다(FR-LNT-02). **월간 Lint의 실행 시각·타임존 기준과 대상 선정 방식은 `UD-21 미확정`이다.** 확정 전에는 스케줄 조회·변경 API를 계약으로 고정하지 않는다.
+
+Lint가 제안하는 웹 검색과 보완 Ingest는 **사용자 승인 후에만** 실행한다(FR-LNT-07). `lint-findings/{findingId}/change-proposal`은 변경 세트만 만들고 외부 호출을 하지 않는다.
 
 ## 11. 알림과 활동
 
@@ -1102,6 +1269,11 @@ Phase 3 API다.
 10. 공개와 위험 변경에는 행위자, 시각, 대상, 결과를 감사 로그로 남긴다.
 11. 오류 응답과 로그에 원본 본문, 토큰, 서명 URL을 포함하지 않는다.
 12. 사용량 차감과 변경 적용은 DB 트랜잭션 및 멱등성 키로 중복 실행을 방지한다.
+13. **원본 중복 후보 탐색은 사용자 계정 내부로 한정한다.** 사용자 간 콘텐츠 해시 비교나 중복 제거를 하지 않는다. 저장 비용 절감을 이유로도 허용하지 않는다. (FR-SRC-05, 기획서 6.1절)
+14. **검색과 확장 검색은 `library_references`에 등록된 범위를 넘지 않는다.** 사용자 승인 없이 참조 도서관으로 자동 확장하지 않는다. (FR-LIB-07, FR-ASK-07, NFR-SEC-03)
+15. 공개 페이지 응답에는 비공개 도서관의 페이지 ID·원본 ID·내부 버전 번호를 포함하지 않는다. (NFR-SEC-01) `[파생]`
+
+이 절은 요구사항 정의서 6.1절(NFR-SEC-01~10)의 API 계층 구현 기준이다. 두 문서가 충돌하면 요구사항 정의서가 우선한다.
 
 ## 16. OpenAPI 구현 기준
 
@@ -1154,13 +1326,60 @@ enum은 문자열로 노출하며 서버 내부 Java enum 이름과 API 값을 �
 
 ## 18. 구현 전에 확정할 계약
 
-1. 파일당·ZIP당·Import당 최대 크기와 문서 수
-2. Access Token과 Refresh Token의 수명
-3. Free·Basic·Advanced 처리량 단위
-4. AI 메시지 polling 간격과 최대 생성 시간
-5. 페이지 diff 표현을 unified diff로 할지 구조화 블록 diff로 할지
-6. 사용자 직접 편집 중 오탈자 같은 안전 변경을 자동 적용할지 항상 변경 세트를 만들지
-7. 검색 결과에서 원본 발췌문을 노출하는 최대 길이
-8. 공개 URL slug 충돌과 변경 정책
-9. OpenAPI에 포함할 관리자·운영 API의 별도 분리 여부
-10. Notion OAuth와 결제 공급자 선정
+정본은 `docs/ZeroWiki-요구사항-정의서.md` 12절이다. 아래는 그중 API 계약에 직접 영향을 주는 항목이며, **UD 번호가 문서 간 공통 식별자**다. 어떤 에이전트도 단독 확정할 수 없다(헌법 제3조).
+
+| UD | 확정할 계약 | 영향받는 절 | 결정 주체 |
+| --- | --- | --- | --- |
+| `UD-01` | 파일당·ZIP당·Import당 최대 크기와 문서 수 | 5.2, `413` 응답 | 사용자 |
+| `UD-02` | Access Token과 Refresh Token의 수명 | 2.1, 3.1 | 사용자 |
+| `UD-03` | Free·Basic·Advanced 처리량 단위 | 12 | 사용자 |
+| `UD-04` | AI 메시지 polling 간격과 최대 생성 시간 | 2.7, 9.2 | 기술 |
+| `UD-05` | 페이지 diff 표현 (unified diff vs 구조화 블록 diff) | 7.1, 8.1 | 기술 |
+| `UD-06` | 사용자 직접 편집 중 안전 변경의 자동 적용 여부 | 7.1 | 사용자 |
+| `UD-07` | 검색 결과 원본 발췌문 최대 길이 | 9.1, 7.2 | 사용자 |
+| `UD-08` | 공개 URL slug 충돌과 변경 정책 | 14.1 | 기술 |
+| `UD-09` | 관리자·운영 API의 OpenAPI 분리 여부 | 16 | 기술 |
+| `UD-10` | Notion OAuth와 결제 공급자 선정 | 6.2, 12 | 사용자 |
+| `UD-21` | 월간 Lint 실행 시각·타임존 기준과 대상 선정 | 10 | 기술 |
+| `UD-23` | 알림 보존 기간과 읽음 처리 정책 | 11 | 기술 |
+
+ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26`)은 요구사항 정의서 12절을 본다.
+
+**확정된 항목 (2026-07-29 사용자 결정):**
+
+| UD | 확정 내용 | 반영 위치 |
+| --- | --- | --- |
+| `UD-24` | 위키 본문은 원본 언어와 무관하게 한국어로 종합 | 1절 원칙 10·11번, 2.8절 |
+| `UD-27` | 전문 용어는 초회 등장 1회 병기, 정의·핵심 주장에는 유지 | 2.8절 |
+
+## 19. 요구사항 추적
+
+각 절이 근거로 삼는 요구사항이다. 요구사항 정의서 13.2절의 역방향 매핑에 해당한다.
+
+| API 절 | 근거 요구사항 |
+| --- | --- |
+| 2.1, 3 | FR-ACC-01~04 |
+| 2.5, 2.6 | FR-CHG-13, FR-ING-24, NFR-OPS-03 |
+| 2.7 | FR-ING-20, FR-ING-25 |
+| 2.8 | FR-ING-13, FR-KNW-06, FR-UIX-12·13 |
+| 4.1 | FR-LIB-01~03, FR-LIB-08~10, FR-UIX-02 |
+| 4.2 | FR-LIB-11~14 |
+| 4.3 | FR-LIB-04·05, NFR-SEC-03 |
+| 5.1 | FR-SRC-01~08 |
+| 5.2 | FR-INP-02·10~12, NFR-SEC-04 |
+| 5.3 | FR-INP-04~09·13 |
+| 6.1 | FR-ING-01~09, FR-ING-19~25 |
+| 6.2 | FR-INP-03 |
+| 7.1 | FR-KNW-03, FR-CHG-06·09·11 |
+| 7.2 | FR-KNW-05~07·09, FR-UIX-13 |
+| 7.3 | FR-KNW-08·10·12, FR-FBK-01~04 |
+| 8 | FR-CHG-01~05·08·10 |
+| 9.1 | FR-SCH-01~05, FR-LIB-06·07 |
+| 9.2 | FR-ASK-01~11 |
+| 10 | FR-LNT-01~07 |
+| 11 | FR-NTF-01~04, FR-ACC-08 |
+| 12 | FR-BIL-01~09 |
+| 13 | FR-EXP-01·02·05 |
+| 14 | FR-PUB-01~17 |
+| 15 | NFR-SEC-01~10 |
+| 17 | 9절 Phase 정의 |
