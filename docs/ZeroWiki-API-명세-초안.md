@@ -200,7 +200,21 @@ If-Match: "7"
 - `PURCHASE_QUOTA`
 - `RETRY_FAILED_ITEMS`
 
-MVP 웹 클라이언트는 polling을 기본으로 한다. 작업 조회 시 `Retry-After`를 반환할 수 있다. 추후 SSE를 추가한다. polling 간격과 최대 생성 시간은 `UD-04 미확정`이다.
+MVP 웹 클라이언트는 polling을 기본으로 한다. 추후 SSE를 추가한다.
+
+**polling 간격 (UD-04 확정, 2026-07-29)**
+
+서버가 작업 조회 응답에 `Retry-After`(초)를 반환하고 **클라이언트는 이를 우선한다.** 헤더가 없을 때만 아래 기본값을 쓴다.
+
+| 작업 | 기본 간격 | 근거 |
+| --- | --- | --- |
+| Ingest | 2초 | 단계 전이가 잦고 사용자 입력 대기 상태(`PLAN_REVIEW`·`QUESTION_WAITING`)를 빨리 감지해야 한다 |
+| AI 답변 | 1초 | 사용자가 화면 앞에서 기다린다 |
+| Lint·Export | 5초 | 중간 입력이 없고 진행도 표시로 충분하다 |
+
+서버가 간격을 지시하는 방식을 택한 이유는 부하에 따라 조절할 수 있기 때문이다. 클라이언트 고정 간격만 쓰면 사용자가 늘었을 때 polling이 부하를 키운다.
+
+**최대 생성 시간은 `UD-25`(성능 목표)에 종속되며 Phase 0 벤치마크 후 정한다.** 그전까지 서버는 초과 시 작업을 `FAILED`로 종결하고 재시도 가능하게 둔다.
 
 `status`는 요구사항 FR-ING-20의 작업 상태 8종과 다음과 같이 대응한다. 이 매핑 밖의 상태 값을 추가하지 않는다.
 
@@ -370,15 +384,47 @@ knowledgeStatus: VERIFIED_FACT | SOURCE_CLAIM | AI_SYNTHESIS | USER_JUDGMENT | H
 }
 ```
 
-`GET /libraries/{libraryId}`는 홈 화면을 위해 다음 요약을 포함할 수 있다.
+`GET /libraries/{libraryId}`는 도서관 홈(FR-UIX-02)을 위해 다음 요약을 **항상 포함한다.** 값이 없으면 필드를 생략하지 않고 빈 배열 또는 `null`을 반환한다. 선택적 필드로 두면 클라이언트가 매번 존재 여부를 확인해야 하고 누락과 빈 상태를 구별할 수 없다.
 
-- 주요 주제
-- 최근 발견한 연결
-- 열린 질문과 지식 공백
-- 모순과 검토 대기 변경 수
-- 최근 활동
+```json
+{
+  "data": {
+    "id": "cc9be2b2-acde-4554-b3fd-2599d3f2ad18",
+    "name": "분산 시스템 학습",
+    "home": {
+      "topics": [],
+      "recentRelations": [],
+      "openQuestions": [],
+      "knowledgeGaps": [],
+      "openContradictionCount": 0,
+      "pendingChangeSetCount": 0,
+      "recentActivities": []
+    }
+  }
+}
+```
 
-상세 목록은 각각의 전용 API로 조회한다.
+| 필드 | 빈 값 | 대응 요구사항 |
+| --- | --- | --- |
+| `topics` | `[]` | FR-UIX-02 주요 주제. 항목은 `{ name, pageCount }` |
+| `recentRelations` | `[]` | FR-UIX-02 최근 발견 연결 |
+| `openQuestions` | `[]` | FR-UIX-02 열린 질문 |
+| `knowledgeGaps` | `[]` | FR-UIX-02 지식 공백 |
+| `openContradictionCount` | `0` | FR-UIX-02 모순 수 |
+| `pendingChangeSetCount` | `0` | FR-UIX-02 검토 대기 변경 수 |
+| `recentActivities` | `[]` | FR-UIX-02 최근 활동 |
+
+각 배열의 기본 길이는 홈 화면 표시에 필요한 만큼으로 제한하며, 상세 목록은 전용 API로 조회한다.
+
+주제 항목은 이름과 페이지 수만 담는다.
+
+```json
+{ "name": "합의 알고리즘", "pageCount": 12 }
+```
+
+주제에 속한 페이지 목록은 홈 응답에 넣지 않는다. 사용자가 주제를 선택하면 `GET /libraries/{libraryId}/pages?topic=합의%20알고리즘`으로 조회한다. 홈 응답에 주제별 페이지를 미리 담으면 응답이 커지는데, 사용자는 대개 한두 주제만 열어본다.
+
+**`topics`의 산출 기준은 아직 확정되지 않았다(`UD-28`).** 기획서 16절은 "AI가 도서관의 콘텐츠를 분석해 관계도가 높은 주제를 자동 선정한다"고 방향을 정했으나, 관계도를 무엇으로 측정하는지(관계 수·중심성·임베딩 클러스터 크기), 몇 개를 표시하는지, 언제 재계산하는지가 미정이다. 확정 전에는 빈 배열을 반환해도 계약 위반이 아니다.
 
 ### 4.2 운영 헌법
 
@@ -624,6 +670,27 @@ GET /sources?type=WEB&libraryId=<uuid>&q=consensus&limit=20
 
 처리가 끝나면 작업은 `CHANGE_REVIEW`가 되고 `changeSetId`를 반환한다. 승인된 변경 적용과 후속 전체 Lint가 완료되면 최종 `COMPLETED`가 된다.
 
+#### 상태 전이표
+
+클라이언트가 다음 화면을 결정할 수 있도록 전이를 명시한다. 표에 없는 전이는 `400 INVALID_STATE_TRANSITION`이다.
+
+| 현재 | 트리거 | 다음 | 클라이언트 동작 |
+| --- | --- | --- | --- |
+| — | `POST /ingest-jobs` | `SCANNING` | `202`. polling 시작 |
+| `SCANNING` | 스캔 완료 | `PLAN_REVIEW` | 계획·비용 표시, 승인 요청 |
+| `PLAN_REVIEW` | `POST /plan-approval` (`APPROVE`) | `PROCESSING` | `202`. polling 유지 |
+| `PLAN_REVIEW` | `POST /plan-approval` (`REJECT`) | `CANCELLED` | 종료 |
+| `PROCESSING` | 맥락 불분명 항목 발생 | `QUESTION_WAITING` | 질문 표시 (FR-ING-05) |
+| `QUESTION_WAITING` | `POST /answers` | `PROCESSING` | polling 유지 |
+| `PROCESSING` | 처리 완료 | `CHANGE_REVIEW` | `changeSetId`로 검토 화면 이동 |
+| `CHANGE_REVIEW` | 변경 세트 `apply` 및 후속 Lint 완료 | `COMPLETED` | 종료 |
+| 임의 진행 상태 | 처리량 소진 | `PAUSED_QUOTA` | 구매 안내. **`FAILED` 아님** |
+| `PAUSED_QUOTA` | 처리량 구매 | 중단 시점 상태 | polling 재개 |
+| 임의 진행 상태 | `POST /cancel` | `CANCELLED` | 종료 |
+| 임의 진행 상태 | 복구 불가 오류 | `FAILED` | `POST /retry`로 실패 항목만 재시도 |
+
+`QUESTION_WAITING`은 **작업 전체를 멈추지 않는다.** 맥락이 불분명한 항목만 보류하고 나머지는 계속 처리한다(FR-ING-05). 따라서 `QUESTION_WAITING` 상태에서도 `progress.completed`가 증가할 수 있다.
+
 ### 6.2 Notion Import
 
 Phase 2에서 다음 책임으로 추가한다.
@@ -649,7 +716,7 @@ Phase 2에서 다음 책임으로 추가한다.
 | `GET` | `/libraries/{libraryId}/pages/by-slug/{slug}` | slug로 조회 |
 | `GET` | `/libraries/{libraryId}/pages/{pageId}/versions` | 페이지 이력 |
 | `GET` | `/libraries/{libraryId}/pages/{pageId}/versions/{versionNo}` | 특정 버전 |
-| `GET` | `/libraries/{libraryId}/pages/{pageId}/diff` | 두 버전 비교 |
+| `GET` | `/libraries/{libraryId}/pages/{pageId}/diff` | 두 버전 비교 (스냅샷 반환) |
 | `POST` | `/libraries/{libraryId}/pages/{pageId}/edit-proposals` | 사용자 본문 수정 변경 세트 생성 |
 | `POST` | `/libraries/{libraryId}/pages/{pageId}/archive` | 보관 변경 세트 생성 |
 
@@ -669,6 +736,7 @@ GET /libraries/{libraryId}/pages?type=CONCEPT&status=PUBLISHED&topic=consensus&q
     "slug": "raft-consensus",
     "pageType": "CONCEPT",
     "status": "PUBLISHED",
+    "topics": ["합의 알고리즘", "분산 시스템"],
     "version": {
       "id": "b3524f0d-884b-44eb-844b-a9344c68bc57",
       "versionNo": 3,
@@ -706,13 +774,44 @@ GET /libraries/{libraryId}/pages?type=CONCEPT&status=PUBLISHED&topic=consensus&q
 
 응답은 즉시 새 페이지 버전이 아니라 `201`과 `changeSetId`를 반환한다.
 
+#### diff 표현 (UD-05 확정, 2026-07-29)
+
+**Phase 1은 서버가 스냅샷을 반환하고 클라이언트가 diff를 계산한다.**
+
+```text
+GET /libraries/{libraryId}/pages/{pageId}/diff?from=2&to=3
+```
+
+```json
+{
+  "data": {
+    "from": { "versionNo": 2, "title": "...", "markdownBody": "..." },
+    "to":   { "versionNo": 3, "title": "...", "markdownBody": "..." }
+  }
+}
+```
+
+**Phase 2에서 서버가 구조화 블록 diff를 추가한다.** 응답에 `structuredDiff` 필드를 더하는 하위 호환 변경이며, 블록 단위(`HEADING`·`PARAGRAPH`·`LIST` 등)로 `UNCHANGED`·`CHANGED`·`ADDED`·`REMOVED` 상태를 표시한다.
+
+Phase 1에서 unified diff를 서버가 생성하지 않는 이유는, 라인 단위 문자열 diff가 Markdown 구조를 감춰 **작은 변경을 문단 전체 교체처럼 보이게 하기 때문**이다. 전문 용어 병기 하나가 바뀌어도 문단 전체가 변경으로 표시되면(FR-UIX-14) 사용자가 변경의 중요도를 오판한다. 그렇다고 Phase 1부터 서버 구조화 diff를 만들면 Markdown 파싱 계층이 먼저 필요해 개인 도서관 코어 검증이 늦어진다. 따라서 Phase 1은 클라이언트 계산으로 두고, 구조화 diff는 Phase 2에서 서버가 제공한다.
+
+블록별 선택 승인은 MVP 범위가 아니다. 승인 단위는 변경 항목(`changeItem`)이다.
+
 ### 7.2 주장과 근거
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| `GET` | `/libraries/{libraryId}/pages/{pageId}/claims` | 현재 페이지 주장 목록 |
+| `GET` | `/libraries/{libraryId}/pages/{pageId}/claims` | 현재 페이지 주장 목록. `?include=evidences`로 근거 동봉 |
 | `GET` | `/libraries/{libraryId}/claims/{claimId}` | 주장과 상태 |
 | `GET` | `/libraries/{libraryId}/claims/{claimId}/evidences` | 근거 목록 |
+
+**근거 보기(FR-ASK-04)는 페이지의 여러 주장에 대한 근거를 한 번에 필요로 한다.** 주장마다 `/claims/{claimId}/evidences`를 호출하면 N+1이 발생하므로, 목록 엔드포인트에 `include`를 지원한다.
+
+```text
+GET /libraries/{libraryId}/pages/{pageId}/claims?include=evidences
+```
+
+응답의 각 주장에 `evidences` 배열이 동봉된다. `include`를 생략하면 주장만 반환하고 `evidenceCount`만 포함한다. 동봉 시 주장당 근거 수가 많으면 서버가 상한을 적용하고 `evidenceTruncated: true`를 표시한다. 전체가 필요하면 개별 엔드포인트를 쓴다.
 | `POST` | `/libraries/{libraryId}/claims/{claimId}/status-proposals` | 주장 상태 수정 제안 |
 | `POST` | `/libraries/{libraryId}/sources/{sourceId}/trust-proposals` | 출처 신뢰도 수정 제안 |
 
@@ -956,6 +1055,24 @@ GET /libraries/{libraryId}/search?q=raft+leader+election&types=PAGE,CLAIM,SOURCE
 
 응답 결과에는 `resultType`, `title`, `snippet`, `score`, `pageId` 또는 `sourceId`, 근거 위치를 포함한다.
 
+각 결과에는 **출처 도서관을 나타내는 `origin`을 포함한다.**
+
+```json
+{
+  "resultType": "PAGE",
+  "title": "Raft 합의 알고리즘",
+  "origin": {
+    "scope": "CURRENT",
+    "libraryId": "cc9be2b2-acde-4554-b3fd-2599d3f2ad18",
+    "libraryName": "분산 시스템 학습"
+  }
+}
+```
+
+`scope`는 `CURRENT` 또는 `REFERENCED`다. 확장 검색 결과에서 현재 도서관과 참조 도서관의 결과가 섞이면 사용자가 지식의 출처를 오인한다. 이는 단순한 UX 문제가 아니라 **도서관 경계 인식의 문제**이며(FR-LIB-04·05, NFR-SEC-03), 클라이언트는 `REFERENCED` 결과를 시각적으로 구분해 표시해야 한다.
+
+`snippet`의 최대 길이는 `UD-07 미확정`이다.
+
 연결 도서관 확장은 반드시 별도 사용자 명령으로 수행한다.
 
 ```json
@@ -1127,6 +1244,7 @@ Lint가 제안하는 웹 검색과 보완 Ingest는 **사용자 승인 후에만
 | `POST` | `/notifications/{notificationId}/read` | 읽음 |
 | `POST` | `/notifications/read-all` | 모두 읽음 |
 | `GET` | `/libraries/{libraryId}/activities` | Import·변경·발행 등 최근 활동 |
+| `GET` | `/libraries/{libraryId}/activities/summary` | 기간별 활동 집계 (활동 잔디용) |
 
 알림 유형:
 
@@ -1137,7 +1255,26 @@ Lint가 제안하는 웹 검색과 보완 Ingest는 **사용자 승인 후에만
 - `ACCOUNT_PURGE_REMINDER`
 - `QUOTA_REQUIRED`
 
-단순 Import 완료는 기본적으로 활동에만 기록한다.
+단순 Import 완료는 기본적으로 활동에만 기록한다(FR-NTF-03). `QUOTA_REQUIRED`는 처리량 부족으로 작업이 보류됐을 때 발송한다(FR-NTF-05, 2026-07-29 사용자 승인으로 기획서 17절에 추가됨).
+
+활동 집계는 활동 잔디(FR-UIX-06, Phase 4)를 위한 것이다.
+
+```text
+GET /libraries/{libraryId}/activities/summary?from=2026-01-01&to=2026-12-31&granularity=DAY
+```
+
+```json
+{
+  "data": {
+    "granularity": "DAY",
+    "buckets": [
+      { "date": "2026-07-29", "count": 12 }
+    ]
+  }
+}
+```
+
+`granularity`는 `DAY` 또는 `WEEK`다. 활동이 없는 구간은 배열에서 생략하며, 클라이언트가 빈 칸으로 렌더링한다. 알림 보존 기간과 읽음 처리 정책은 `UD-23 미확정`이다.
 
 ## 12. 사용량과 과금
 
@@ -1333,8 +1470,7 @@ enum은 문자열로 노출하며 서버 내부 Java enum 이름과 API 값을 �
 | `UD-01` | 파일당·ZIP당·Import당 최대 크기와 문서 수 | 5.2, `413` 응답 | 사용자 |
 | `UD-02` | Access Token과 Refresh Token의 수명 | 2.1, 3.1 | 사용자 |
 | `UD-03` | Free·Basic·Advanced 처리량 단위 | 12 | 사용자 |
-| `UD-04` | AI 메시지 polling 간격과 최대 생성 시간 | 2.7, 9.2 | 기술 |
-| `UD-05` | 페이지 diff 표현 (unified diff vs 구조화 블록 diff) | 7.1, 8.1 | 기술 |
+| `UD-28` | 도서관 홈 `topics`의 산출 기준 | 4.1 | 기획(pm) |
 | `UD-06` | 사용자 직접 편집 중 안전 변경의 자동 적용 여부 | 7.1 | 사용자 |
 | `UD-07` | 검색 결과 원본 발췌문 최대 길이 | 9.1, 7.2 | 사용자 |
 | `UD-08` | 공개 URL slug 충돌과 변경 정책 | 14.1 | 기술 |
@@ -1347,10 +1483,14 @@ ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26
 
 **확정된 항목 (2026-07-29 사용자 결정):**
 
-| UD | 확정 내용 | 반영 위치 |
-| --- | --- | --- |
-| `UD-24` | 위키 본문은 원본 언어와 무관하게 한국어로 종합 | 1절 원칙 10·11번, 2.8절 |
-| `UD-27` | 전문 용어는 초회 등장 1회 병기, 정의·핵심 주장에는 유지 | 2.8절 |
+| UD | 확정 내용 | 결정 주체 | 반영 위치 |
+| --- | --- | --- | --- |
+| `UD-24` | 위키 본문은 원본 언어와 무관하게 한국어로 종합 | 사용자 | 1절 원칙 10·11번, 2.8절 |
+| `UD-27` | 전문 용어는 초회 등장 1회 병기, 정의·핵심 주장에는 유지 | 사용자 | 2.8절 |
+| `UD-04` | `Retry-After` 우선 + 클라이언트 기본값(Ingest 2초 / AI 답변 1초 / Lint·Export 5초). 최대 생성 시간은 `UD-25`에 종속 | 기술(리더) | 2.7절 |
+| `UD-05` | Phase 1은 스냅샷 반환 + 클라이언트 계산, Phase 2에 서버 구조화 블록 diff 추가 | 기술(리더) | 7.1절 |
+
+`UD-04`·`UD-05`는 frontend 권고(2026-07-29)를 근거로 리더가 확정했다. 두 항목은 요구사항 정의서 12.1절에서 결정 주체가 **기술**이므로 사용자 결정을 기다리지 않는다.
 
 ## 19. 요구사항 추적
 
@@ -1368,18 +1508,18 @@ ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26
 | 5.1 | FR-SRC-01~08 |
 | 5.2 | FR-INP-02·10~12, NFR-SEC-04 |
 | 5.3 | FR-INP-04~09·13 |
-| 6.1 | FR-ING-01~09, FR-ING-19~25 |
+| 6.1 | FR-ING-01~09, FR-ING-19~26 |
 | 6.2 | FR-INP-03 |
 | 7.1 | FR-KNW-03, FR-CHG-06·09·11 |
 | 7.2 | FR-KNW-05~07·09, FR-UIX-13 |
 | 7.3 | FR-KNW-08·10·12, FR-FBK-01~04 |
 | 8 | FR-CHG-01~05·08·10 |
-| 9.1 | FR-SCH-01~05, FR-LIB-06·07 |
+| 9.1 | FR-SCH-01~05, FR-LIB-06·07, NFR-SEC-03 |
 | 9.2 | FR-ASK-01~11 |
 | 10 | FR-LNT-01~07 |
-| 11 | FR-NTF-01~04, FR-ACC-08 |
+| 11 | FR-NTF-01~05, FR-ACC-08, FR-UIX-06 |
 | 12 | FR-BIL-01~09 |
 | 13 | FR-EXP-01·02·05 |
 | 14 | FR-PUB-01~17 |
-| 15 | NFR-SEC-01~10 |
+| 15 | NFR-SEC-01~10 (13·14·15번은 FR-SRC-05, FR-LIB-07·FR-ASK-07, NFR-SEC-01에 각각 대응) |
 | 17 | 9절 Phase 정의 |

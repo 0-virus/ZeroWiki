@@ -98,7 +98,69 @@ BLOCKER 없음. 모든 불일치는 ERD 업데이트로 해결 가능.
 - **기술 결정 대기 (UD-12, 13, 15, 16, 18)**: Claim 복제 정책·도서관 버전 과거 조회·헌법 JSON Schema·관계 유형·Notion ID
 - **벤치마크 대기 (UD-11, 17)**: Claim 세밀도·임베딩 모델·차원 — Phase 0 실행 후 확정
 - **사용자 결정 대기 (UD-14, 19, 20, 21, 22, 23)**: 원본 발췌 범위·처리량 표시·감사 로그 보존·Lint 스케줄·신고 처리·알림 보존
-- **API 명세 조정**: revision 필드·멱등성 키 저장 메커니즘 API 명세에 반영 필요
+- **API 명세 조정**: revision 필드·멱등성 키·도서관 홈 응답·배치 근거 조회·활동 집계·검색 확장·상태 전이 명확화 (리더 진행 중)
+
+---
+
+## 2026-07-29 — frontend 갭 재검토: API 명세 6건 수정 요청
+
+**한 일**
+
+- frontend가 요구사항 정의서 v0.2·API 명세 v0.2 반영 후 갭 재검토 → backend 영향 6건 공지
+- 영향도 분석 및 리더에게 API 명세 수정 요청
+
+**API 명세 수정 요청 (MAJOR 3건 + MINOR 3건)**
+
+| 갭 # | 심각도 | API 절 | 요청 사항 | 근거 |
+| --- | --- | --- | --- | --- |
+| 2 | MAJOR | 4.1 | 도서관 홈 응답 필드 null/빈배열 명시 | FR-UIX-02 |
+| 4 | MINOR | 7.1 | 페이지 `topics[]` 필드 추가 | FR-UIX-03 |
+| 5 | MAJOR | 7.2 | 배치 근거 조회 엔드포인트 신규 (`GET /pages/{pageId}/evidences?claimIds=...`) | FR-KNW-09, N+1 문제 |
+| 6 | MINOR | 11 | 활동 집계 엔드포인트 신규 (`GET /activities/summary?granularity=DAY`) | FR-UIX-06 |
+| 11 | MINOR | 9.1 | 검색 확장 응답에 `source` 필드 (CURRENT\|REFERENCED) | FR-ASK-07 |
+| 12 | MAJOR | 6.1 | Ingest 상태 전이 명확화 (PLAN_REVIEW 승인 후 PROCESSING) | FR-ING-04·05, FR-ING-26 |
+
+**backend 영향 및 대응**
+
+- 갭 #2, 5, 12 (MAJOR): API 명세 확정 후 ERD·DB 스키마 재검토 필요
+- 갭 #4, 6, 11 (MINOR): API 확정 후 구현 시 반영
+- **갭 #12 특이사항**: 본 backend이 요구사항 정의서 3절에서 이미 명확화한 상태 머신(FR-ING-20, FR-ING-26)과 frontend 갭이 일치 → API 명세만 반영하면 정합성 완성
+
+**산출물**
+
+- `docs/검증-프론트엔드-화면-API-갭.md` (frontend 작성, 참조)
+
+**미해결**
+
+- 리더의 API 명세 6건 수정 진행 중
+
+---
+
+## 2026-07-29 — ingest_jobs 상태 enum 수정 + 도서관 홈 스키마 설계
+
+**한 일**
+
+1. **QA 확인 요청 반영** — ingest_jobs.status enum 전체 개정
+   - QUESTION_WAITING → QUESTION_REVIEW (API 2.7절 표와 일치)
+   - 정상 흐름 8종 + 운영 상태 2종(PAUSED_QUOTA, CANCELLED) 명시
+   - PAUSED_QUOTA vs FAILED 구별 명확화 (재개 가능 vs 종결)
+   - 근거: FR-ING-20·26, API 2.7절, FR-ING-24 멱등성
+
+2. **frontend 갭 #2+#3 통합** — 도서관 홈 API 설계
+   - pm의 기획서 16절 주요 주제 추가에 대응
+   - `GET /libraries/{libraryId}` 응답에 `topicSummary` 필드 추가 제안
+   - 필드 구성: topics[], name, pageCount, pages(상위 5), lastUpdatedAt
+   - 필드 누락 대신 null/빈배열로 명시적 반환 (갭 #2 해결)
+   - 리더에게 API 명세 4.1절 수정 요청
+
+**산출물**
+
+- ERD 4.4절 ingest_jobs 상태 명명 및 구조 완성
+- API 명세 4.1절 도서관 홈 응답 설계 제안 (리더 검토 대기)
+
+**미해결**
+
+- 리더의 API 명세 수정 진행 중 (총 7건: 원래 6건 + 도서관 홈 1건)
 
 ---
 

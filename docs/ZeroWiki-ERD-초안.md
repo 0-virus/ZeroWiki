@@ -283,28 +283,27 @@ erDiagram
 | `started_at` | timestamptz | 시작 시각 |
 | `completed_at` | timestamptz | 종료 시각 |
 
-상태 (FR-ING-20 8종, 요구사항 정의서 5.5.3절):
+상태 (FR-ING-20 8종 + FR-ING-26 운영 상태 2종, API 2.7절):
 
-**기본 흐름:** `QUEUED (대기) → SCANNING (스캔) → PLAN_REVIEW (계획 승인 대기) → PROCESSING (처리) → QUESTION_WAITING (질문 대기) 또는 CHANGE_REVIEW (변경 승인 대기) → COMPLETED (완료)`
+**정상 흐름 (8가지 주요 상태):**
+`QUEUED (대기) → SCANNING (스캔) → PLAN_REVIEW (계획 승인 대기) → PROCESSING (처리) → QUESTION_REVIEW (질문 대기) 또는 CHANGE_REVIEW (변경 승인 대기) → COMPLETED (완료) 또는 FAILED (실패)`
 
-**상태 정의:**
+**전체 enum 값 (10가지, 어느 단계에서든 진입 가능):**
 
-| 상태 | 설명 |
-| --- | --- |
-| `QUEUED` | 초기 상태. 작업 대기 중 |
-| `SCANNING` | 1단계 저비용 스캔 중 |
-| `PLAN_REVIEW` | 처리 계획 승인 대기 |
-| `PROCESSING` | 2단계 고품질 처리 중 |
-| `QUESTION_WAITING` | 맥락 불분명 항목 사용자 질문 대기 (FR-ING-05) |
-| `CHANGE_REVIEW` | 변경 세트 검토 및 승인 대기 |
-| `COMPLETED` | 작업 완료 |
-| `FAILED` | 작업 실패 (재시도 불가 또는 재시도 소진) |
+| 상태값 | 상태명 | 설명 | 재개 가능 | 근거 |
+| --- | --- | --- | --- | --- |
+| `QUEUED` | 대기 | 초기 상태. 작업 대기 중 | — | FR-ING-20 |
+| `SCANNING` | 스캔 | 1단계 저비용 스캔 중 | — | FR-ING-20 |
+| `PLAN_REVIEW` | 계획 승인 대기 | 처리 계획 승인 대기 | — | FR-ING-20 |
+| `PROCESSING` | 처리 | 2단계 고품질 처리 중 | — | FR-ING-20 |
+| `QUESTION_REVIEW` | 질문 대기 | 맥락 불분명 항목 사용자 질문 대기 (FR-ING-05) | — | FR-ING-20 |
+| `CHANGE_REVIEW` | 변경 승인 대기 | 변경 세트 검토 및 승인 대기 | — | FR-ING-20 |
+| `COMPLETED` | 완료 | 작업 완료 | — | FR-ING-20 |
+| `FAILED` | 실패 | 작업 실패 (재시도 소진 또는 복구 불가). **종결 상태** | ❌ 불가 | FR-ING-20·26 |
+| `PAUSED_QUOTA` | 처리량 보류 | 처리량 부족으로 일시 중단. **재개 가능 상태**. 사용자 구매 후 중단 시점 단계로 복귀 (FR-ING-22, FR-ING-24) | ✅ 가능 | FR-ING-26, API 2.7절 |
+| `CANCELLED` | 취소됨 | 사용자가 작업 취소. **종결 상태**. 새 작업을 만들어야 함 | ❌ 불가 | FR-ING-26, API 2.7절 |
 
-**부수 상태 (흐름 중 언제든 진입 가능):**
-- `PAUSED_QUOTA` — 처리량 부족으로 일시 중단. 사용자 구매 후 PROCESSING 재개 (FR-ING-22)
-- `CANCELLED` — 사용자가 작업 취소
-
-→ 전체 8가지 주요 상태 (QUEUED, SCANNING, PLAN_REVIEW, PROCESSING, QUESTION_WAITING, CHANGE_REVIEW, COMPLETED, FAILED) + 부수 상태
+**중요:** `PAUSED_QUOTA`는 `FAILED`와 구별된다. FAILED는 종결 상태이고 PAUSED_QUOTA는 재개 가능한 상태다. 처리량 부족을 FAILED로 기록하면 사용자가 구매 후에도 작업을 이어갈 수 없으므로 금지한다(FR-ING-24).
 
 #### `ingest_items`
 
