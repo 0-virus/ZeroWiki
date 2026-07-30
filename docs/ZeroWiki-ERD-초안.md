@@ -375,20 +375,40 @@ erDiagram
 - UNIQUE(`page_id`, `version_no`)
 - 발행된 버전은 수정하지 않는다.
 
-#### `claims`
+#### `claims` (재사용 구조, UD-12 확정)
+
+**주의:** 이 테이블은 페이지 버전을 초월한다. 한 Claim이 여러 버전에서 재사용될 수 있으며, 버전별 상태는 `claim_statuses`에 저장된다. **Claim은 페이지에 속하며, 다른 도서관의 버전에서는 참조될 수 없다.**
 
 | 컬럼 | 타입 | 제약/설명 |
 | --- | --- | --- |
 | `id` | uuid | PK |
+| `page_id` | uuid | FK → `pages.id`. Claim이 속한 페이지(버전 비종속). `pages.library_id`로 한 홉에 도서관·소유자 접근 |
+| `claim_key` | varchar(120) | 버전 간 대응 안정 키. 생성 규칙은 UD-29에 위임 (벤치마크) |
+| `statement` | text | 주장 (버전 불변) |
+| `ai_confidence` | numeric(4,3) | AI 신뢰도 (생성 시점 기준) |
+| `created_at` | timestamptz | 생성 시각 |
+
+#### `claim_statuses` (신규, UD-12 확정)
+
+**목적:** 버전별 Claim 상태. 변경 없는 Claim은 재사용되며, 버전마다 이 테이블에 행이 생긴다.
+
+| 컬럼 | 타입 | 제약/설명 |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `claim_id` | uuid | FK → `claims.id` |
 | `page_version_id` | uuid | FK → `page_versions.id` |
-| `claim_key` | varchar(120) | 버전 간 대응을 돕는 안정 키 |
-| `statement` | text | 주장 |
-| `knowledge_status` | varchar(30) | `VERIFIED_FACT`, `SOURCE_CLAIM`, `AI_INFERENCE`, `USER_JUDGMENT`, `HYPOTHESIS` |
-| `confidence` | numeric(4,3) | AI 신뢰도 0~1 |
+| `knowledge_status` | varchar(30) | `VERIFIED_FACT`, `SOURCE_CLAIM`, `AI_INFERENCE`, `USER_JUDGMENT`, `HYPOTHESIS` (버전별로 다를 수 있음) |
+| `confidence` | numeric(4,3) | 해당 버전에서의 확도 (0~1) |
 | `valid_from` | date | 적용 시작일, 선택 |
 | `valid_to` | date | 적용 종료일, 선택 |
 | `conditions` | jsonb | 적용 조건과 범위 |
 | `created_at` | timestamptz | 생성 시각 |
+
+**제약 및 인덱스:**
+- UNIQUE(`claim_id`, `page_version_id`) — 각 Claim-Version 쌍은 한 번만 표현
+- `(page_version_id)` — 버전별 Claim 조회
+- `(claim_id, created_at DESC)` — Claim별 버전 이력
+- `(claim_id, page_version_id)` — Claim 검증 시 버전 범위 확인
 
 #### `evidences`
 
@@ -399,7 +419,7 @@ erDiagram
 | `source_version_id` | uuid | FK → `source_versions.id` |
 | `evidence_type` | varchar(20) | `SUPPORTS`, `REFUTES`, `CONTEXT` |
 | `locator` | jsonb | 페이지, 문단, 줄, 타임코드, JSON Pointer 등 |
-| `excerpt` | text | 짧은 근거 발췌 |
+| `excerpt` | text | 근거 발췌 — **최대 400자** (UD-07·UD-14 확정). 저장 범위와 노출 범위를 일치시켜 조회 시 재절단 불필요 |
 | `source_trust` | numeric(4,3) | 적용 당시 신뢰도 |
 | `created_at` | timestamptz | 생성 시각 |
 
@@ -411,7 +431,7 @@ erDiagram
 | `library_id` | uuid | FK, 양 끝점과 동일 도서관 |
 | `source_page_id` | uuid | FK → `pages.id` |
 | `target_page_id` | uuid | FK → `pages.id` |
-| `relation_type` | varchar(40) | `RELATED_TO`, `PART_OF`, `DEPENDS_ON`, `CAUSES`, `CONTRASTS_WITH`, `EXPLAINS`, `APPLIES_TO` 등 |
+| `relation_type` | varchar(40) | **확정 7종** (UD-16, 2026-07-30): `RELATED_TO`, `PART_OF`, `DEPENDS_ON`, `CAUSES`, `CONTRASTS_WITH`, `EXPLAINS`, `APPLIES_TO`. Phase 2에서 사용자 정의 유형 추가. CHECK 제약으로 구현 |
 | `rationale` | text | 연결 이유 |
 | `confidence` | numeric(4,3) | AI 신뢰도 |
 | `status` | varchar(20) | `PROPOSED`, `ACCEPTED`, `REJECTED`, `ARCHIVED` |
@@ -594,7 +614,13 @@ erDiagram
 | `scope` | varchar(20) | `LIBRARY`, `ACCOUNT` |
 | `created_at` | timestamptz | 생성 시각 |
 
-#### `notifications`
+#### `notifications` (UD-23 확정)
+
+**보존 정책 (차등):**
+- 위험 변경·삭제 유예: 30일 (승인 필요, 재실행 불가)
+- 포크·Lint·편집 제안: 14일 (재실행 가능)
+- 진행 알림: 7일 (실시간, 재실행 가능)
+- **삭제 유예 알림은 유예 기간 끝날 때까지 보존** (유예가 30일이면 보존도 30일까지)
 
 | 컬럼 | 타입 | 제약/설명 |
 | --- | --- | --- |
@@ -606,7 +632,11 @@ erDiagram
 | `resource_type` | varchar(30) | 연결 대상 |
 | `resource_id` | uuid | 연결 대상 ID |
 | `read_at` | timestamptz | 읽은 시각 |
+| `archived_at` | timestamptz | 아카이브·삭제 시각. NULL = 활성. 자동 아카이빙은 Phase 2. |
 | `created_at` | timestamptz | 생성 시각 |
+
+**제약:**
+- 인덱스: `(user_id, archived_at DESC)` — 활성 알림 조회 (archived_at IS NULL)
 
 #### `usage_ledger`
 
@@ -753,6 +783,7 @@ API 주요 필터 패턴을 지탱하는 인덱스. 기본 FK 인덱스 외 추�
 | --- | --- | --- |
 | `sources` | `(owner_id, source_type, updated_at DESC)` | 사용자 내 원본 목록 필터·정렬 |
 | `sources` | `(content_hash)` | ✓ 이미 정의 — 중복 탐색 |
+| `source_versions` | `(owner_id, content_hash, source_metadata->>'notion_id')` | Notion Import 중복 판정 (UD-18 확정): 사용자 내 notion_id 기준 탐색 |
 | `library_sources` | `(library_id, linked_at DESC)` | 도서관 내 원본 조회 |
 | `library_sources` | `(source_id)` | 원본 삭제 시 참조 확인 |
 | `pages` | `(library_id, page_type, status, updated_at DESC)` | 페이지 목록 필터·정렬 |
@@ -779,11 +810,12 @@ API 주요 필터 패턴을 지탱하는 인덱스. 기본 FK 인덱스 외 추�
 5. `source_versions`, 발행된 `page_versions`, `library_constitution_versions`는 불변이다.
 6. 위험 변경은 승인된 `change_item`만 적용할 수 있다.
 7. `change_set.base_library_version_id`가 현재 버전과 다르면 재계산 또는 충돌 검사가 필요하다.
-8. Evidence는 반드시 사용자가 접근 가능한 `source_version`을 참조해야 한다.
-9. 모순의 두 Claim은 현재 도서관 또는 명시적으로 참조 가능한 도서관 범위에 있어야 한다.
-10. 공개 페이지는 특정 `page_version`을 고정해서 발행하며 내부 최신 버전으로 자동 교체하지 않는다.
-11. 비밀번호·API 키로 판정된 원본은 객체 저장 전에 차단하거나 격리하고 Ingest에 사용하지 않는다.
-12. 계정 완전 삭제 시 원본 객체, DB 레코드, 임베딩, 작업 로그를 사용자 단위로 삭제한다.
+8. Evidence는 반드시 사용자가 접근 가능한 `source_version`을 참조해야 한다. **Claim은 버전 비종속이므로, Claim을 통한 버전 추적은 `claim_statuses`를 거친다. `evidences.claim_id`는 현재 도서관에 속하는 Claim만 참조할 수 있다 (소유자 인가 검사 단축).**
+9. 모순의 두 Claim은 현재 도서관 또는 명시적으로 참조 가능한 도서관 범위에 있어야 한다. **Claim이 버전 비종속이므로, 특정 버전에서의 모순 판정은 해당 버전의 `claim_statuses`에서 시작한다. `contradictions.left_claim_id`·`right_claim_id`는 모두 현재 도서관에 속하는 Claim이어야 한다.**
+10. **`claim_statuses.page_version_id`가 참조하는 버전은 `claims.page_id`와 동일 페이지에 속해야 한다.** 이를 통해 버전 간 Claim 재사용 범위를 같은 페이지 내로 제한한다.
+11. 공개 페이지는 특정 `page_version`을 고정해서 발행하며 내부 최신 버전으로 자동 교체하지 않는다.
+12. 비밀번호·API 키로 판정된 원본은 객체 저장 전에 차단하거나 격리하고 Ingest에 사용하지 않는다.
+13. 계정 완전 삭제 시 원본 객체, DB 레코드, 임베딩, 작업 로그를 사용자 단위로 삭제한다.
 
 ## 7. 권장 삭제 정책
 
@@ -805,12 +837,28 @@ FK는 기본적으로 `RESTRICT`를 사용한다. 계정 완전 삭제 작업에
 | # | 항목 | UD 참조 | 출처 | 결정 주체 |
 | --- | --- | --- | --- | --- |
 | 1 | Claim을 모든 문장에서 생성할지, 중요한 주장에만 생성할지 | UD-11 | FR-KNW-11, 기획서 25절 4번 | 벤치마크 |
-| 2 | 페이지 버전마다 Claim을 복제할지, 변경되지 않은 Claim을 재사용할지 | UD-12 | FR-CHG-09 | 기술 |
-| 3 | 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지 | UD-13 | NFR-DAT-06 | 기술 |
-| 4 | 원본 발췌문 저장이 저작권·개인정보 정책상 허용되는 최대 범위 | UD-14 | NFR-DAT-07, FR-PUB-02 | 사용자 |
-| 5 | 구조화 헌법의 JSON Schema | UD-15 | FR-LIB-11, 요구사항 정의서 5.2절 | 기술 |
-| 6 | 관계 유형의 초기 고정 목록과 사용자 정의 허용 시점 | UD-16 | FR-KNW-12 | 기술 |
+| 2 | 페이지 버전마다 Claim을 복제할지, 변경되지 않은 Claim을 재사용할지 | **UD-12(확정)** | FR-CHG-09 | **확정 (2026-07-30, 기술): 재사용. claims에서 page_version_id 제거, claim_statuses 신설. UD-29 정해질 때까지 자동 매칭 미구현** |
+| 3 | 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지 | **UD-13(확정)** | NFR-DAT-06 | **확정 (2026-07-30, 기술): 초기 이벤트 재생. Phase 0에서 도서관당 500+ change_sets 기준 재생 시간 1초 초과 시 Phase 2 스냅샷 필수** |
+| 4 | 원본 발췌문 저장이 저작권·개인정보 정책상 허용되는 최대 범위 | **UD-14(확정)** | NFR-DAT-07, FR-PUB-02 | **확정 (2026-07-30, 사용자): 400자** |
+| 5 | 구조화 헌법의 JSON Schema | **UD-15(확정)** | FR-LIB-11, 요구사항 정의서 5.2절 | **확정 (2026-07-30, 기술)** |
+| 6 | 관계 유형의 초기 고정 목록과 사용자 정의 허용 시점 | **UD-16(확정)** | FR-KNW-12 | **확정 (2026-07-30, 기술): 고정 7종 CHECK 제약. Phase 2에서 사용자 정의 추가** |
 | 7 | pgvector 임베딩 모델과 차원 | UD-17 | FR-SCH-06, 검증 4.3절 | 벤치마크 |
-| 8 | Notion Import의 외부 ID 및 재가져오기 중복 판정 정책 | UD-18 | FR-INP-03 | 기술 |
+| 8 | Notion Import의 외부 ID 및 재가져오기 중복 판정 정책 | **UD-18(확정)** | FR-INP-03 | **확정 (2026-07-30, 기술): 인덱스 (owner_id, content_hash, notion_id). 사용자 내부만 판정** |
 | 9 | 처리량의 사용자 표시 단위와 실제 토큰 원장의 환산 규칙 | UD-19 | FR-BIL-07 | 사용자 |
 | 10 | 감사 로그의 보존 기간과 관리자 접근 정책 | UD-20 | NFR-SEC-10 | 사용자 |
+| 11 | 월간 Lint 실행 시각·타임존·대상 선정 | **UD-21(확정)** | FR-LNT-02 | **확정 (2026-07-30, 기술): 가입일 기준 분산. 29·30·31일 가입자는 말일로 당김** |
+| 12 | 알림 보존 기간·읽음 처리 정책 | **UD-23(확정)** | FR-NTF-04 | **확정 (2026-07-30, 기술): 차등 보존 30/14/7일. 삭제 유예는 유예 기간까지. archived_at 필드 추가** |
+| 13 | Claim 버전별 상태 대응 규칙 (claim_key 생성) | **UD-29(신규)** | FR-CHG-09 | **벤치마크**: 의미 정규화 불가(해시의 한계). AI 제안 + 사용자 승인으로 처리 추천 |
+
+---
+
+## 9. 개정 이력
+
+| 버전 | 날짜 | 내용 | 작성 |
+| --- | --- | --- | --- |
+| 1.0 | 2026-07-27 | 최초 작성. 설계 목표·범위·논리 ERD·핵심 엔터티·정합성 규칙·삭제 정책·미확정 사항 포함 | backend |
+| 1.1 | 2026-07-29 | 요구사항 정의서 v0.1~0.2 기반 ERD 조정. revision 필드 추가, idempotency_records 신규, 복합 인덱스 16개, source_versions.detected_language, ingest_jobs 상태 명확화, ERD 8절을 UD-11~20과 상호 참조 | backend |
+| 1.2 | 2026-07-30 | 사용자 결정 5건 반영(UD-01·02·06·07·14). 8절 UD-14 확정 표기, evidences.excerpt에 최대 400자 제약 명시. UD-28 확정 구현 사양 인덱스·상태머신 검증 완료(page_relations 763~764행 인덱스 지탱 확인, change_sets 자동 적용 없음 확인) | backend |
+| 1.3 | 2026-07-30 | 기술 결정 6건 확정 반영(UD-08·09·13·15·16·18). UD-16 page_relations.relation_type 7종 CHECK 제약으로 확정. UD-18 source_versions 복합 인덱스 추가: (owner_id, content_hash, source_metadata->>'notion_id') — Notion 중복 판정. UD-13 Phase 0 성능 측정 조건 명시. 3건(UD-12·21·23) 보류 | backend |
+| 1.4 | 2026-07-30 | **대규모 구조 변경:** UD-12·21·23 확정, UD-29 신설. 1) `claims` 재설계(재사용 구조): page_version_id FK 제거, knowledge_status 등 이동. 2) `claim_statuses` 신규: 버전별 Claim 상태(UNIQUE claim_id·page_version_id). 3) `notifications`: archived_at 추가(UD-23), 인덱스(user_id, archived_at). 4) UD-21 가입일 분산 + 월말 처리. 5) UD-29(신규, 벤치마크): claim_key는 의미 정규화 불가, AI 제안+사용자 승인 권고. 주의: 구조 변경으로 정합성 규칙 재검토 필요(특히 contradictions·evidences) | backend |
+| 1.5 | 2026-07-30 | **테넌시 앵커 추가:** `claims.page_id` FK 신규(NOT NULL). 1) Claim 소유자 접근을 4홉(claim_statuses→page_versions→pages→libraries)에서 1홉(claims.page_id→pages.library_id)으로 단축. 2) 다른 도서관의 버전에서 Claim을 참조하는 것을 구조로 차단 (정보 노출 방지). 3) 정합성 규칙 8·9 보강: evidences·contradictions의 Claim이 현재 도서관에 속함을 명시. 4) 규칙 10 신규: claim_statuses.page_version_id는 claims.page_id와 동일 페이지의 버전이어야 함. 5) claim_statuses 인덱스 `(claim_id, page_version_id)` 추가 — 버전 범위 검증 최적화 | backend |
