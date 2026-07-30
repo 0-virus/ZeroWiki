@@ -45,11 +45,12 @@ ZeroWiki-SaaS/
 │       └── {역할}/               CLAUDE.md · STATE.md · WORKLOG.md (각 역할 소유)
 ├── docs/                         기준 문서·검증 문서 (아래 표 참조)
 ├── backend/                      미생성. Spring Boot 앱 + Ingest Worker
-├── frontend/                     미생성. Next.js + TypeScript
-└── qa/                           미생성. 테스트 코드·평가 세트
+├── frontend/                     Next.js + TypeScript. 현재는 화면 설계 문서만
+│   └── screens/                  화면 설계·와이어프레임 (frontend 소유)
+└── qa/                           테스트 시나리오 문서. 실행 코드는 미작성
 ```
 
-`backend/`·`frontend/`·`qa/`는 아직 없다. **코드는 한 줄도 없으며 현재는 문서 단계다.** 없는 디렉터리를 있다고 가정하지 않는다.
+`backend/`는 아직 없다. `frontend/`·`qa/`는 2026-07-30에 생겼으나 **각각 화면 설계 문서와 테스트 시나리오 문서뿐이고 실행되는 코드는 한 줄도 없다.** 없는 디렉터리를 있다고 가정하지 않는다.
 
 ## 기준 문서
 

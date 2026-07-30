@@ -858,7 +858,7 @@ GET /libraries/{libraryId}/pages/{pageId}/claims?include=evidences
 }
 ```
 
-`statement`는 한국어로 생성된 주장이고 `excerpt`는 **원본 언어 그대로**인 발췌다(FR-UIX-12·13). 두 값의 언어가 다른 것은 정상이며, 클라이언트는 `excerptLanguage`로 원문 표기를 구분한다. `excerpt` 최대 길이는 `UD-07 미확정`, 저작권상 허용 범위는 `UD-14 미확정`이다.
+`statement`는 한국어로 생성된 주장이고 `excerpt`는 **원본 언어 그대로**인 발췌다(FR-UIX-12·13). 두 값의 언어가 다른 것은 정상이며, 클라이언트는 `excerptLanguage`로 원문 표기를 구분한다. `excerpt` 최대 길이는 **400자**이며(`UD-07` 확정, 2026-07-30), 저작권상 저장 허용 범위도 같은 **400자**다(`UD-14` 확정, 2026-07-30). 저장 범위와 노출 범위가 같으므로 발췌를 잘라 저장한 뒤 다시 자르는 처리는 필요 없다.
 
 ### 7.3 관계와 모순
 
@@ -875,6 +875,57 @@ GET /libraries/{libraryId}/pages/{pageId}/claims?include=evidences
 ```text
 GET /libraries/{libraryId}/relations?pageId=<uuid>&status=ACCEPTED&since=2026-07-01T00:00:00Z
 ```
+
+모순 조회 필터:
+
+```text
+GET /libraries/{libraryId}/contradictions?status=OPEN&classification=TRUE_CONFLICT&since=2026-07-01T00:00:00Z&limit=10&cursor=<opaque>
+```
+
+| 파라미터 | 값 | 기본값 |
+| --- | --- | --- |
+| `status` | `OPEN` \| `ACCEPTED` \| `DISMISSED` \| `RESOLVED` \| `ALL` | `OPEN` |
+| `classification` | 아래 enum 중 하나. 생략 시 전체 | — |
+| `since` | 이 시각 이후 생성된 것만 | — |
+| `limit`·`cursor`·`sort` | 2.4절 공통 규약을 따른다 | `limit=20`, `sort=createdAt,desc` |
+
+```text
+classification: TRUE_CONFLICT | TIME_CHANGE | CONDITION_DIFF | VIEWPOINT_DIFF | POSSIBLE_CONFLICT
+```
+
+`classification`은 ERD `contradictions.classification`과 같은 값이며, 기획서 24절 2번의 모순 오탐(관점 차이·시간 변화·적용 조건 차이) 구분에 대응한다.
+
+목록 응답:
+
+```json
+{
+  "data": [
+    {
+      "id": "9f1c0a52-3e77-4a91-b0d2-1c8e5a4d7b30",
+      "leftClaimId": "2a4d...",
+      "rightClaimId": "7b91...",
+      "leftClaimStatement": "테스트 커버리지 80%를 품질 기준으로 삼는다.",
+      "rightClaimStatement": "커버리지 수치는 품질 지표로 신뢰할 수 없다.",
+      "classification": "VIEWPOINT_DIFF",
+      "explanation": "두 주장은 같은 지표를 다른 목적으로 평가한다.",
+      "confidence": 0.78,
+      "status": "OPEN",
+      "resolutionNote": null,
+      "createdAt": "2026-07-30T04:12:09Z",
+      "resolvedAt": null
+    }
+  ],
+  "page": {
+    "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2...",
+    "hasNext": true
+  }
+}
+```
+
+- `leftClaimStatement`·`rightClaimStatement`는 목록 화면에서 주장 본문을 따로 조회하지 않도록 함께 반환한다(N+1 방지). 전문이 아니라 요약이 필요하면 클라이언트가 자른다.
+- `resolutionNote`와 `resolvedAt`은 `status`가 `OPEN`이 아닐 때만 값이 있다. `OPEN`일 때는 필드를 빼지 않고 `null`로 명시한다(4.1절 도서관 홈과 같은 규칙).
+- `resolved_by`는 응답에 포함하지 않는다. 개인 지식 도서관에서 해소 주체는 항상 소유자이므로 사용자 식별자를 노출할 이유가 없다(NFR-SEC-01).
+- 도서관 홈의 `openContradictionCount`(4.1절)는 이 목록의 `status=OPEN` 건수와 일치해야 한다.
 
 모순 해소 요청:
 
@@ -1086,7 +1137,7 @@ GET /libraries/{libraryId}/search?q=raft+leader+election&types=PAGE,CLAIM,SOURCE
 
 `scope`는 `CURRENT` 또는 `REFERENCED`다. 확장 검색 결과에서 현재 도서관과 참조 도서관의 결과가 섞이면 사용자가 지식의 출처를 오인한다. 이는 단순한 UX 문제가 아니라 **도서관 경계 인식의 문제**이며(FR-LIB-04·05, NFR-SEC-03), 클라이언트는 `REFERENCED` 결과를 시각적으로 구분해 표시해야 한다.
 
-`snippet`의 최대 길이는 `UD-07 미확정`이다.
+`snippet`의 최대 길이는 **400자**다(`UD-07` 확정, 2026-07-30).
 
 연결 도서관 확장은 반드시 별도 사용자 명령으로 수행한다.
 
@@ -1482,20 +1533,14 @@ enum은 문자열로 노출하며 서버 내부 Java enum 이름과 API 값을 �
 
 | UD | 확정할 계약 | 영향받는 절 | 결정 주체 |
 | --- | --- | --- | --- |
-| `UD-01` | 파일당·ZIP당·Import당 최대 크기와 문서 수 | 5.2, `413` 응답 | 사용자 |
-| `UD-02` | Access Token과 Refresh Token의 수명 | 2.1, 3.1 | 사용자 |
 | `UD-03` | Free·Basic·Advanced 처리량 단위 | 12 | 사용자 |
-| `UD-06` | 사용자 직접 편집 중 안전 변경의 자동 적용 여부 | 7.1 | 사용자 |
-| `UD-07` | 검색 결과 원본 발췌문 최대 길이 | 9.1, 7.2 | 사용자 |
-| `UD-08` | 공개 URL slug 충돌과 변경 정책 | 14.1 | 기술 |
-| `UD-09` | 관리자·운영 API의 OpenAPI 분리 여부 | 16 | 기술 |
 | `UD-10` | Notion OAuth와 결제 공급자 선정 | 6.2, 12 | 사용자 |
 | `UD-21` | 월간 Lint 실행 시각·타임존 기준과 대상 선정 | 10 | 기술 |
 | `UD-23` | 알림 보존 기간과 읽음 처리 정책 | 11 | 기술 |
 
-ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26`)은 요구사항 정의서 12절을 본다.
+ERD 측 항목(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26`)의 현재 상태는 요구사항 정의서 12절을 본다.
 
-**확정된 항목 (2026-07-29 사용자 결정):**
+**확정된 항목:**
 
 | UD | 확정 내용 | 결정 주체 | 반영 위치 |
 | --- | --- | --- | --- |
@@ -1504,6 +1549,13 @@ ERD 측 미확정(`UD-11`~`UD-20`)과 벤치마크 의존 항목(`UD-25`, `UD-26
 | `UD-04` | `Retry-After` 우선 + 클라이언트 기본값(Ingest 2초 / AI 답변 1초 / Lint·Export 5초). 최대 생성 시간은 `UD-25`에 종속 | 기술(리더) | 2.7절 |
 | `UD-05` | Phase 1은 스냅샷 반환 + 클라이언트 계산, Phase 2에 서버 구조화 블록 diff 추가 | 기술(리더) | 7.1절 |
 | `UD-28` | 주제 = `page_type='CONCEPT'` 페이지. `pageCount`는 `ACCEPTED` 관계 양방향 합산, `PUBLISHED`만 대상, 상위 6개. 재계산은 변경 세트 apply 커밋 후 비동기 | 기술(리더) | 4.1절 |
+| `UD-01` | 파일당 **200MB**, ZIP당 **1GB**, Import당 **1000개 문서**. 초과 시 `413` | 사용자 (2026-07-30) | 5.2절, `413` 응답 |
+| `UD-02` | Access Token **15분**, Refresh Token **30일**(회전) | 사용자 (2026-07-30) | 2.1절, 3.1절 |
+| `UD-06` | 안전 변경도 자동 적용하지 않는다. 안전 판정은 서버가 하되 **항상 변경 세트를 생성**해 승인을 받는다 | 사용자 (2026-07-30) | 7.1절 |
+| `UD-07` | 검색 결과 발췌문 최대 **400자**. `UD-14`와 같은 값 | 사용자 (2026-07-30) | 9.1절, 7.2절 |
+| `UD-14` | 발췌문 저장의 저작권상 최대 범위 **400자**. 저장 범위와 노출 범위를 일치시킨다 | 사용자 (2026-07-30) | 7.2절 |
+| `UD-08` | slug 충돌 시 숫자 suffix. slug 변경 불가 — 내리고 새로 발행 | 기술(리더, 2026-07-30) | 14.1절 |
+| `UD-09` | spec 분리 없이 `Admin` 태그로 구분. Phase 1에 관리자 API 없음 | 기술(리더, 2026-07-30) | 16절 |
 
 `UD-04`·`UD-05`는 frontend 권고(2026-07-29)를 근거로 리더가 확정했다. 두 항목은 요구사항 정의서 12.1절에서 결정 주체가 **기술**이므로 사용자 결정을 기다리지 않는다.
 
