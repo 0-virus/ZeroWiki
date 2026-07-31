@@ -1047,6 +1047,14 @@ GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
 
 `REQUEST_CHANGES`가 하나라도 있으면 변경 세트는 `apply` 후에도 완결되지 않고 재생성 결과를 기다린다. `comment`는 `REQUEST_CHANGES`와 `REJECT`에서 필수다.
 
+**REQUEST_CHANGES 재생성 흐름 (2026-07-30 리더 확정, 근거: `docs/검증-백엔드-ERD-API-정합성.md` 9절, `docs/검증-프론트엔드-화면-API-갭.md` 갭 #23):**
+
+- `POST .../reviews`는 재생성을 트리거하고 `202 Accepted`를 반환한다. 완료를 알리는 별도 응답·웹훅·SSE는 없다(Phase 1 범위, webhook/SSE는 Phase 2 고려).
+- 재생성 대상 항목은 **같은 `changeItemId`를 유지**하며 새 항목을 만들지 않는다(옵션 A: 기존 항목 갱신). `after_snapshot`이 재생성 결과로 교체된다.
+- `change_items[].review_status`는 재생성 중 `REVISION_REQUESTED`, 완료 시 `PENDING`으로 전이한다. 클라이언트는 이 필드 변화로 완료를 감지한다.
+- `changeSetId`는 재생성 전 과정에서 불변이다. 재생성은 새 변경 세트를 만들지 않는다(`origin_type`/`origin_id` 불변 원칙).
+- 클라이언트는 `GET .../items`를 **2초 간격**으로 polling한다(UD-04 기본값과 동일 체계). 재생성 소요 시간의 실측값은 Phase 0 벤치마크 대상이다.
+
 안전한 항목 일괄 승인:
 
 ```json

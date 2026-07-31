@@ -939,5 +939,52 @@ const diffs = diffLines(before.markdownBody, after.markdownBody);
 
 ---
 
+### 갭 #23: REQUEST_CHANGES 재생성 완료 감지 메커니즘 — 해소됨 ✅
+
+**상태**: **해소됨** (2026-07-30, 리더 확정)  
+**영향 화면**: 변경 검토 화면  
+
+**확정 내용** (2026-07-30, 리더 기술 확정):
+- **`changeItemId` 불변**: 새 항목 생성 안 함
+- **`after_snapshot`만 갱신**: 변경 재생성 시 같은 항목의 `after_snapshot` 필드만 업데이트
+- **완료 감지**: `change_items[].review_status` 필드 전이
+  - REVISION_REQUESTED → PENDING (완료)
+- **Polling 방식**: `GET /change-sets/{changeSetId}/items` (2초 간격)
+  - 웹훅·SSE 없음, polling만 사용
+- **`changeSetId` 불변**: 변경 세트 ID는 변경 없음
+
+**근거**:
+- `docs/ZeroWiki-API-명세-초안.md` 8.1절 (REQUEST_CHANGES 재생성 흐름 문단)
+- `docs/검증-백엔드-ERD-API-정합성.md` 9절 (backend 확정 내용)
+
+**프론트엔드 구현** (2026-07-30 확정):
+- 기존 ASSUMPTION이 정확함 (같은 changeSetId, items 배열 업데이트, 2초 폴링)
+- 2초 polling으로 `change_items[].review_status` 변화 감시
+- REVISION_REQUESTED → PENDING 전이 시 "새 변경 준비됨" 표시
+
+---
+
+### 갭 #24: 모순 조회 API — 해소됨 ✅
+
+**상태**: **해소됨** (2026-07-30, 리더 확인)  
+**영향 화면**: 도서관 홈 (모순 섹션)  
+
+**문제**: 도서관 홈 설계 중 모순 섹션이 필요하나 API 스펙이 불명확했음.
+
+**해소 내용** (2026-07-30):
+- **API 명세 7.3절**: `GET /libraries/{libraryId}/contradictions` 엔드포인트 완전 정의
+  - 필터 (페이지 범위·신뢰도·타입·영향도)
+  - 페이지네이션 (limit, offset)
+  - 응답 스키마 (contradiction_id, page1_id, page2_id, status, confidence, evidence_count, created_at)
+- 엔드포인트 전체 스펙 정의됨
+
+**근거**:
+- `docs/ZeroWiki-API-명세-초안.md` 7.3절 (863~936행, Contradictions 엔드포인트 상세)
+
+**프론트엔드 구현 상태**:
+- 도서관 홈 ContradictionsSection 구현 완료 (목록 데이터 사용, 🚀 표기)
+- 실 API 연동 준비 완료
+
+---
 
 

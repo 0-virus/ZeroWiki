@@ -1074,3 +1074,260 @@ GROUP BY operation_type;
 
 ---
 
+## 9. frontend 갭 분석: REQUEST_CHANGES 재생성 메커니즘
+
+### 9.1 갭 #23: REQUEST_CHANGES 재생성 완료 감지 메커니즘 🆕 ✅ (확정·2026-07-30)
+
+**출처:** `docs/검증-프론트엔드-화면-API-갭.md` 갭 #23 (942~978행)
+
+**문제 정의:**
+- `POST /change-sets/{changeSetId}/reviews` (decision: REQUEST_CHANGES) 호출 후 비동기 재생성
+- 클라이언트가 완료를 감지할 메커니즘이 명세에 미정의
+
+**frontend 질문 4가지:**
+1. polling 시 어떤 필드가 변하는가? (`status`? `nextAction`? 별도 `regenerationStatus`?)
+2. 재생성된 변경이 같은 `changeSetId`인가, 새 `changeSetId`인가?
+3. 완료 시 API 응답 형태는?
+4. polling 간격은 UD-04 기본값(2초)을 따르는가?
+
+---
+
+### 9.2 backend 구현 관점 분석
+
+#### ChangeSet 상태 머신 확인 (ERD 4.6절, 검증 2절)
+
+**현재 설계:**
+- `change_sets.status`: DRAFT → READY_FOR_REVIEW → PARTIALLY_APPROVED → APPROVED → APPLIED
+- `change_items.review_status`: PENDING, APPROVED, REJECTED, REVISION_REQUESTED (REQUEST_CHANGES), DEFERRED
+
+**REQUEST_CHANGES 이후 상태 전이:**
+
+1. **개별 항목(change_item) 수준:**
+   ```
+   review_status: PENDING → (사용자 검토) → REVISION_REQUESTED
+                                             ↓ (AI 재생성)
+                                         PENDING (새로운 제안)
+   ```
+
+2. **변경 세트(change_set) 수준:**
+   ```
+   status: PARTIALLY_APPROVED (REQUEST_CHANGES 전)
+            ↓ (재생성 진행 중)
+           PARTIALLY_APPROVED (상태 유지, 재생성 타게팅만 업데이트)
+            ↓ (재생성 완료)
+           PARTIALLY_APPROVED (새 항목 평가 대기)
+   ```
+
+**근거:**
+- ERD 4.6절 475~500행 (change_sets, change_items 구조)
+- 검증 2절 272~285행 (ChangeSet 상태 정의)
+- API 명세 8.1절 1045행 ("적용하지 않고 항목을 재생성 대상으로 표시")
+
+#### ChangeSet 구조상 REVISION_REQUESTED 의미
+
+**ERD 설계 원칙:**
+- `change_sets` = 변경 세트 전체 상태 (발행 단위)
+- `change_items` = 개별 항목 상태 (검토 단위)
+- 한 세트 내 항목들의 review_status가 섞일 수 있음 (일부는 APPROVED, 일부는 REVISION_REQUESTED 등)
+
+**REQUEST_CHANGES 처리 시나리오:**
+
+```
+초기: change_set.status = PARTIALLY_APPROVED
+      change_item#1: review_status = APPROVED
+      change_item#2: review_status = APPROVED
+      change_item#3: review_status = PENDING
+      change_item#4: review_status = PENDING
+
+사용자가 change_item#3에 REQUEST_CHANGES 요청:
+      change_item#3: review_status = REVISION_REQUESTED
+      
+클라이언트가 POST 응답 받음: 202 Accepted
+
+백엔드 비동기 재생성 진행 (작업 큐):
+      change_item#3: 재생성 대상 표시 (origin_id 업데이트 등)
+      
+재생성 완료 후:
+      방법 A (옛 항목 갱신): change_item#3 after_snapshot 업데이트
+      방법 B (새 항목 생성): 같은 change_set_id, 같은 target_id인 새 change_item#3' 추가
+```
+
+**설계 권고:**
+
+다음 중 하나를 선택해야 함 (현재 미확정):
+
+**옵션 A (권장): 같은 항목 갱신**
+- `change_item#3`의 `after_snapshot` 업데이트
+- `review_status`: REVISION_REQUESTED → PENDING (재검토 필요)
+- 클라이언트 감지: `change_items` 배열에서 해당 항목의 `after_snapshot` 변화
+- 장점: 항목 ID 일관성, 히스토리 명확
+- 단점: UI에서 "뭐가 바뀌었나?" 비교 필요
+
+**옵션 B: 새 항목 생성**
+- `change_item#3'` (새 ID) 생성, 같은 `target_id`
+- 기존 `change_item#3` 보존 (히스토리)
+- 클라이언트 감지: `change_items` 배열 길이 증가, 새 항목 push
+- 장점: 히스토리 보존, 재생성 흔적 명확
+- 단점: 같은 대상의 항목이 여러 개 → UI 혼동 가능
+
+---
+
+### 9.3 backend 권고안
+
+#### 질문별 답변
+
+**1. polling 시 어떤 필드가 변하는가?**
+
+**권고:** `GET /change-sets/{changeSetId}` 응답의 `change_items` 배열 변화 감시
+
+변할 필드:
+- `change_items[].after_snapshot` (옵션 A 선택 시) — 재생성된 스냅샷
+- **또는** `change_items[]` 배열 자체 (옵션 B 선택 시) — 새 항목 추가
+
+변하지 않을 필드:
+- `change_sets.status` — PARTIALLY_APPROVED 유지
+- `change_sets.nextAction` — REVIEW_CHANGES 유지 (여전히 검토 필요)
+
+**선택지:**
+- ❌ 별도 `regenerationStatus` 필드: 불필요, 기존 구조로 충분
+- ✅ `change_items[].review_status` 변화 감시 (REVISION_REQUESTED → PENDING)
+
+**근거:** ERD 4.6절 항목 정의 (컬럼 487~501행)
+
+**2. 같은 changeSetId인가, 새 changeSetId인가?**
+
+**권고:** **같은 `changeSetId` 내에서만 재생성**
+
+- 변경 세트는 Ingest 또는 사용자 액션의 단일 원인 → changeSetId 불변
+- 재생성은 같은 세트 내 항목의 재검토일 뿐 → 새 세트 생성 아님
+- 새 changeSetId는 새로운 Ingest/편집에서만 생성
+
+**근거:** ERD 4.6절 470~472행 (origin_type, origin_id — 원인 추적)
+
+**3. 완료 시 API 응답 형태는?**
+
+**권고:** 202 Accepted 이후 별도 응답 없음, polling 통해서만 감지
+
+- `POST /change-sets/{changeSetId}/reviews` (decision: REQUEST_CHANGES) → 202 Accepted
+- 재생성 완료 시 서버는 **푸시 알림을 보내지 않음** (현재 기획서 범위)
+- 클라이언트는 `GET /change-sets/{changeSetId}` polling으로만 감지
+
+**선택지:**
+- 재생성 완료 전용 webhook/SSE 추가? → Phase 2 고려 (현재 미확정)
+- 현재는 polling 기반으로 진행 (UD-04와 일관성)
+
+**4. polling 간격은?**
+
+**권고:** UD-04 기본값 **2초** 준용
+
+- Ingest의 SCANNING/PROCESSING 단계와 동일 체계
+- 재생성 소요 시간은 항목 규모에 따라 가변 (벤치마크 필요)
+- Phase 0 벤치마크에서 "변경 항목 1개 재생성 평균 시간" 측정 필수
+
+**근거:** UD-04 정의, API 명세 6.1절 (polling 규약)
+
+---
+
+### 9.4 backend 구현 체크리스트
+
+**API 명세 정리 필요** (리더 담당):
+- `POST /change-sets/{changeSetId}/reviews` 응답에서 202 Accepted 명시
+- `GET /change-sets/{changeSetId}` 응답 형태:
+  - change_items 배열 포함 (상세 정의)
+  - change_items[].review_status 포함 (PENDING, APPROVED, REJECTED, REVISION_REQUESTED, DEFERRED)
+  - change_items[].after_snapshot 포함 (재생성 결과)
+
+**ERD 수정 필요** (backend 담당):
+- change_items 구조 확인 (위 필드들 모두 포함되었는지)
+- 재생성된 항목의 tracking 메커니즘 (옵션 A 또는 B 선택)
+
+**상태 머신 정의** (backend 담당):
+- REQUEST_CHANGES → 재생성 중 → 완료 까지 상태 전이
+- review_status 변화: REVISION_REQUESTED → (재생성) → PENDING
+
+---
+
+### 9.5 backend 최종 권고
+
+| 항목 | 권고 | 상태 | 근거 |
+| --- | --- | --- | --- |
+| polling 필드 | `change_items[].after_snapshot` + `review_status` | ✅ 확정 | ERD 4.6절 487~501행 |
+| changeSetId | 같은 ID 내에서만 재생성 | ✅ 확정 | origin_type/origin_id 불변 |
+| 완료 감지 | polling 기반 (202 후 별도 응답 없음) | ✅ 확정 | API 명세 8.1절(리더 신설 문단) |
+| polling 간격 | UD-04 기본값 2초 | ✅ 확정 | Ingest 일관성, API 명세 8.1절 |
+| 재생성 메커니즘 | **옵션 A(기존 항목 갱신)** — change_items.id 불변, review_status REVISION_REQUESTED→PENDING | ✅ 확정 | 리더 2026-07-30 |
+
+**다음 단계:**
+1. frontend·pm과 협의: 옵션 A vs B 선택 (UI 영향 큼)
+2. API 명세 8.1절 보강: REQUEST_CHANGES 재생성 흐름 명시
+3. Phase 0 벤치마크: 재생성 소요 시간 및 polling 간격 조정 기준 수집
+
+**근거 인용:**
+- ERD: `docs/ZeroWiki-ERD-초안.md` 4.6절 (463~526행)
+- API: `docs/ZeroWiki-API-명세-초안.md` 8.1절 (1010~1087행)
+- 기획서: `docs/ZeroWiki-MVP-서비스-기획서.md` 11절 (변경 검토 화면)
+- frontend 갭: `docs/검증-프론트엔드-화면-API-갭.md` 942~978행
+
+---
+
+### 9.6 갭 #23 확정 반영 ✅ (2026-07-30 리더 확정)
+
+**리더 확정 사항:**
+- ✅ **옵션 A(기존 항목 갱신) 선택 확정**
+- ✅ API 명세 8.1절에 REQUEST_CHANGES 재생성 흐름 문단 신설
+- ✅ changeItemId 불변, review_status REVISION_REQUESTED→PENDING 전이
+- ✅ 202 Accepted 후 별도 응답 없음, 2초 polling, changeSetId 불변
+
+**ERD 구조 검증:** ✅ 완전
+
+| 필드 | ERD 위치 | 값 | 상태 |
+| --- | --- | --- | --- |
+| `change_items.id` | 4.6절 489행 | uuid PK | ✅ 불변 |
+| `change_items.change_set_id` | 4.6절 490행 | uuid FK | ✅ 불변 |
+| `change_items.target_id` | 4.6절 492행 | uuid (NULL 가능) | ✅ 같은 대상 |
+| `change_items.review_status` | 4.6절 500행 | PENDING·APPROVED·REJECTED·REVISION_REQUESTED·DEFERRED | ✅ 전이 지원 |
+| `change_items.after_snapshot` | 4.6절 497행 | jsonb | ✅ 재생성 결과 저장 |
+
+**상태 전이 (확정):**
+
+```
+REQUEST_CHANGES 호출 전:
+  change_items#3.review_status = PENDING
+  change_sets.status = PARTIALLY_APPROVED
+
+REQUEST_CHANGES 호출 → 202 Accepted:
+  change_items#3.review_status = REVISION_REQUESTED (사용자 판단 기록)
+  
+비동기 재생성 진행 (작업 큐):
+  change_items#3: 재생성 대상 표시
+
+재생성 완료:
+  change_items#3.after_snapshot = {새 값} (갱신)
+  change_items#3.review_status = PENDING (재검토 대기)
+  change_sets.status = PARTIALLY_APPROVED (유지)
+  
+클라이언트 polling GET /change-sets/{changeSetId}:
+  → change_items[].review_status 변화 감지 (REVISION_REQUESTED → PENDING)
+  → change_items[].after_snapshot 변화 감지 (재생성 결과)
+  → 재검토 화면 표시
+```
+
+**API 명세 반영 확인:**
+
+✅ 8.1절 신설 문단 (리더 추가):
+- REQUEST_CHANGES 호출 후 202 Accepted
+- 클라이언트는 `GET /change-sets/{changeSetId}` polling
+- change_items 배열의 review_status·after_snapshot 변화 감시
+- changeSetId는 불변 (같은 세트 내 재생성)
+- polling 간격: UD-04 기본값 2초
+
+**Phase 0 벤치마크 항목 추가:**
+
+✅ 다음 항목을 Phase 0 벤치마크 계획에 포함:
+- "변경 항목 1개 재생성 평균 소요 시간" 측정
+- 기준: 항목 규모별 (소/중/대) 재생성 시간 변동
+- 목표: polling 간격 최적화 기준 수집 (현 기본값 2초 적절성 검증)
+- 리더 지적 배경: 재생성 소요 시간이 항목 규모에 따라 가변
+
+---
+

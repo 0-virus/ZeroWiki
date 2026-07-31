@@ -636,3 +636,187 @@ BLOCKER 없음. 모든 불일치는 ERD 업데이트로 해결 가능.
 - Contradictions 엔드포인트 상세 스펙 정의 (갭 #21, 리더 API 명세 추가 대기)
 - UD-29 벤치마크 계획: claim_key 자동 매칭 대안 평가(AI 제안+사용자 승인 vs 기타)
 - 코드 구현: Spring Boot, Ingest Worker, API 개발 (Phase 0 후 시작)
+
+---
+
+## 2026-07-30 — frontend 갭 #23: REQUEST_CHANGES 재생성 메커니즘 backend 검토 (세션 abackend-gap23-review)
+
+**한 일**
+
+1. **frontend 갭 #23 분석** — 변경 검토 화면, REQUEST_CHANGES 재생성 완료 감지 불명확
+   - 출처: `docs/검증-프론트엔드-화면-API-갭.md` 942~978행
+   - 심각도: MAJOR (변경 검토 화면 UX 핵심)
+
+2. **backend 구현 관점 분석** — ChangeSet 상태 머신 검토
+   - ✅ ERD 4.6절: change_sets.status, change_items.review_status 구조 확인
+   - ✅ 검증 2절: ChangeSet 상태 정의 완정
+   - ✅ API 명세 8.1절: REQUEST_CHANGES 동작 명시 (1045행)
+
+3. **frontend 4가지 질문에 backend 답변**
+
+   **Q1: polling 시 어떤 필드가 변하는가?**
+   - A: `change_items[]` 배열의 `after_snapshot` 또는 배열 자체 변화
+   - `change_items[].review_status` (REVISION_REQUESTED → PENDING) 감시
+   - ❌ 별도 `regenerationStatus` 필드 불필요
+
+   **Q2: 같은 changeSetId인가, 새 changeSetId인가?**
+   - A: **같은 changeSetId 내에서만 재생성**
+   - 근거: origin_type/origin_id 불변, 같은 Ingest/편집의 결과
+
+   **Q3: 완료 시 API 응답 형태는?**
+   - A: 202 Accepted 후 별도 응답 없음, polling으로만 감지
+   - 푸시 알림/webhook: Phase 2 고려
+
+   **Q4: polling 간격은?**
+   - A: UD-04 기본값 **2초** (Ingest SCANNING/PROCESSING과 동일)
+
+4. **구현 메커니즘 설계 (미확정)**
+
+   **옵션 A (권장): 같은 항목 갱신**
+   - `change_item#3`의 `after_snapshot` 업데이트
+   - `review_status`: REVISION_REQUESTED → PENDING
+   - 장점: 항목 ID 일관성, 히스토리 명확
+   - 단점: UI에서 "뭐가 바뀌었나?" 비교 필요
+
+   **옵션 B: 새 항목 생성**
+   - `change_item#3'` (새 ID), 같은 `target_id`
+   - 기존 항목 보존 (히스토리)
+   - 장점: 히스토리 보존, 재생성 흔적 명확
+   - 단점: 같은 대상 항목 여러 개 → UI 혼동 가능
+
+   **결정 필요:** 옵션 A vs B 중 선택 (frontend·pm 협의 후)
+
+**산출물**
+
+- `docs/검증-백엔드-ERD-API-정합성.md` 9절 신설: "frontend 갭 분석: REQUEST_CHANGES 재생성 메커니즘"
+  - 9.1절: 갭 정의
+  - 9.2절: backend 구현 관점 분석
+  - 9.3절: 질문별 답변 4가지
+  - 9.4절: 구현 체크리스트
+  - 9.5절: 최종 권고안 테이블
+
+**근거**
+
+- ERD 4.6절 463~526행 (change_sets, change_items)
+- API 명세 8.1절 1010~1087행 (변경 검토, REQUEST_CHANGES 정의)
+- frontend 갭: `docs/검증-프론트엔드-화면-API-갭.md` 942~978행
+- 기획서 11절 (변경 검토 화면)
+
+**미해결**
+
+- **옵션 A vs B 선택 대기** — UI 영향도 큼, frontend·pm 협의 필요
+- **API 명세 정정 필요** (리더 담당):
+  - POST 응답: 202 Accepted 명시
+  - GET 응답: change_items[], review_status, after_snapshot 정의
+
+**다음 단계**
+
+1. frontend·pm과 협의: 옵션 A vs B 선택
+2. API 명세 8.1절 보강: REQUEST_CHANGES 재생성 흐름 명시
+3. Phase 0 벤치마크: 재생성 소요 시간 측정, polling 간격 조정 기준 수집
+
+---
+
+## 2026-07-30 — 갭 #23 옵션 A 확정 반영 및 상태머신·벤치마크 정의 (세션 abackend-gap23-confirm)
+
+**한 일**
+
+1. **리더 확정 사항 반영** — 갭 #23 옵션 A(기존 항목 갱신)로 확정
+   - ✅ API 명세 8.1절: REQUEST_CHANGES 재생성 흐름 문단 신설 (리더 완료)
+   - ✅ changeItemId 불변, review_status REVISION_REQUESTED→PENDING 전이
+   - ✅ 202 Accepted 후 별도 응답 없음, 2초 polling, changeSetId 불변
+
+2. **ERD 구조 검증** — 옵션 A 구현 가능성 확인
+   - ✓ change_items.id (PK, uuid) — 불변
+   - ✓ change_items.change_set_id (FK) — 불변
+   - ✓ change_items.target_id (uuid) — 같은 대상 추적
+   - ✓ change_items.review_status (varchar 20) — PENDING, APPROVED, REJECTED, REVISION_REQUESTED, DEFERRED
+   - ✓ change_items.after_snapshot (jsonb) — 재생성 결과 저장
+   - **결론:** ERD 4.6절 487~501행 구조로 옵션 A 완전 지원 가능
+
+3. **상태 머신 정의** — REQUEST_CHANGES 전이 프로세스 문서화
+   ```
+   REQUEST_CHANGES 호출 전: review_status = PENDING
+   REQUEST_CHANGES 호출 → 202 Accepted: review_status = REVISION_REQUESTED
+   비동기 재생성: after_snapshot 갱신
+   재생성 완료: review_status = PENDING (재검토 대기)
+   ```
+   - ✓ change_set.status는 PARTIALLY_APPROVED 유지
+   - ✓ change_items.id는 변함없음 (불변)
+   - ✓ 클라이언트는 polling으로 review_status·after_snapshot 변화 감지
+
+4. **Phase 0 벤치마크 항목 추가**
+   - ✅ "변경 항목 1개 재생성 평균 시간" 측정 항목 신설
+   - ✅ 목표: polling 간격 최적화 기준 (현 기본값 2초 적절성 검증)
+   - ✅ 규모별 측정: 소/중/대 규모 항목 재생성 시간 변동 조사
+
+**산출물**
+
+- `docs/검증-백엔드-ERD-API-정합성.md` 9.6절 신설: "갭 #23 확정 반영"
+  - ERD 구조 검증 테이블
+  - 상태 전이 다이어그램
+  - Phase 0 벤치마크 항목 정의
+- `.claude/team/backend/STATE.md` — 갭 #23 옵션 A 확정 표기, 다음 작업 정리, 벤치마크 8건 항목 추가
+- `.claude/team/backend/WORKLOG.md` — 이번 세션 기록
+
+**검증 체크리스트**
+
+| 항목 | 확인 | 결과 |
+| --- | --- | --- |
+| change_items 구조 | review_status·after_snapshot 필드 존재 | ✅ 4.6절 487~501행 |
+| 옵션 A 구현 가능성 | PK·FK 불변으로 같은 항목 갱신 가능 | ✅ 설계상 지원 |
+| 상태 전이 논리 | REVISION_REQUESTED→PENDING 원형도 가능 | ✅ enum 값에 포함 |
+| 벤치마크 추가 | Phase 0 평가 항목에 반영 | ✅ STATE.md 8번 항목 |
+
+**근거**
+
+- ERD: `docs/ZeroWiki-ERD-초안.md` 4.6절 483~501행 (change_items)
+- API: `docs/ZeroWiki-API-명세-초안.md` 8.1절 (리더 신설 REQUEST_CHANGES 재생성 흐름)
+- 리더 지시: "옵션 A 확정, API 명세 반영 완료, ERD·상태머신·벤치마크 정의" (2026-07-30)
+
+**미해결**
+
+- Phase 0 벤치마크 실행 대기 (코드 구현 후)
+
+---
+
+## 2026-07-30 — Contradictions 엔드포인트 정합성 검증 (세션 abackend-gap21-confirm)
+
+**한 일**
+
+1. **리더 확인 사항 반영** — Contradictions 엔드포인트가 이미 API 명세에 정의됨
+   - API 명세 7.3절 863~936행 완전 정의됨
+   - 필터(status/classification/since/limit/cursor) ✅
+   - 페이지네이션 ✅
+   - 응답 스키마 (leftClaimStatement, resolutionNote 등) ✅
+
+2. **ERD `contradictions` 엔터티 정합성 검증** (ERD 4.5절 446~461행)
+
+   | 항목 | API 명세 | ERD | 정합성 |
+   | --- | --- | --- | --- |
+   | classification | TRUE_CONFLICT \| TIME_CHANGE \| CONDITION_DIFF \| VIEWPOINT_DIFF \| POSSIBLE_CONFLICT (5종) | ✅ 5종 일치 (454행) | ✅ |
+   | status | OPEN \| ACCEPTED \| DISMISSED \| RESOLVED | ✅ 4종 일치 (457행) | ✅ |
+   | resolutionNote | null 가능, OPEN일 때 null | ✅ text 타입, NOT NULL 없음 (458행) | ✅ |
+   | resolvedAt | null 가능, OPEN일 때 null | ✅ timestamptz 타입, NOT NULL 없음 (460행) | ✅ |
+   | resolved_by | 응답에 포함하지 않음 (NFR-SEC-01) | ✅ FK 존재하지만 API 응답 제외 (459행) | ✅ |
+
+3. **결론: 완전 정합, 별도 조치 불필요**
+   - classification enum 5종 정확히 일치
+   - status enum 일치
+   - nullable 여부 일치 (OPEN일 때 null)
+   - 보안 설계 준수 (resolved_by 비노출)
+
+**산출물**
+
+- STATE.md 갱신: "다음 작업" 항목에서 Contradictions 엔드포인트 제거
+- WORKLOG.md 이번 세션 기록
+
+**근거**
+
+- API: `docs/ZeroWiki-API-명세-초안.md` 7.3절 863~936행
+- ERD: `docs/ZeroWiki-ERD-초안.md` 4.5절 446~461행
+- 리더 지시: Contradictions 스펙 이미 정의, ERD 정합성만 검증 (2026-07-30)
+
+**다음 단계**
+
+- Phase 0 벤치마크 실행 (코드 구현 후)

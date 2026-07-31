@@ -45,12 +45,13 @@ ZeroWiki-SaaS/
 │       └── {역할}/               CLAUDE.md · STATE.md · WORKLOG.md (각 역할 소유)
 ├── docs/                         기준 문서·검증 문서 (아래 표 참조)
 ├── backend/                      미생성. Spring Boot 앱 + Ingest Worker
-├── frontend/                     Next.js + TypeScript. 현재는 화면 설계 문서만
-│   └── screens/                  화면 설계·와이어프레임 (frontend 소유)
+├── frontend/                     Next.js + TypeScript 프로젝트. 도서관 홈 화면 1차 구현 + 화면 설계 4종
+│   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
+│   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
 └── qa/                           테스트 시나리오 문서. 실행 코드는 미작성
 ```
 
-`backend/`는 아직 없다. `frontend/`·`qa/`는 2026-07-30에 생겼으나 **각각 화면 설계 문서와 테스트 시나리오 문서뿐이고 실행되는 코드는 한 줄도 없다.** 없는 디렉터리를 있다고 가정하지 않는다.
+`backend/`는 아직 없다. `qa/`는 2026-07-30에 생겼으나 테스트 시나리오 문서뿐이고 실행되는 코드는 없다. `frontend/`는 2026-07-30에 Next.js 프로젝트로 초기화되어 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)까지 구현됐고, 변경 검토·원문 발췌 표기·Ingest 진행 화면 설계 문서도 추가됐다. 없는 디렉터리를 있다고 가정하지 않는다.
 
 ## 기준 문서
 
