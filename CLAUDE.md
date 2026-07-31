@@ -21,7 +21,9 @@
 | qa | `.claude/team/qa/CLAUDE.md` | `.claude/team/qa/STATE.md` | `.claude/team/qa/WORKLOG.md` |
 | pm | `.claude/team/pm/CLAUDE.md` | `.claude/team/pm/STATE.md` | `.claude/team/pm/WORKLOG.md` |
 
-팀 운영 방법(스폰 프롬프트 템플릿, 작업 분할 원칙)은 `.claude/team/README.md`, 에이전트 팀 기능 자체의 사용법은 `docs/에이전트-팀-운영-가이드.md`에 있다.
+팀 운영 방법(스폰 프롬프트 템플릿, 작업 분할 원칙, **완료 보고 규약**)은 `.claude/team/README.md`, 에이전트 팀 기능 자체의 사용법은 `docs/에이전트-팀-운영-가이드.md`에 있다.
+
+**완료 보고에는 검증 근거가 따라온다.** 편집한 파일을 다시 읽어 확인한 뒤 보고하고, 근거는 행 번호가 아니라 **검증 명령과 그 출력**으로 낸다. 근거 없는 완료 보고는 리더가 접수하지 않는다. 전문은 `.claude/team/README.md`의 "완료 보고 규약" 절에 있다.
 
 ## 팀 스킬
 
@@ -42,12 +44,15 @@ ZeroWiki-SaaS/
 │   ├── skills/{이름}/SKILL.md    팀 스킬 정의 (리더 소유)
 │   └── team/
 │       ├── README.md             팀 운영 방법 (리더 소유)
+│       ├── JOURNAL.md            네 역할을 관통하는 시간순 통합 업무 기록 (리더 소유)
 │       └── {역할}/               CLAUDE.md · STATE.md · WORKLOG.md (각 역할 소유)
 ├── docs/                         기준 문서·검증 문서 (아래 표 참조)
 ├── backend/                      미생성. Spring Boot 앱 + Ingest Worker
 ├── frontend/                     Next.js + TypeScript 프로젝트. 도서관 홈 화면 1차 구현 + 화면 설계 4종
 │   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
+│   │   └── design-source/        외부에서 가져온 디자인 시안 원본 (frontend 소유)
 │   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
+├── evaluation/                   Phase 0 벤치마크 정답 라벨 CSV. 사용자가 작성, backend가 소비 (backend 소유)
 └── qa/                           테스트 시나리오 문서. 실행 코드는 미작성
 ```
 
@@ -86,7 +91,7 @@ ZeroWiki-SaaS/
 | 보안 설계·리뷰 | 기획서 18절 → API 명세 15절 → 요구사항 정의서 6.1절(NFR-SEC) |
 | 미확정 항목 확인·권고 | **요구사항 정의서 12절(정본)** → 해당 문서의 미확정 절 |
 | 범위·우선순위 판단 | 기획서 22절(MVP 제외)·23절(Phase) → API 명세 17절 |
-| 팀 현황 파악 | 각 역할 `STATE.md` → `WORKLOG.md`(필요할 때만) |
+| 팀 현황 파악 | `.claude/team/JOURNAL.md`(흐름·판단 이력) → 각 역할 `STATE.md` → `WORKLOG.md`(필요할 때만) |
 
 **절 번호를 인용할 때는 그 절을 실제로 열어 확인한다.** 접두사 없는 번호(`13·14·15번` 등)는 요구사항 ID가 아니라 그 절 내부의 항목 번호일 수 있다. 확인 없이 단정한 인용은 헌법 제2조 5항 위반이다.
 
