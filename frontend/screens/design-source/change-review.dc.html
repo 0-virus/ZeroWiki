@@ -1,0 +1,190 @@
+<!--
+  원본: claude.ai/design 프로젝트 "Hi-fi 와이어프레임 제작"
+  URL: https://claude.ai/design/p/909dd058-1ca0-4b24-8c60-d2e73c48e1b0?file=change-review.dc.html
+  이 파일은 claude_design MCP로 그대로 가져온 원본이다. 렌더링하려면 dc-runtime(support.js, 같은 프로젝트에 존재)이 필요하며
+  이 저장소만으로는 실행되지 않는다. 정적 HTML/CSS/JS로 재현한 상호작용 가능한 버전은
+  ../design-import-change-review.md 에서 링크하는 Artifact를 참고할 것.
+  같은 프로젝트에는 global-home.dc.html · graph.dc.html · ingest-plan.dc.html · library-home.dc.html ·
+  mobile.dc.html · onboarding.dc.html · page-attention.dc.html 도 있다 (미가져옴).
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"></link>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"></link>
+<style>
+@font-face { font-family:'D2Coding'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_three@1.0/D2Coding.woff') format('woff'); font-weight:normal; }
+@keyframes zw-type { from { width:0ch } to { width:9ch } }
+@keyframes zw-caret { 0%,100% { border-color:transparent } 50% { border-color:currentColor } }
+body { margin:0; background:#fdfcfc; color:#201d1d; font-family:'JetBrains Mono','D2Coding',monospace; }
+a { color:#201d1d; }
+a:hover { color:#0f0000; }
+*{ box-sizing:border-box; }
+</style>
+</helmet>
+<div data-screen-label="변경 검토" style="min-height:100vh; background:#fdfcfc; font-size:16px; line-height:1.5">
+  <div style="height:56px; border-bottom:1px solid rgba(15,0,0,0.12); display:flex; align-items:center; gap:24px; padding:0 24px; position:sticky; top:0; background:#fdfcfc; z-index:10">
+    <a href="global-home.dc.html" style="display:flex; align-items:center; gap:10px; text-decoration:none">
+      <span style="font-weight:700; font-size:16px; display:inline-block; overflow:hidden; white-space:nowrap; width:9ch; border-right:2px solid; animation:zw-type 1.2s steps(9,end), zw-caret 1s step-end 1.2s infinite">ZERO_WIKI</span>
+    </a>
+    <div style="display:flex; gap:20px; font-size:14px; flex:1">
+      <a href="global-home.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">홈</a>
+      <a href="library-home.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">도서관</a>
+      <a href="page-attention.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">문서</a>
+      <a href="change-review.dc.html" style="text-decoration:none; font-weight:700; white-space:nowrap">변경 검토</a>
+      <a href="ingest-plan.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">Ingest</a>
+      <a href="graph.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">그래프</a>
+      <a href="onboarding.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">온보딩</a>
+      <a href="mobile.dc.html" style="text-decoration:none; color:#646262; white-space:nowrap">모바일</a>
+    </div>
+    <span style="font-size:14px; color:#646262; white-space:nowrap">알림 <span style="background:#201d1d; color:#fdfcfc; border-radius:4px; padding:1px 7px; font-size:13px">4</span></span>
+  </div>
+
+  <div style="max-width:1000px; margin:0 auto; padding:40px 40px 64px">
+    <div style="font-size:14px; color:#646262; margin-bottom:8px"><a href="library-home.dc.html" style="color:#646262">AI &amp; 머신러닝</a> / 변경 세트 #b634</div>
+    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px">
+      <h1 style="font-size:28px; font-weight:700; margin:0">신경망 자료 20건 Ingest 결과</h1>
+      <span style="font-size:13px; border:1px solid #646262; border-radius:4px; padding:1px 10px; color:#646262">READY_FOR_REVIEW</span>
+    </div>
+    <div style="font-size:14px; color:#646262; border-bottom:1px solid #646262; padding-bottom:16px; margin-bottom:16px">기준: 도서관 v12 → 적용 시 v13 발행 · 변경 34건 = 안전 28 · 검토 4 · 위험 2 · revision 4</div>
+
+    <div style="display:flex; gap:0; border-bottom:1px solid #646262; margin-bottom:16px; font-size:14px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.select }}" style="background:transparent; border:none; border-bottom:2px solid {{ t.underline }}; color:{{ t.color }}; font-family:inherit; font-size:14px; font-weight:{{ t.weight }}; padding:8px 16px; cursor:pointer; line-height:2">{{ t.label }}</button>
+      </sc-for>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px">
+        <button onClick="{{ approveAllSafe }}" style="background:#fdfcfc; border:1px solid #646262; border-radius:4px; color:#201d1d; font-family:inherit; font-size:13px; font-weight:500; padding:0 12px; cursor:pointer; line-height:2">안전 28건 일괄 승인</button>
+      </div>
+    </div>
+
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="5">
+      <div style="border:1px solid rgba(15,0,0,0.12); border-radius:4px; margin-bottom:8px; background:#fdfcfc">
+        <div onClick="{{ it.expand }}" style="display:flex; align-items:baseline; gap:12px; padding:10px 16px; cursor:pointer">
+          <span style="color:#646262; font-size:14px">{{ it.caret }}</span>
+          <span style="flex:1; font-size:15px">{{ it.title }}</span>
+          <span style="font-size:12px; border:1px solid {{ it.riskColor }}; color:{{ it.riskColor }}; border-radius:4px; padding:0 6px">{{ it.risk }}</span>
+          <span style="font-size:12px; color:#9a9898">{{ it.kind }}</span>
+          <span style="font-size:13px; color:{{ it.decisionColor }}; min-width:88px; text-align:right">{{ it.decisionLabel }}</span>
+        </div>
+        <sc-if value="{{ it.open }}" hint-placeholder-val="{{ false }}">
+          <div style="border-top:1px solid rgba(15,0,0,0.12); padding:16px; display:flex; flex-direction:column; gap:16px; font-size:14px">
+            <div style="color:#424245"><span style="font-weight:700; color:#201d1d">변경 이유 — </span>{{ it.reason }}</div>
+            <div style="display:grid; grid-template-columns:{{ diffCols }}; gap:12px">
+              <div>
+                <div style="font-size:12px; color:#9a9898; margin-bottom:4px">변경 전 (v{{ it.fromV }})</div>
+                <div style="background:#f8f7f7; border:1px solid rgba(15,0,0,0.12); border-radius:4px; padding:10px 12px; color:#424245; white-space:pre-wrap"><span style="background:rgba(255,59,48,0.12)">{{ it.before }}</span></div>
+              </div>
+              <div>
+                <div style="font-size:12px; color:#9a9898; margin-bottom:4px">변경 후 (제안)</div>
+                <div style="background:#f8f7f7; border:1px solid rgba(15,0,0,0.12); border-radius:4px; padding:10px 12px; color:#424245; white-space:pre-wrap"><span style="background:rgba(48,209,88,0.16)">{{ it.after }}</span></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; color:#646262; font-size:13px">
+              <span>영향 페이지: {{ it.affected }} · 근거: {{ it.evidence }} · AI 신뢰도 {{ it.confidence }}</span>
+              <a href="page-attention.dc.html" style="color:#201d1d">근거 원문 보기 →</a>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <button onClick="{{ it.approve }}" style="background:#201d1d; color:#fdfcfc; border:none; border-radius:4px; font-family:inherit; font-size:14px; font-weight:500; padding:2px 20px; cursor:pointer; line-height:2">승인</button>
+              <button onClick="{{ it.reject }}" style="background:#fdfcfc; color:#201d1d; border:1px solid #646262; border-radius:4px; font-family:inherit; font-size:14px; font-weight:500; padding:2px 20px; cursor:pointer; line-height:2">거절</button>
+              <button onClick="{{ it.requestChanges }}" style="background:#fdfcfc; color:#201d1d; border:1px solid #646262; border-radius:4px; font-family:inherit; font-size:14px; font-weight:500; padding:2px 20px; cursor:pointer; line-height:2">수정 요청</button>
+              <button onClick="{{ it.defer }}" style="background:#fdfcfc; color:#646262; border:1px solid rgba(15,0,0,0.12); border-radius:4px; font-family:inherit; font-size:14px; font-weight:500; padding:2px 20px; cursor:pointer; line-height:2">판단 보류</button>
+              <span style="font-size:12px; color:#9a9898; align-self:center">거절·수정 요청에는 사유가 필요하며 운영 헌법 학습에 반영됩니다</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <div style="margin-top:24px; border-top:1px solid #646262; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+      <span style="font-size:14px; color:#646262">판단 완료 {{ decidedCount }} / 34 · 수정 요청이 있으면 재생성 결과를 기다립니다</span>
+      <div style="display:flex; gap:8px">
+        <a href="library-home.dc.html" style="text-decoration:none; background:#fdfcfc; color:#201d1d; border:1px solid #646262; border-radius:4px; padding:2px 20px; font-weight:500; font-size:14px; line-height:2">나중에</a>
+        <a href="library-home.dc.html" style="text-decoration:none; background:#201d1d; color:#fdfcfc; border-radius:4px; padding:2px 20px; font-weight:500; font-size:14px; line-height:2">승인 항목 적용 — v13 발행</a>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280},&quot;diffLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;SPLIT&quot;,&quot;UNIFIED&quot;],&quot;default&quot;:&quot;SPLIT&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;diff&quot;},&quot;riskColorMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;SEMANTIC&quot;,&quot;MONO&quot;],&quot;default&quot;:&quot;SEMANTIC&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;위험도 표시&quot;},&quot;badgeStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;OUTLINE&quot;,&quot;FILLED&quot;],&quot;default&quot;:&quot;FILLED&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;근거 표시&quot;},&quot;evidenceOpenByDefault&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;근거 표시&quot;},&quot;bodyFontSize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:14,&quot;max&quot;:18,&quot;step&quot;:1,&quot;unit&quot;:&quot;px&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;본문&quot;},&quot;showRail&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;레이아웃&quot;},&quot;askTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;DARK&quot;,&quot;CREAM&quot;],&quot;default&quot;:&quot;DARK&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;AI 질문 패널&quot;}}">
+class Component extends DCLogic {
+  state = { filter: "ALL", expanded: "i1", decisions: {} };
+  renderVals() {
+    const data = [
+      { id: "i1", title: "기존 사실 수정 — 「드롭아웃 비율 0.5 권장」", risk: "HIGH", kind: "사실 수정", fromV: 2,
+        reason: "2024년 이후 원본 6건이 트랜스포머 계열에서 0.1~0.3 범위를 보고한다. 기존 주장은 CNN 시대 원본 1건에 근거한다.",
+        before: "드롭아웃 비율은 0.5를 권장한다. 은닉층 뉴런의 절반을 무작위로 비활성화하는 것이 표준이다.",
+        after: "드롭아웃 비율은 구조에 따라 다르다. 트랜스포머 계열은 0.1~0.3이 일반적이며, 0.5는 초기 CNN 연구의 권장값이다.",
+        affected: "정규화 기법 외 2", evidence: "원본 6건", confidence: "0.88" },
+      { id: "i2", title: "모순 판정 — 배치 크기와 일반화 성능", risk: "HIGH", kind: "모순 해소", fromV: 3,
+        reason: "두 주장이 같은 조건을 다르게 서술하는지 검토가 필요하다. AI는 조건 차이(학습률 스케일링 여부)로 분류를 제안한다.",
+        before: "큰 배치 크기는 일반화 성능을 해친다.",
+        after: "[조건 차이] 학습률을 배치 크기에 비례해 조정하지 않은 경우에만 일반화 저하가 관찰된다.",
+        affected: "경사 하강법 외 1", evidence: "원본 3건", confidence: "0.78" },
+      { id: "i3", title: "새 페이지 — 「위치 인코딩」 (CONCEPT)", risk: "SAFE", kind: "새 페이지", fromV: 0,
+        reason: "Ingest된 논문 4건이 공통으로 다루는 개념이며 기존 페이지가 없다.",
+        before: "(없음)",
+        after: "위치 인코딩(positional encoding)은 순서 정보가 없는 주의 기제에 토큰 위치를 주입하는 방법이다...",
+        affected: "주의 메커니즘, 트랜스포머", evidence: "원본 4건", confidence: "0.93" },
+      { id: "i4", title: "새 연결 — 주의 메커니즘 —관련→ 스케일링 법칙", risk: "SAFE", kind: "새 연결", fromV: 3,
+        reason: "두 페이지가 같은 원본 2건을 인용하며 인과 서술이 이어진다.",
+        before: "(연결 없음)",
+        after: "주의 메커니즘 —관련→ 스케일링 법칙 (근거: Kaplan et al. §3)",
+        affected: "2개 페이지", evidence: "원본 2건", confidence: "0.85" },
+      { id: "i5", title: "구조 개선 — 「활성화 함수」 절 순서 재배치", risk: "REVIEW", kind: "구조 개선", fromV: 4,
+        reason: "정의보다 비교표가 먼저 나와 읽기 흐름이 어긋난다. 의미 변경 없음.",
+        before: "## 비교표 → ## 정의 → ## 역사",
+        after: "## 정의 → ## 비교표 → ## 역사",
+        affected: "활성화 함수", evidence: "—", confidence: "0.91" }
+    ];
+    const mono = (this.props.riskColorMode ?? "SEMANTIC") === "MONO";
+    const riskColors = mono
+      ? { HIGH: "#201d1d", REVIEW: "#646262", SAFE: "#9a9898" }
+      : { HIGH: "#ff3b30", REVIEW: "#ff9f0a", SAFE: "#646262" };
+    const decisionMeta = { APPROVE: ["✓ 승인됨", "#30d158"], REJECT: ["× 거절됨", "#ff3b30"], REQUEST_CHANGES: ["± 수정 요청", "#ff9f0a"], DEFER: ["… 보류", "#9a9898"] };
+    const setDecision = (id, d) => this.setState((s) => ({ decisions: { ...s.decisions, [id]: d } }));
+    const filtered = data.filter((it) => this.state.filter === "ALL" || it.risk === this.state.filter);
+    const items = filtered.map((it) => {
+      const open = this.state.expanded === it.id;
+      const dec = this.state.decisions[it.id];
+      return { ...it,
+        open, caret: open ? "[-]" : "[+]",
+        riskColor: riskColors[it.risk],
+        decisionLabel: dec ? decisionMeta[dec][0] : "미판단",
+        decisionColor: dec ? decisionMeta[dec][1] : "#9a9898",
+        expand: () => this.setState({ expanded: open ? null : it.id }),
+        approve: () => setDecision(it.id, "APPROVE"),
+        reject: () => setDecision(it.id, "REJECT"),
+        requestChanges: () => setDecision(it.id, "REQUEST_CHANGES"),
+        defer: () => setDecision(it.id, "DEFER")
+      };
+    });
+    const tabDefs = [["ALL", "전체 34"], ["SAFE", "안전 28"], ["REVIEW", "검토 4"], ["HIGH", "위험 2"]];
+    const tabs = tabDefs.map(([key, label]) => ({
+      label,
+      color: this.state.filter === key ? "#201d1d" : "#646262",
+      weight: this.state.filter === key ? 700 : 500,
+      underline: this.state.filter === key ? "#9a9898" : "transparent",
+      select: () => this.setState({ filter: key })
+    }));
+    return {
+      tabs, items,
+      diffCols: (this.props.diffLayout ?? "SPLIT") === "SPLIT" ? "1fr 1fr" : "1fr",
+      decidedCount: Object.keys(this.state.decisions).length + 26,
+      approveAllSafe: () => {
+        const next = { ...this.state.decisions };
+        data.forEach((it) => { if (it.risk === "SAFE") next[it.id] = "APPROVE"; });
+        this.setState({ decisions: next });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

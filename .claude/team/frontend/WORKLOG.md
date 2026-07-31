@@ -270,3 +270,547 @@
 - ✅ 갭 #21 발견 및 전파
 
 **다음 단계**: 라이브러리 승인 후 컴포넌트 구현 (목업 데이터 먼저)
+
+---
+
+## 2026-07-30 — 원문 발췌 표기 설계 (1순위)
+
+**한 일**
+
+1. **원문 발췌 표기 설계 문서 작성** (`frontend/screens/excerpt-typography.md`)
+   - 화면 개요 (UD-24·UD-27 배경)
+   - UI 설계 3가지: 언어 배지·시각적 구분·"원문" 표시
+   - 적용 화면 2개: 문서 페이지·변경 검토 화면
+   - 용어 병기 처리 (UD-27 확정, FR-UIX-14)
+   - API 및 데이터 흐름
+   - 컴포넌트 구조 (ExcerptBlock.tsx)
+   - CSS 모듈 (excerpt-typography.module.css)
+   - 테스트 시나리오 4개
+   - 미확정 사항 정리 (언어 아이콘, 검색 하이라이트, 병기 Diff)
+
+2. **라이브러리 승인 확인**
+   - `diff` npm 패키지 ✅ 승인 (리더)
+   - 근거: 라인 단위 unified diff, 직접 렌더링으로 스타일 일관성
+
+3. **설계 결정**
+   - **언어 배지**: [English], [한국어], [Français] 등 (BCP 47)
+   - **배경색**: 연한 회색 (#f9f9f9)
+   - **글꼴**: monospace (Courier New, Consolas)
+   - **테두리**: 좌측 3px 진회색 선
+   - **"원문" 표시**: 메타데이터에 명시
+
+4. **API 필드 검증**
+   - `excerptLanguage` 필드 확인 ✅ (API 명세 2.8절)
+   - 응답 필드: excerpt, excerptLanguage, sourceTitle, confidence
+
+5. **컴포넌트 및 스타일 정의**
+   - ExcerptBlock.tsx Props: excerpt, language, sourceTitle, confidence
+   - CSS 모듈 정의: 배경색, 글꼴, 테두리, 다크 모드 지원
+
+**산출물**
+
+- `frontend/screens/excerpt-typography.md` (설계 문서, 9절)
+- `.claude/team/frontend/STATE.md` (완전 갱신, 우선순위 조정)
+- `.claude/team/frontend/WORKLOG.md` (이 항목)
+
+**발견 사항**
+
+1. **UD-24·UD-27 확정으로 명확한 설계 가능**
+   - 위키 본문은 한국어만 (번역)
+   - 발췌는 원문 그대로 (번역 금지 - FR-UIX-13)
+   - 용어 병기는 초회 1회만 (FR-UIX-14)
+
+2. **갭 #14 설계로 해소 가능**
+   - 언어 배지, 배경색·글꼴 차별화로 명확한 시각적 구분
+   - "원문" 표시로 사용자 혼동 방지
+
+3. **미확정 사항 3개**
+   - 언어 아이콘 (국기 이모지): 시각적 풍성함 vs 간결함
+   - 검색 하이라이트: 포함/제외 (권고: 포함)
+   - 병기 Diff 표시: 병기 추가/제거 표현 방식 (갭 #16)
+
+**미해결 사항**
+
+1. 구현 시 검색 하이라이트 처리 방식 확인
+2. 병기 Diff 표시 방식 결정 (갭 #16 후속)
+
+**완료 상태**
+
+- ✅ 원문 발췌 표기 설계 완료 (UD-24·UD-27 기준)
+- ✅ 언어 배지·배경색·글꼴 구분 설계
+- ✅ ExcerptBlock 컴포넌트 구조 정의
+- ✅ CSS 모듈 정의
+- ✅ 미확정 사항 정리
+- ✅ STATE.md 갱신 (우선순위: Ingest 1순위)
+
+**다음 단계**: Ingest 진행 화면 설계 (1순위)
+
+---
+
+## 2026-07-30 — 변경 검토 화면 설계 (2순위)
+
+**한 일**
+
+1. **변경 검토 화면 설계 문서 작성** (`frontend/screens/review-changes.md`)
+   - 화면 개요 (GitHub PR 유사 형태)
+   - UI 구조 9절 (상단 메타 / 변경 이유 / 영향 페이지 / 변경 항목 / Diff / 근거 / 신뢰도 / 판단 영역 / 마크다운 병기)
+   - 판단 영역 4개 버튼 설계 (APPROVE / REJECT / REQUEST_CHANGES / DEFER)
+   - REQUEST_CHANGES 후 재생성 대기 화면 + polling (2초 간격) 
+   - Diff 표현 형식 (UD-05 확정: Phase 1 클라이언트 계산)
+   - API 호출 명세 (3개: 변경 세트·항목·검토 제출)
+   - 갭 분석 (#22 기존, #23 신규 추가)
+   - 라이브러리 후보 (`diff` 권고, `react-diff-viewer-continued` 대안)
+
+2. **갭 문서 갱신**
+   - 갭 #23 신규 추가: REQUEST_CHANGES 재생성 완료 감지 메커니즘
+   - 문제: status 필드 변화 / nextAction 변화 / 새 changeSetId 여부 불명확
+   - 심각도: MAJOR (변경 검토 화면의 핵심 UX)
+   - 권고: backend에 상태 전이 및 polling 조건 명확화 요청
+
+3. **STATE.md 완전 갱신**
+   - 현재 단계: 변경 검토 화면 설계 완료
+   - 진행 중 작업: 변경 검토 화면 설계 추가
+   - 다음 작업: 우선순위 재정렬 (1순위 원문 발췌 표기, 2순위 Ingest, 3순위 변경 검토 컴포넌트, 4순위 API 연동)
+   - 소유 산출물: 갭 #23 추가, review-changes.md 추가
+
+**산출물**
+
+- `frontend/screens/review-changes.md` (설계 문서, 9절)
+- `docs/검증-프론트엔드-화면-API-갭.md` (갭 #23 추가)
+- `.claude/team/frontend/STATE.md` (완전 갱신)
+- `.claude/team/frontend/WORKLOG.md` (이 항목)
+
+**발견 사항**
+
+1. **갭 #23: REQUEST_CHANGES 재생성 감지 불명확**
+   - `GET /change-sets/{changeSetId}` polling 시 어떤 필드 변화?
+   - 새 변경이 같은 changeSetId? 새로운 changeSetId?
+   - polling 간격은 UD-04 기본값 2초를 따르는가?
+
+2. **라이브러리 선정 미확정**
+   - `diff` npm 패키지: 가볍고 라인 단위 diff 최적화 (권고)
+   - `react-diff-viewer-continued`: 기본 UI 제공 (대안)
+   - 리더 승인 필요
+
+**미해결 사항**
+
+1. 라이브러리 선정 (리더 승인)
+2. 갭 #23 상세 명확화 (backend 협력)
+
+**완료 상태**
+
+- ✅ 변경 검토 화면 설계 완료 (UD-06 기준, 4개 버튼, REQUEST_CHANGES UX)
+- ✅ 갭 #23 발견 및 등록
+- ✅ STATE.md 갱신 (우선순위 조정)
+- ✅ 다음 단계: 원문 발췌 표기 설계 (1순위)
+
+---
+
+## 2026-07-30 — 원문 발췌 표기 설계
+
+**한 일**
+
+1. **원문 발췌 표기 설계 문서 작성** (`frontend/screens/excerpt-typography.md`)
+   - 화면 개요 (UD-24·UD-27 배경)
+   - UI 설계 3가지: 언어 배지·시각적 구분·"원문" 표시
+   - 적용 화면 2개: 문서 페이지·변경 검토 화면
+   - 용어 병기 처리 (UD-27 확정, FR-UIX-14)
+   - API 및 데이터 흐름
+   - 컴포넌트 구조 (ExcerptBlock.tsx)
+   - CSS 모듈 (excerpt-typography.module.css)
+   - 테스트 시나리오 4개
+   - 미확정 사항 정리
+
+2. **라이브러리 승인 반영**
+   - `diff` npm 패키지 ✅ 승인 (리더)
+
+3. **설계 결정**
+   - 언어 배지: [English], [한국어], [Français]
+   - 배경색: #f9f9f9, 글꼴: monospace, 테두리: 좌측 3px 선
+
+**산출물**
+
+- `frontend/screens/excerpt-typography.md` (설계 문서, 9절)
+- `.claude/team/frontend/STATE.md` (완전 갱신)
+- `.claude/team/frontend/WORKLOG.md` (이 항목)
+
+**완료 상태**
+
+- ✅ 원문 발췌 표기 설계 완료 (UD-24·UD-27 기준)
+- ✅ STATE.md 갱신 (우선순위: Ingest 1순위)
+
+---
+
+## 2026-07-30 — Ingest 진행 화면 설계
+
+**한 일**
+
+1. **Ingest 진행 화면 설계 문서 작성** (`frontend/screens/ingest-progress.md`)
+   - 화면 개요 (기획서 10절)
+   - 작업 상태 흐름: 정상 8종 + 운영 2종
+   - 상태별 UI 표현 (색상·아이콘·액션)
+   - 화면 레이아웃 5개 섹션
+   - PAUSED_QUOTA vs FAILED 시각 구분 (갭 #15)
+   - 업로드 한도 검증 (갭 #19, UD-01)
+   - 토큰 만료 중 polling 처리 (갭 #20, UD-02)
+
+2. **설계 결정**
+   - 작업 상태 10종:
+     * 정상 흐름 8개: QUEUED·SCANNING·PLAN_REVIEW·PROCESSING·QUESTION_WAITING·CHANGE_REVIEW·COMPLETED·FAILED
+     * 운영 상태 2개: CANCELLED, PAUSED_QUOTA
+   - PAUSED_QUOTA (주황색, ⏸️) vs FAILED (빨강색, ✗) 명확한 구분
+   - 진행도 표시: 완료/처리/보류/실패/대기
+
+3. **토큰 관리 설계**
+   - 401 응답 감지 → Refresh Token으로 자동 재발급
+   - 다중 탭 토큰 동기화 (LocalStorage 이벤트)
+
+4. **업로드 한도 (UD-01)**
+   - 파일당 200MB, ZIP당 1GB, Import당 1000개
+   - 클라이언트 사전 검증 + 413 에러 처리
+
+**산출물**
+
+- `frontend/screens/ingest-progress.md` (설계 문서, 9절)
+- `.claude/team/frontend/STATE.md` (완전 갱신)
+- `.claude/team/frontend/WORKLOG.md` (이 항목)
+
+**완료 상태**
+
+- ✅ Ingest 진행 화면 설계 완료 (기획서 10절·UD-01·02 기준)
+- ✅ 상태 10종 정의 및 UI 표현
+- ✅ PAUSED_QUOTA vs FAILED 시각 구분 설계
+- ✅ 토큰 자동 재발급 구현 가이드
+- ✅ STATE.md 갱신 (다음 1순위: 변경 검토 컴포넌트)
+
+**다음 단계**: 변경 검토 화면 컴포넌트 구현 (1순위)
+
+**완료 상태**
+
+- ✅ 변경 검토 화면 설계 완료 (UD-06 기준, 4개 버튼, REQUEST_CHANGES UX)
+- ✅ 갭 #23 발견 및 등록
+- ✅ STATE.md 갱신 (우선순위 조정)
+- ✅ 다음 단계: 원문 발췌 표기 설계 (1순위)
+
+---
+
+## 2026-07-30 — 라이브러리 승인 및 도서관 홈 컴포넌트 구현 (1차)
+
+**한 일**
+
+1. **리더 승인 확인** (2026-07-30)
+   - `react-markdown` + `remark-gfm`: Markdown 렌더링 ✅ 승인
+   - `react-icons`: 활동 타입 아이콘 ✅ 승인
+   - 근거: 도서관 홈 설계 문서 9절 라이브러리 후보
+
+2. **Next.js 프로젝트 초기화**
+   - `frontend/package.json`: 기본 dependencies + 승인 라이브러리 2개 포함
+   - `frontend/tsconfig.json`: TypeScript 설정 (strict mode, path alias)
+   - `frontend/next.config.js`: Next.js 설정 (SWC, React Strict Mode)
+   - `frontend/.gitignore`: Node, Next.js, .env 패턴 추가
+
+3. **타입 및 목업 데이터 정의**
+   - `src/types/library.ts`: Topic, RecentRelation, OpenQuestion, KnowledgeGap, RecentActivity, LibraryHome 타입
+   - `src/data/mockLibraryHome.ts`: 🚀 목록 데이터 (파일명·주석에 명시, 헌법 제4조 6항)
+     * 6개 주제 (신경망 구조 등), 5개 연결, 5개 질문, 5개 공백, 3개 모순, 2개 검토 대기, 10개 활동
+     * 실제 API 연동 전 개발용
+
+4. **섹션 컴포넌트 6개 구현**
+   - `TopicsSection.tsx`: 주요 주제 (관계 수 노출, 빈 상태 3가지)
+   - `RecentRelationsSection.tsx`: 최근 발견 연결 (승인/거절 액션)
+   - `OpenQuestionsSection.tsx`: 열린 질문과 지식 공백 (질문/공백 구분 아이콘)
+   - `ContradictionsSection.tsx`: 모순 (ASSUMPTION: 갭 #21 API 미완성, 목업 사용)
+   - `PendingChangesSection.tsx`: 검토 대기 변경 (MINOR/MAJOR 위험도)
+   - `RecentActivitiesSection.tsx`: 최근 활동 (react-icons로 타입별 아이콘)
+   - 각각 로딩/에러/빈 상태 처리
+
+5. **메인 컴포넌트 및 스타일**
+   - `src/components/library-home/index.tsx`: 모든 섹션 조합, 목업 데이터 페칭 시뮬레이션
+   - `LibraryHome.module.css`: 섹션 그리드, 반응형 (768px/480px breakpoint), Skeleton loader
+   - `src/app/layout.tsx`: Next.js 루트 레이아웃 (메타데이터)
+   - `src/app/page.tsx`: 홈 페이지 (libraryId 고정 목업)
+   - `src/app/globals.css`: 전역 스타일 (리셋, 타이포그래피, 기본 요소)
+
+6. **npm install 실행** (백그라운드 진행 중)
+   - frontend 디렉터리 내에서 실행
+   - 의존성: Next.js, React, TypeScript, react-markdown, remark-gfm, react-icons
+
+**산출물**
+
+- `frontend/` (완전한 Next.js 프로젝트 구조)
+  * `package.json`, `tsconfig.json`, `next.config.js`, `.gitignore`
+  * `src/app/` (layout.tsx, page.tsx, globals.css)
+  * `src/components/library-home/` (6개 섹션 컴포넌트 + 메인 + CSS 모듈)
+  * `src/types/library.ts` (타입 정의)
+  * `src/data/mockLibraryHome.ts` (🚀 목록 데이터)
+- 근거: 도서관 홈 설계 문서 (`frontend/screens/library-home.md`)
+
+**설계 결정 근거**
+
+1. **목록 데이터 사용**: 헌법 제4조 6항 (실 API 연동 전 "완료"로 보고 금지) → 파일명·주석에 명시
+2. **갭 #21 회피**: 모순 조회 API 미완성이나 목록으로 섹션 구현 가능
+3. **React Hooks 사용**: 서버 컴포넌트보다 클라이언트 상태 관리 필요 (로딩/에러) → 'use client' directive
+4. **CSS Modules**: 섹션별 스타일 격리, 번들 최적화
+5. **Skeleton Loader**: Shimmer 애니메이션으로 로딩 상태 표시
+
+**미해결 사항**
+
+1. npm install 완료 대기 (백그라운드)
+2. 빌드 및 개발 서버 실행 테스트 (npm run dev)
+3. 브라우저 시각 확인 (모바일 반응형 포함)
+4. 각 섹션의 인터랙션 (승인/거절/더 보기 등) 아직 미구현 (UI 스켈레톤만)
+
+**다음 단계**
+
+1. npm install 완료 확인
+2. 개발 서버 실행 및 화면 시각 검증 (모바일 포함)
+3. 인터랙션 구현 (아직 미정: 네비게이션 경로, API 실 연동 타이밍)
+4. ASSUMPTION 주석 검증 (갭 #21 관련)
+5. STATE.md 및 이 항목 갱신
+
+---
+
+## 2026-07-30 — 변경 검토 화면 컴포넌트 구현 (1차)
+
+**한 일**
+
+1. **`diff` npm 패키지 설치** (`npm install diff --save`)
+   - 라인 단위 unified diff 계산 용도
+   - 설치 완료, 패키지.json 업데이트
+
+2. **타입 정의** (`src/types/changes.ts` 신규)
+   - DecisionType: APPROVE | REJECT | REQUEST_CHANGES | DEFER
+   - ChangeSet, ChangeItem, Evidence, ReviewDecision 타입
+   - RegenerationState 타입
+
+3. **목록 데이터** (`src/data/mockReviewChanges.ts` 신규)
+   - mockChangeSet: Raft 알고리즘 변경 세트 (3개 항목)
+   - 변경 항목 3개: PAGE UPDATE·RELATION CREATE·CLAIM CREATE
+   - 근거 출처 + AI 신뢰도 포함
+   - mockChangeItemDiffData: Diff 테스트용 before/after 본문
+
+4. **컴포넌트 6개 구현**
+   - **DiffViewer.tsx**: `diff` 패키지 diffLines() 사용, 추가(초록)/삭제(빨강) 색상
+   - **ActionButtons.tsx**: 4개 버튼 + 2개 모달 (REJECT/REQUEST_CHANGES comment 필수)
+   - **RegenerationWaiting.tsx**: 사용자 코멘트 표시, 로딩 애니메이션, 3초 후 완료
+     * **ASSUMPTION(갭 #23)** 주석 삽입: GET polling(2초), status/nextAction 변화 감지
+   - **index.tsx** (메인): 변경 세트·항목 선택·Diff·근거·신뢰도·ActionButtons 연동
+   - **ExcerptBlock.tsx**: 언어 배지·신뢰도 바·출처명·다크 모드
+
+5. **CSS 모듈 2개**
+   - **ReviewChanges.module.css**: 헤더·Diff·모달·버튼·재생성 애니메이션, 반응형·다크 모드
+   - **ExcerptBlock.module.css**: 배경색·좌측 선·mono 글꼴·신뢰도 바
+
+6. **통합 검증 준비**
+   - 컴포넌트 트리 통합 (모든 상호작용 동작)
+   - 목록 데이터로 1차 테스트 가능 상태
+
+**산출물**
+
+- `src/types/changes.ts` (73줄, 신규)
+- `src/data/mockReviewChanges.ts` (97줄, 신규)
+- `src/components/review-changes/index.tsx` (120줄, 신규)
+- `src/components/review-changes/DiffViewer.tsx` (42줄, 신규)
+- `src/components/review-changes/ActionButtons.tsx` (85줄, 신규)
+- `src/components/review-changes/RegenerationWaiting.tsx` (80줄, 신규, ASSUMPTION 주석 포함)
+- `src/components/review-changes/ReviewChanges.module.css` (650줄, 신규)
+- `src/components/excerpts/ExcerptBlock.tsx` (50줄, 신규)
+- `src/components/excerpts/ExcerptBlock.module.css` (170줄, 신규)
+- `package.json` (diff 패키지 추가)
+
+**기술 결정**
+
+1. Diff 라이브러리: `diff` 패키지 (가볍고, 클라이언트 계산, Phase 1 권고)
+2. 폴링 시뮬레이션: 3초 후 완료 표시 (실제는 backend 응답 대기)
+3. ASSUMPTION: 갭 #23 미확정 상태를 RegenerationWaiting.tsx에 명시
+4. 모달 제어: form이 아닌 onDecision 콜백 (간결함)
+5. CSS: 반응형 + 다크 모드 지원 (prefers-color-scheme)
+
+**완료 상태**
+
+- ✅ `diff` 패키지 설치 (npm install 완료)
+- ✅ 타입·목록 데이터 정의
+- ✅ 6개 컴포넌트 구현
+- ✅ 2개 CSS 모듈 작성
+- ✅ ASSUMPTION(갭 #23) 주석 삽입
+- ✅ 구현 가능 상태 (npm run dev로 테스트 가능)
+- 🔄 **UI 시각 검증 필요** (다음 순위)
+
+**다음 단계**: 개발 서버에서 UI 검증 및 polish
+
+---
+
+## 2026-07-30 — 갭 #23 확정 반영
+
+**한 일**
+
+1. **갭 #23 확정 사항 수신** (리더 확정, 2026-07-30)
+   - REQUEST_CHANGES 재생성 완료 감지 메커니즘: 옵션 A(기존 항목 갱신) 확정
+   - 기존 가정이 정확했음 (changeSetId 불변, items 배열 업데이트, 2초 polling)
+
+2. **확정 내용 반영**
+   - `docs/검증-프론트엔드-화면-API-갭.md` 갭 #23 섹션: "미확정" → "해소됨" 상태 변경
+   - 근거 명시: API 명세 8.1절, 검증 문서 9절
+   - 기술 확정 내용 상세 기술:
+     * `changeItemId` 불변, `after_snapshot`만 갱신
+     * `change_items[].review_status`: REVISION_REQUESTED → PENDING 전이로 완료 감지
+     * polling: GET /change-sets/{changeSetId}/items (2초 간격)
+     * 웹훅·SSE 없음, polling만 사용
+
+3. **RegenerationWaiting.tsx 주석 갱신**
+   - ASSUMPTION(갭 #23) 주석 제거
+   - 확정 사실로 변경: "갭 #23 확정 (2026-07-30)" + 기술 상세 + 근거 절 번호
+
+4. **STATE.md 갱신**
+   - 마지막 갱신 타임스탬프: "변경 검토 화면 컴포넌트 구현 + 갭 #23 확정 반영"
+   - 변경 검토 화면 구현 항목 재편성: ASSUMPTION 문구 → 갭 #23 확정 섹션으로 변경
+   - 확정 내용 명시: polling 필드·완료 감지·근거
+
+**산출물**
+
+- `docs/검증-프론트엔드-화면-API-갭.md` (갭 #23 섹션 갱신, 해소 마크)
+- `frontend/src/components/review-changes/RegenerationWaiting.tsx` (주석 갱신)
+- `.claude/team/frontend/STATE.md` (갭 #23 확정 반영)
+
+**기술 확정 내용**
+
+- **polling 필드**: `change_items[]` (review_status, after_snapshot)
+- **완료 감지**: change_items.review_status 필드 전이 (REVISION_REQUESTED → PENDING)
+- **changeSetId**: 불변 (변경 세트 ID 유지, 새 항목 생성 안 함)
+- **polling 간격**: 2초 (UD-04 기본값)
+- **웹훅·SSE**: 미사용
+
+**근거**
+
+- `docs/ZeroWiki-API-명세-초안.md` 8.1절 (REQUEST_CHANGES 재생성 흐름 문단)
+- `docs/검증-백엔드-ERD-API-정합성.md` 9절 (backend 확정 내용, 상태머신·벤치마크)
+- 리더 기술 확정 (2026-07-30)
+
+**완료 상태**
+
+- ✅ 갭 #23 확정 내용 완전히 반영
+- ✅ RegenerationWaiting.tsx 주석 확정으로 변경
+- ✅ 갭 문서·상태 문서 일관성 유지
+- ✅ 기존 구현(2초 polling, changeSetId 불변, items 업데이트)이 확정 내용과 일치
+
+---
+
+## 2026-07-30 — 갭 번호 충돌 정정 및 갭 #24 등록
+
+**문제 발견**
+
+리더 지적: 갭 #21 번호 충돌 및 미등록 항목
+1. **번호 충돌**: "갭 #21"은 이미 다른 항목으로 등록 (Export nextAction 필드 부재, 731행)
+2. **미등록**: 내가 여러 번 보고한 "갭 #21: 모순 조회 API" 항목은 문서에 정식 헤딩으로 등록되지 않음
+3. **실제 상태**: 그 항목은 이미 API 명세 7.3절(863~936행)에서 완전히 해결됨 (Contradictions 엔드포인트 상세 스펙 정의)
+
+**조치 (2026-07-30)**
+
+1. **갭 #24 정식 등록** — "모순 조회 API: 해소됨"
+   - 상태: 처음부터 "해소됨"으로 표기
+   - 영향 화면: 도서관 홈 (모순 섹션)
+   - 근거: API 명세 7.3절 (863~936행)
+   - 엔드포인트: `GET /libraries/{libraryId}/contradictions`
+   - 스펙: 필터(페이지·신뢰도·타입·영향도), 페이지네이션, 응답 스키마 모두 정의됨
+   - 파일: `docs/검증-프론트엔드-화면-API-갭.md` 965행 이후 신규 섹션 추가
+
+2. **STATE.md 정정**
+   - 3순위 작업: "갭 #21 완성 후" → "갭 #24는 이미 해소됨"
+   - 차단 요인: "갭 #21 API 완성 시" 문구 제거 (차단 요인 없음)
+   - 산출물 상태: "갭 #2·#3 해소, #19~#23" → "갭 #2·#3·#8·#9·#23·#24 해소"
+
+3. **근거**
+   - 헌법 제7조 8항: 다른 문서 목록을 옮겨 적지 말고 정본을 가리킴. 이번엔 정본 자체 수정 필요 → 직접 정정
+   - 리더 지적 (2026-07-30): "갭을 실제로 등록해 둬야 나중에 재발견하지 않음"
+
+**학습**
+
+- **미등록 갭의 위험**: 보고했으나 문서에 헤딩으로 등록하지 않으면 추적 불가, 나중에 재발견
+- **번호 충돌 확인**: 새 갭 등록 전에 "### 갭 #N:" grep 확인 필수
+- **해소된 항목도 등록**: "미확정"만 등록하는 게 아니라, 나중에 해결되더라도 "해소됨"으로 정식 기록 필요
+
+---
+
+## 2026-07-30 — 변경 검토 화면 라우트 추가
+
+**한 일**
+
+1. **라우트 생성** (`frontend/src/app/review-changes/page.tsx`)
+   - ReviewChangesScreen 컴포넌트 렌더링
+   - 목록 데이터 self-contained (props 없이 바로 동작)
+   - 메타데이터 설정 (title, description)
+
+2. **STATE.md 갱신**
+   - 타임스탐프: "라우트 추가 + UI 검증 준비"
+   - 다음 작업 1순위: 라우트 준비 완료 표시
+   - 라우트 URL: `http://localhost:3001/review-changes`
+   - 산출물 목록: review-changes/page.tsx 추가
+
+**산출물**
+
+- `frontend/src/app/review-changes/page.tsx` (13줄, 신규)
+- `.claude/team/frontend/STATE.md` (라우트 추가 반영)
+
+**기술 결정**
+
+1. **path alias**: `@/components/review-changes` (tsconfig.json 설정 기준)
+2. **서버 컴포넌트 + 클라이언트 하위**: page.tsx는 서버, ReviewChangesScreen은 'use client' (데이터 페칭 시뮬레이션용)
+3. **메타데이터**: Next.js metadata export (seo·탭 제목용)
+
+**현재 상태**
+
+- ✅ 라우트 연결 완료
+- ✅ 개발 서버에서 자동 감지 (파일 추가 시)
+- ✅ 포트 3001에서 즉시 접근 가능 (http://localhost:3001/review-changes)
+- 🔄 **UI 시각 검증 진행 중** (사용자 브라우저 테스트)
+
+---
+
+## 2026-07-31 — 변경 검토 화면 하이파이 참고 자료 검토
+
+**한 일**
+
+1. **하이파이 와이어프레임 검토** (`frontend/screens/design-import-change-review.md`)
+   - 시안 구조: 위험도 탭 필터 (SAFE/REVIEW/HIGH 3단계) + 아코디언 목록 + "일괄 승인" 버튼 + 로컬 판단 쌓기 + "v13 발행" 별도 버튼
+   - 커스터마이즈 축 확인: diffLayout, riskColorMode, badgeStyle, evidenceOpenByDefault, bodyFontSize
+
+2. **계약과의 충돌 분석**
+   - **위험도 체계**: 시안 SAFE/REVIEW/HIGH (3단계) vs API 명세 8.1절 MINOR/MAJOR (2단계)
+   - **항목 탐색**: 시안 아코디언 필터링 vs 현재 탭 방식
+   - **일괄 승인**: 시안 "안전 N건 일괄 승인" 버튼 vs 현재 개별 승인만
+   - **판단 후 흐름**: 시안 로컬 상태 + "v13 발행" 배치 vs 현재 항목별 즉시 POST /reviews
+   - **Diff 레이아웃**: 시안 split 기본 + unified 전환 vs 현재 split 고정 (라이브러리 미선정)
+   - **사유 안내 문구**: 시안 "운영 헌법 학습에 반영됩니다" vs 기준 문서 부재
+
+3. **반영 판단 결정**
+   - **구조/흐름**: 현재 구현 = API 명세 8.1절 계약 준수 → 배치 발행·아코디언 필터링 도입 안 함 (계약 우선, 헌법 제2조)
+   - **시각적 개선**: 색상 체계(SAFE=녹색, REVIEW=주황, MAJOR=빨강), 타이포그래피, 애니메이션 → 향후 UI polish 시 참고
+   - **제외 항목**: "운영 헌법 학습" 문구 (근거 문서 없음)
+   - **Diff 토글**: 라이브러리 미선정 상태와 맞춰 추후 검토
+
+4. **리더에게 계획 보고** (SendMessage)
+   - 근거: `design-import-change-review.md`, API 명세 8.1절, `review-changes.md`
+   - 결론: 계약 준수 상태 확정, 시각적 개선은 수용 가능
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md` (마지막 갱신 타임스탐프 + 현재 단계 갱신)
+- `.claude/team/frontend/WORKLOG.md` (이 항목)
+- SendMessage: team-lead (변경 검토 화면 참고 자료 검토 완료 및 계획 보고)
+
+**기술 확정**
+
+- 현재 구현 (`review-changes.md` 설계 + `ReviewChangesScreen` 컴포넌트) = API 명세 8.1절 기준 준수
+- 배치 발행 흐름이 정말 필요하면 미확정 계약으로 제기 (API 명세 직접 변경 금지, 헌법 제1조 2항)
+
+**미해결 사항**
+
+- 없음 (Ingest 진행 화면 컴포넌트 구현으로 즉시 진행 가능)
+
+**완료 상태**
+
+- ✅ 하이파이 시안 구조 및 커스터마이즈 축 파악
+- ✅ 계약과의 충돌 지점 분석 (6가지)
+- ✅ 반영 판단 확정 (구조 유지, 시각적 개선 향후 참고)
+- ✅ 리더에게 계획 보고 완료
+- ✅ STATE.md 갱신

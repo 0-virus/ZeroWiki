@@ -1,0 +1,612 @@
+.reviewScreenContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* 헤더 */
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.headerTitle h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.headerMeta {
+  display: flex;
+  gap: 12px;
+}
+
+.riskBadge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.riskBadge[data-level='MAJOR'] {
+  background-color: #ff9800;
+  color: white;
+}
+
+.riskBadge[data-level='MINOR'] {
+  background-color: #4caf50;
+  color: white;
+}
+
+.statusBadge {
+  display: inline-block;
+  background-color: #2196f3;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 섹션 */
+.section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.summaryBox {
+  background-color: white;
+  padding: 12px 16px;
+  border-left: 3px solid #2196f3;
+  border-radius: 4px;
+  line-height: 1.6;
+  color: #555;
+  margin: 0;
+}
+
+/* 변경 항목 탭 */
+.itemTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.itemTab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.itemTab:hover {
+  border-color: #2196f3;
+  background-color: #f0f8ff;
+}
+
+.itemTab.active {
+  border-color: #2196f3;
+  background-color: #2196f3;
+  color: white;
+}
+
+.riskBadgeSmall {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.riskBadgeSmall[data-level='MAJOR'] {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.riskBadgeSmall[data-level='MINOR'] {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+/* Diff 뷰어 */
+.diffViewerContainer {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.diffHeader {
+  background-color: #f5f5f5;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.diffTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.diffStats {
+  font-size: 12px;
+  color: #666;
+}
+
+.diffContent {
+  max-height: 600px;
+  overflow-y: auto;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diffLine {
+  display: flex;
+  padding: 2px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.diffLine.diffUnchanged {
+  background-color: white;
+  color: #666;
+}
+
+.diffLine.diffAdded {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.diffLine.diffRemoved {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.diffPrefix {
+  display: inline-block;
+  width: 30px;
+  padding: 0 8px;
+  text-align: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.diffText {
+  flex: 1;
+  padding-right: 16px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+/* 근거 */
+.evidenceList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 신뢰도 */
+.confidenceBox {
+  background-color: white;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.confidenceBar {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.confidenceProgress {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.confidenceText {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 8px 0;
+}
+
+.confidenceDesc {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+
+/* 액션 버튼 */
+.actionButtonsContainer {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.actionButtonsHeader {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.actionButtonsGroup {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  flex: 1;
+  min-width: 140px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.approveButton {
+  background-color: #4caf50;
+  color: white;
+}
+
+.approveButton:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.rejectButton {
+  background-color: #f44336;
+  color: white;
+}
+
+.rejectButton:hover:not(:disabled) {
+  background-color: #da190b;
+}
+
+.requestChangesButton {
+  background-color: #ff9800;
+  color: white;
+}
+
+.requestChangesButton:hover:not(:disabled) {
+  background-color: #e68900;
+}
+
+.deferButton {
+  background-color: #2196f3;
+  color: white;
+}
+
+.deferButton:hover:not(:disabled) {
+  background-color: #0b7dda;
+}
+
+/* 모달 */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.modalTextarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.submitButton {
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancelButton:hover {
+  background-color: #d0d0d0;
+}
+
+/* 재생성 대기 */
+.regenerationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.regenerationContent {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px 20px;
+}
+
+.regenerationContent h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.regenerationInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.infoSection {
+  background-color: white;
+  padding: 16px;
+  border-radius: 4px;
+  border-left: 3px solid #2196f3;
+}
+
+.infoSection h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.commentBox {
+  background-color: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.spinner {
+  font-size: 48px;
+  animation: spin 1s linear infinite;
+  margin: 10px 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.regenerationInfo p {
+  margin: 4px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.estimatedTime {
+  font-weight: 600;
+  color: #333;
+  font-size: 12px;
+}
+
+.readyNotification {
+  background-color: #c8e6c9;
+  border-left: 3px solid #4caf50;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.readyBadge {
+  display: inline-block;
+  background-color: #4caf50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.readyNotification p {
+  margin: 0;
+  color: #2e7d32;
+  font-size: 13px;
+}
+
+.regenerationActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.checkButton {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkButton:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.checkButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .reviewScreenContainer {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .reviewHeader {
+    border-bottom-color: #333;
+  }
+
+  .headerTitle h1 {
+    color: #e0e0e0;
+  }
+
+  .section {
+    background-color: #2a2a2a;
+  }
+
+  .section h2 {
+    color: #e0e0e0;
+  }
+
+  .summaryBox {
+    background-color: #333;
+    color: #bbb;
+    border-left-color: #555;
+  }
+
+  .itemTab {
+    background-color: #333;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+
+  .itemTab:hover {
+    background-color: #444;
+  }
+
+  .diffViewerContainer {
+    background-color: #2a2a2a;
+    border-color: #444;
+  }
+
+  .diffHeader {
+    background-color: #333;
+    border-bottom-color: #444;
+    color: #e0e0e0;
+  }
+
+  .diffTitle {
+    color: #e0e0e0;
+  }
+
+  .diffStats {
+    color: #aaa;
+  }
+
+  .modal {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .modal h3 {
+    color: #e0e0e0;
+  }
+
+  .modalTextarea {
+    background-color: #333;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+}
