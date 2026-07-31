@@ -1,159 +1,151 @@
 'use client';
 
-import { useState } from 'react';
-import { ChangeSet, DecisionType, ReviewDecision } from '../../types/changes';
-import { DiffViewer } from './DiffViewer';
-import { ActionButtons } from './ActionButtons';
-import { RegenerationWaiting } from './RegenerationWaiting';
-import { ExcerptBlock } from '../excerpts/ExcerptBlock';
-import { mockChangeSet, mockChangeItemDiffData } from '../../data/mockReviewChanges';
+import { useState, useMemo } from 'react';
+import {
+  ChangeSet,
+  ChangeItem,
+  DecisionType,
+  FilterTab,
+  LocalDecisionState,
+} from '../../types/changes';
+import { mockChangeSet } from '../../data/mockReviewChanges';
 import styles from './ReviewChanges.module.css';
+import { FilterTabs } from './FilterTabs';
+import { AccordionList } from './AccordionList';
+import { ProgressBar } from './ProgressBar';
 
 export function ReviewChangesScreen() {
   const [changeSet] = useState<ChangeSet>(mockChangeSet);
-  const [selectedItemIndex, setSelectedItemIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [regenerationWaiting, setRegenerationWaiting] = useState(false);
-  const [regenerationComment, setRegenerationComment] = useState('');
+  const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(
+    changeSet.items?.[0]?.changeItemId || null
+  );
+  const [decisions, setDecisions] = useState<LocalDecisionState>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedItem = changeSet.items?.[selectedItemIndex];
-  const diffData = mockChangeItemDiffData.ci1;
+  // 필터링된 항목 목록 (API 계약: MINOR/MAJOR)
+  const filteredItems = useMemo(() => {
+    if (!changeSet.items) return [];
+    if (filterTab === 'ALL') return changeSet.items;
 
-  const handleDecision = async (decision: DecisionType, comment?: string) => {
-    setIsLoading(true);
+    return changeSet.items.filter((item) => {
+      if (filterTab === 'SAFE') return item.riskLevel === 'MINOR';
+      if (filterTab === 'DANGER') return item.riskLevel === 'MAJOR';
+      return true;
+    });
+  }, [changeSet.items, filterTab]);
 
-    try {
-      // 목업: API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  // 판단 완료 카운트
+  const decisionCount = Object.keys(decisions).length;
+  const totalCount = changeSet.items?.length || 0;
 
-      if (decision === 'REQUEST_CHANGES' && comment) {
-        setRegenerationWaiting(true);
-        setRegenerationComment(comment);
-      } else {
-        // 다른 결정: 성공 메시지 표시
-        alert(`${decision} 처리되었습니다`);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  // 위험도별 카운트 (2단계: 안전/위험)
+  const safeCount = changeSet.counts?.safe || 0;
+  const dangerCount = changeSet.counts?.danger || 0;
+
+  // 판단 처리
+  const handleDecision = (changeItemId: string, decision: DecisionType, comment?: string) => {
+    setDecisions((prev) => ({
+      ...prev,
+      [changeItemId]: { decision, comment },
+    }));
   };
 
-  if (regenerationWaiting) {
-    return (
-      <RegenerationWaiting
-        comment={regenerationComment}
-        onNewChangeReady={() => {
-          alert('새 변경이 로드되었습니다');
-          setRegenerationWaiting(false);
-        }}
-        onCancel={() => setRegenerationWaiting(false)}
-      />
-    );
-  }
+  // 일괄 승인 (SAFE/MINOR 항목만)
+  const handleBatchApproveSafe = () => {
+    const batchDecisions: LocalDecisionState = {};
+    changeSet.items?.forEach((item) => {
+      if (item.riskLevel === 'MINOR') {
+        batchDecisions[item.changeItemId] = { decision: 'APPROVE' };
+      }
+    });
+    setDecisions((prev) => ({ ...prev, ...batchDecisions }));
+  };
+
+  // 적용 버튼 (모든 판단을 API로 제출)
+  const handleApply = async () => {
+    setIsSubmitting(true);
+    try {
+      // 목업: 각 결정을 순차 호출
+      for (const [itemId, decision] of Object.entries(decisions)) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        console.log(`POST /reviews: ${itemId}`, decision);
+      }
+      alert(`${decisionCount}개 항목 판단이 제출되었습니다`);
+      setDecisions({});
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className={styles.reviewScreenContainer}>
       {/* 헤더 */}
       <div className={styles.reviewHeader}>
-        <div className={styles.headerTitle}>
-          <h1>변경 검토: {changeSet.title}</h1>
+        <div className={styles.headerBreadcrumb}>
+          <span>도서관</span> <span>/</span> <span>변경 세트 #{changeSet.id.split('-')[1]}</span>
         </div>
+        <h1 className={styles.headerTitle}>{changeSet.title}</h1>
         <div className={styles.headerMeta}>
-          <span className={styles.riskBadge} data-level={changeSet.riskLevel}>
-            위험도: {changeSet.riskLevel === 'MAJOR' ? '높음' : '낮음'}
+          <span className={styles.statusBadge}>준비 완료</span>
+          <span className={styles.versionInfo}>
+            v{changeSet.baseLibraryVersionNo} → v{changeSet.baseLibraryVersionNo + 1} (총{' '}
+            {totalCount}건)
           </span>
-          <span className={styles.statusBadge}>상태: 검토 중</span>
         </div>
       </div>
 
       {/* 변경 이유 */}
       <section className={styles.section}>
-        <h2>📝 변경 이유</h2>
+        <h2 className={styles.sectionTitle}>📝 변경 이유</h2>
         <p className={styles.summaryBox}>{changeSet.summary}</p>
       </section>
 
-      {/* 변경 항목 선택 */}
-      {changeSet.items && changeSet.items.length > 1 && (
-        <section className={styles.section}>
-          <h2>변경 항목 ({changeSet.items.length}개)</h2>
-          <div className={styles.itemTabs}>
-            {changeSet.items.map((item, idx) => (
-              <button
-                key={idx}
-                className={`${styles.itemTab} ${selectedItemIndex === idx ? styles.active : ''}`}
-                onClick={() => setSelectedItemIndex(idx)}
-              >
-                {item.targetType} - {item.targetName}
-                <span className={styles.riskBadgeSmall} data-level={item.riskLevel}>
-                  {item.riskLevel}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+      {/* 필터 탭 + 일괄 승인 */}
+      <div className={styles.filterBar}>
+        <FilterTabs
+          filterTab={filterTab}
+          onFilterChange={setFilterTab}
+          counts={{ safe: safeCount, danger: dangerCount }}
+        />
+        {safeCount > 0 && (
+          <button className={styles.batchApproveBtn} onClick={handleBatchApproveSafe}>
+            안전 {safeCount}건 일괄 승인
+          </button>
+        )}
+      </div>
+
+      {/* 아코디언 목록 */}
+      {filteredItems.length > 0 ? (
+        <AccordionList
+          items={filteredItems}
+          expandedItemId={expandedItemId}
+          onExpandChange={setExpandedItemId}
+          decisions={decisions}
+          onDecision={handleDecision}
+        />
+      ) : (
+        <div className={styles.emptyState}>
+          <p>항목이 없습니다.</p>
+        </div>
       )}
 
-      {/* Diff 뷰어 */}
-      {selectedItem && (
-        <>
-          <section className={styles.section}>
-            <DiffViewer
-              title={selectedItem.targetName}
-              beforeBody={
-                typeof selectedItem.beforeSnapshot.markdownBody === 'string'
-                  ? selectedItem.beforeSnapshot.markdownBody
-                  : diffData.beforeBody
-              }
-              afterBody={
-                typeof selectedItem.afterSnapshot.markdownBody === 'string'
-                  ? selectedItem.afterSnapshot.markdownBody
-                  : diffData.afterBody
-              }
-            />
-          </section>
+      {/* 진행 바 */}
+      <ProgressBar completed={decisionCount} total={totalCount} />
 
-          {/* 근거 출처 */}
-          {selectedItem.evidenceSummary && selectedItem.evidenceSummary.length > 0 && (
-            <section className={styles.section}>
-              <h2>🔗 근거 출처</h2>
-              <div className={styles.evidenceList}>
-                {selectedItem.evidenceSummary.map((evidence, idx) => (
-                  <ExcerptBlock
-                    key={idx}
-                    excerpt={evidence.excerpt}
-                    language={evidence.excerptLanguage}
-                    sourceTitle={evidence.sourceTitle}
-                    confidence={evidence.confidence}
-                    sourceUrl={evidence.url}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* AI 신뢰도 */}
-          <section className={styles.section}>
-            <h2>🤖 AI 신뢰도</h2>
-            <div className={styles.confidenceBox}>
-              <div className={styles.confidenceBar}>
-                <div
-                  className={styles.confidenceProgress}
-                  style={{ width: `${selectedItem.aiConfidence * 100}%` }}
-                />
-              </div>
-              <p className={styles.confidenceText}>
-                {Math.round(selectedItem.aiConfidence * 100)}%
-              </p>
-              <p className={styles.confidenceDesc}>
-                이 변경은 제공된 근거에 의해 충분히 지지됩니다
-              </p>
-            </div>
-          </section>
-        </>
-      )}
-
-      {/* 판단 버튼 */}
-      <ActionButtons onDecision={handleDecision} isLoading={isLoading} />
+      {/* 하단 액션 */}
+      <div className={styles.bottomActions}>
+        <button className={styles.deferBtn} disabled={isSubmitting}>
+          나중에
+        </button>
+        <button
+          className={styles.applyBtn}
+          onClick={handleApply}
+          disabled={decisionCount === 0 || isSubmitting}
+        >
+          {isSubmitting ? '제출 중...' : '승인 항목 적용'}
+        </button>
+      </div>
     </div>
   );
 }

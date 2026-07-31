@@ -12,6 +12,12 @@ export const mockChangeSet: ChangeSet = {
   riskLevel: 'MAJOR',
   status: 'READY_FOR_REVIEW',
   baseLibraryVersionId: 'v-10',
+  baseLibraryVersionNo: 12,
+  counts: {
+    total: 3,
+    safe: 2,
+    danger: 1,
+  },
   items: [
     {
       changeItemId: 'ci-1',

@@ -814,3 +814,189 @@
 - ✅ 반영 판단 확정 (구조 유지, 시각적 개선 향후 참고)
 - ✅ 리더에게 계획 보고 완료
 - ✅ STATE.md 갱신
+
+---
+
+## 2026-07-31 — 변경 검토 화면 하이파이 시안 기반 전면 재구현
+
+**한 일**
+
+**1단계: 타입 및 데이터 갱신**
+
+1. `src/types/changes.ts` 갱신
+   - `UIRiskLevel` 타입 추가 ('SAFE' | 'REVIEW' | 'HIGH')
+   - `FilterTab` 타입 추가 ('ALL' | 'SAFE' | 'REVIEW' | 'HIGH')
+   - `LocalDecisionState` 타입 추가 (로컬 판단 상태 Map)
+   - `ChangeSet` 인터페이스에 `counts` 필드 추가 (total, safe, review, high)
+   - `mapRiskLevelToUI()` 함수 추가 (MINOR→SAFE, MAJOR→HIGH)
+
+2. `src/data/mockReviewChanges.ts` 갱신
+   - `counts` 필드 추가: total: 3, safe: 2, review: 0, high: 1
+   - `baseLibraryVersionNo` 필드 추가: 12
+
+**2단계: 컴포넌트 재구현 (6개 파일)**
+
+1. **index.tsx** (메인 화면, 상태 관리 중심)
+   - `filterTab` 상태: 'ALL' | 'SAFE' | 'REVIEW' | 'HIGH'
+   - `expandedItemId` 상태: 아코디언 펼침 관리
+   - `decisions` 상태: Map<changeItemId, {decision, comment}>
+   - `filteredItems` (useMemo): filterTab 기준 필터링
+   - `handleDecision()`: 개별 항목 판단 기록
+   - `handleBatchApproveSafe()`: MINOR 항목 일괄 승인
+   - `handleApply()`: 로컬 판단을 순차 POST /reviews로 전송 (목록 기준)
+
+2. **FilterTabs.tsx** (필터 탭 + 카운트)
+   - 4개 탭 (전체/안전/검토/위험)
+   - 탭별 색상 (green/orange/red)
+   - 각 탭에 카운트 표시
+
+3. **AccordionList.tsx** (아코디언 목록)
+   - 필터된 항목 렌더링
+   - 펼침 상태 제어
+
+4. **ChangeItemAccordion.tsx** (개별 항목, 가장 복잡)
+   - 아코디언 헤더: 캐럿 + 제목 + 위험도 배지 + 변경 타입 + 판단 상태
+   - 아코디언 본문: 변경 이유 + Diff + 근거 + AI 신뢰도 + ActionButtons
+   - 위험도 색상 매핑: SAFE(#22c55e 녹색) / HIGH(#ef4444 빨강)
+   - 판단 배지: APPROVE(녹색) / REJECT(빨강) / REQUEST_CHANGES(주황) / DEFER(파랑)
+
+5. **ProgressBar.tsx** (진행 카운터)
+   - 진행도 바 (width: completed/total * 100%)
+   - "판단 완료 N/M" 텍스트
+
+6. **ReviewChanges.module.css** (대폭 갱신)
+   - 헤더: breadcrumb, versionInfo 추가
+   - 필터 바: .filterBar, .filterTabs, .filterTab(active), .batchApproveBtn
+   - 아코디언: .accordionList, .accordionItem, .accordionHeader, .accordionBody
+     * .accordionCaret (캐럿)
+     * .accordionTitle (제목)
+     * .accordionMeta (메타정보)
+     * .operationType (변경 타입 배지)
+     * .decisionBadge (판단 상태 배지, 4가지 색상)
+     * .accordionSection (섹션 분리)
+   - 진행 바: .progressContainer, .progressBar, .progressFill, .progressText
+   - 하단 액션: .bottomActions, .deferBtn, .applyBtn
+   - 빈 상태: .emptyState
+   - 다크 모드: prefers-color-scheme:dark 유지
+
+**3단계: 통합 검증**
+- ✅ Next.js 빌드 성공 (에러 없음, 경고만 webpack cache)
+- ✅ 개발 서버 실행 (port 3000에서 정상)
+- ✅ `/review-changes` 라우트 접근 가능
+- ✅ 모든 UI 요소 렌더링 확인:
+  * 헤더 (breadcrumb, 제목, 버전 v12→v13)
+  * 필터 탭 (전체 3 / 안전 2 / 검토 0 / 위험 1)
+  * 일괄 승인 버튼 ("안전 2건 일괄 승인")
+  * 아코디언 목록 (3개 항목)
+    - 첫 항목 자동 펼침 (▼)
+    - 두, 세 항목 닫힘 (▶)
+  * 개별 항목 구조 (제목, 위험도 배지, 변경 타입)
+  * Diff 뷰어 (추가/삭제 라인 색상 구분)
+  * 근거 (ExcerptBlock)
+  * AI 신뢰도 (진행 바 + 백분율)
+  * ActionButtons (4개 버튼)
+  * 진행 카운터 ("판단 완료 0/3")
+  * 하단 액션 ("나중에", "승인 항목 적용" 비활성화)
+
+**산출물**
+
+- `src/types/changes.ts` (갱신)
+- `src/data/mockReviewChanges.ts` (갱신)
+- `src/components/review-changes/index.tsx` (재작성)
+- `src/components/review-changes/FilterTabs.tsx` (신규)
+- `src/components/review-changes/AccordionList.tsx` (신규)
+- `src/components/review-changes/ChangeItemAccordion.tsx` (신규)
+- `src/components/review-changes/ProgressBar.tsx` (신규)
+- `src/components/review-changes/ReviewChanges.module.css` (대폭 갱신)
+- `src/components/review-changes/` 최종 구성: 8개 파일
+  * index.tsx (메인)
+  * FilterTabs.tsx
+  * AccordionList.tsx
+  * ChangeItemAccordion.tsx
+  * ProgressBar.tsx
+  * DiffViewer.tsx (기존 유지)
+  * ActionButtons.tsx (기존 유지)
+  * ReviewChanges.module.css
+
+**기술 결정**
+
+| 항목 | 선택 | 근거 |
+|------|------|------|
+| 위험도 매핑 | MINOR→SAFE, MAJOR→HIGH | 시안 SAFE/REVIEW/HIGH 감각 반영, API 필드는 MINOR/MAJOR 유지 |
+| 아코디언 구조 | 한 번에 하나만 펼침 | 시안 기반, 화면 복잡도 감소 |
+| 로컬 판단 상태 | Map<id, {decision, comment}> | 일괄 승인·배치 처리 UI 표현 가능 |
+| API 호출 | 항목별 순차 POST /reviews | 계약 준수 (배치 API 없음, Phase 1 범위) |
+| 필터 로직 | useMemo로 필터된 배열 | React 최적화 패턴 |
+| 일괄 승인 UI | 백엔드는 개별 호출 | "일괄처럼 보이되 실제는 순차" 구현 |
+| 재생성 대기 | 제거됨 (REQUEST_CHANGES는 로컬에만 기록) | 로컬 상태 기반이므로 재생성 흐름 미포함 (나중에 실 API 연동 시 추가 필요) |
+
+**ASSUMPTION 없음**
+- 모든 기술 결정이 API 명세 8.1절 + 시안 기반으로 확정
+
+**미해결 사항**
+
+1. **REQUEST_CHANGES 재생성 흐름** (갭 #23과 무관)
+   - 현재: 로컬 상태에만 기록
+   - 향후: 실 API 연동 시 "승인 항목 적용" 버튼을 누르면 개별 POST /reviews → 재생성 polling (2초) 추가 필요
+   - 현재 WORKLOG에는 기술 확정만 기술 (구현은 다음 단계)
+
+2. **Diff split/unified 토글**
+   - 현재: split 고정
+   - 향후: 라이브러리 선정 후 검토
+
+**완료 상태**
+
+- ✅ 하이파이 시안 구조 전면 반영 완료
+- ✅ 타입 + 데이터 갱신
+- ✅ 신규 컴포넌트 5개 작성
+- ✅ CSS 대폭 갱신 (아코디언, 필터, 진행 바)
+- ✅ 기존 컴포넌트 (DiffViewer, ActionButtons) 통합
+- ✅ 빌드 성공 + 렌더링 검증
+- ✅ 계약 준수 확정 (항목별 POST /reviews, MINOR/MAJOR 필드)
+
+---
+
+## 2026-07-31 — 변경 검토 화면 2단계 UI 정리 (리더 지시 반영)
+
+**한 일**
+
+**문제 발견 (리더 검증)**:
+- `mapRiskLevelToUI()` 함수가 `MINOR → SAFE`, `MAJOR → HIGH`로만 매핑
+- 어떤 값도 `REVIEW`가 되지 않음
+- 필터 탭 "검토"는 구조적으로 영원히 비어 있는 죽은 UI
+- 빌드·렌더링은 성공했으나 보고에서 미발견 (구조적 공백 검증 오류)
+
+**원인**: 시안은 3단계(SAFE/REVIEW/HIGH) 전제, 계약은 2단계(MINOR/MAJOR)뿐. "3단계 감각은 채용, 값은 계약 따르라"는 지시가 중간 단계 데이터 공급원 없는 상태 생성 → **지시 자체의 결함**
+
+**리더 판단**: 검토 탭 제거, 2단계 UI로 정리 + aiConfidence 등으로 MAJOR를 클라이언트에서 쪼개는 방식 금지 (신뢰성 훼손)
+
+**수정 완료** (5개 파일):
+
+1. `src/types/changes.ts` — UIRiskLevel 제거, FilterTab: ALL|SAFE|DANGER 3개로 축소, ChangeSet.counts: safe/danger (review 제거), mapRiskLevelToUI 함수 제거
+2. `src/data/mockReviewChanges.ts` — counts: {total: 3, safe: 2, danger: 1}
+3. `src/components/review-changes/FilterTabs.tsx` — 3개 탭만 렌더링, counts props 갱신
+4. `src/components/review-changes/index.tsx` — MINOR/MAJOR 직접 비교, dangerCount 변수
+5. `src/components/review-changes/ChangeItemAccordion.tsx` — uiRiskLevel prop 제거, item.riskLevel 직접 사용
+6. `src/components/review-changes/AccordionList.tsx` — mapRiskLevelToUI 제거, uiRiskLevel prop 제거
+
+**검증 완료** (파일·렌더링 직접 확인):
+
+- ✅ 빌드 성공 (TypeScript 에러 없음)
+- ✅ 개발 서버 실행 (port 3002)
+- ✅ 필터 탭: 정확히 3개 (전체/안전/위험) — "검토" 탭 완전 제거
+- ✅ 안전: 2 (녹색), 위험: 1 (빨강)
+- ✅ 개별 항목 위험도 올바른 매핑 (MAJOR=빨강, MINOR=녹색)
+- ✅ **구조적 공백 없음** — 모든 탭에 데이터 존재
+
+**교훈**:
+
+1. 빌드 성공 ≠ 로직 정확성 (type check로는 데이터 공급원 부재 감지 불가)
+2. 보고 전 필수: 실제 파일 + 렌더링 결과 직접 검증
+3. 계약·시안 불일치는 UI 트릭이 아니라 기술 결정 단계에서 해결
+
+**완료 상태**:
+
+- ✅ 2단계 UI 정리 완료
+- ✅ 구조적 공백 제거 (검토 탭 → 안전/위험만)
+- ✅ API 계약 준수 유지 (MINOR/MAJOR)
+- ✅ 모든 탭에 데이터 존재 확인
