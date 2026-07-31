@@ -1,0 +1,118 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--hair);
+}
+
+.logo {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  width: 0ch;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: zw-type 1.2s steps(9, end) forwards;
+  border-right: 2px solid var(--ink);
+  padding-right: 2px;
+}
+
+.nav {
+  display: flex;
+  gap: 2rem;
+  flex: 1;
+  margin-left: 2rem;
+}
+
+.navLink {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+  transition: color 0.2s;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+}
+
+.navLink:hover {
+  color: var(--ink);
+}
+
+.navLink.active {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom-color: var(--ink);
+}
+
+.notificationBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+  }
+
+  .nav {
+    gap: 1rem;
+    margin-left: 1rem;
+  }
+
+  .navLink {
+    font-size: 13px;
+  }
+
+  .notificationBadge {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+  }
+
+  .logo {
+    width: 100%;
+    text-align: center;
+  }
+
+  .nav {
+    width: 100%;
+    gap: 0.75rem;
+    margin-left: 0;
+  }
+
+  .navLink {
+    font-size: 12px;
+  }
+
+  .notificationBadge {
+    width: 100%;
+    justify-content: center;
+  }
+}

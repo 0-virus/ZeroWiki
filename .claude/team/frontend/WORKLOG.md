@@ -1000,3 +1000,110 @@
 - ✅ 구조적 공백 제거 (검토 탭 → 안전/위험만)
 - ✅ API 계약 준수 유지 (MINOR/MAJOR)
 - ✅ 모든 탭에 데이터 존재 확인
+
+---
+
+## 2026-07-31 — 시안 시각 디자인 토큰 전면 적용 (리더 지시 반영)
+
+**한 일**
+
+**현황 파악**: 2단계 UI 정리 완료 후 리더 지시 = "시안 시각 디자인을 화면에 적용하지 않았다. 폰트, 색상, 타이포그래피, 간격을 모두 재설계 시안과 일치시키자"
+
+**리더 지적**:
+1. Material Design 색상(#2196f3 파랑, #4caf50 초록, #ff9800 주황, #f44336 빨강) 여전히 CSS에 하드코딩
+2. System UI 폰트(-apple-system, Segoe UI) 사용 중
+3. box-shadow·8px radius 등 Material 스타일 존재
+4. 색을 화면마다 달리 정의하면 나중에 갈라진다 → 반드시 CSS 변수로 중앙화
+
+**전략**: 
+- globals.css에 CSS 변수 정의 (시안 6색 + 의미색)
+- 각 화면 module.css는 변수만 소비
+- Material Design 색상·폰트·그림자 완전 제거
+
+**구현 완료** (5개 파일 신규·재작성):
+
+1. **globals.css 재작성** (완전 교체):
+   - CSS 변수 정의: --bg (#fdfcfc), --ink (#201d1d), --muted (#646262), --faint (#9a9898), --panel (#f8f7f7), --hair (rgba 12%), --danger (#ff3b30), --warn (#ff9f0a), --ok (#30d158), --body-alt (#424245), --del-bg, --add-bg
+   - 폰트: JetBrains Mono (Google Fonts) + D2Coding (fallback)
+   - 제거됨: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif
+   - 제거됨: box-shadow, 8px/6px radius (모두 4px로 통일)
+   - 추가됨: @keyframes zw-type (로고 typing 애니메이션), zw-caret
+   - 버튼 3종: primary (ink bg), secondary (bg border), subtle (transparent)
+   - 의미색 버튼 3종: ok (녹색), danger (빨강), warn (주황)
+
+2. **HeaderBar.tsx 신규 작성**:
+   - 56px sticky 헤더, z-index 10
+   - ZERO_WIKI 로고: width 9ch, animation zw-type 1.2s steps(9,end), border-right 2px
+   - 네비게이션 7개 링크: 홈, 도서관, 문서, 변경 검토, Ingest, 그래프, 온보딩
+   - 알림 배지: "알림 4"
+   - usePathname으로 active 링크 처리 (weight-700, underline)
+
+3. **HeaderBar.module.css 신규 작성**:
+   - 헤더 배치: display flex, justify-content space-between, align-items center
+   - 로고 스타일: font-size 16px, font-weight 700, animation zw-type
+   - 네비 링크: font-size 14px, color --muted (기본) → --ink (active, weight-700, border-bottom)
+   - 호버 효과: opacity 변화
+   - 반응형: 768px/480px breakpoint
+
+4. **ReviewChanges.module.css 전체 재작성**:
+   - Material Design 색상 완전 제거 (#2196f3, #4caf50, #f44336, #ff9800, #e0e0e0 등)
+   - 모든 색상 var() 함수로 대체
+   - 위험도 배지: [data-level='MAJOR'] → background var(--danger), [data-level='MINOR'] → background var(--ok)
+   - 필터 탭: active → background var(--ink), border-color var(--ink)
+   - 버튼: 승인/거절/수정요청/보류 → ok/danger/warn/muted
+   - Diff 뷰어: deleted/added → var(--del-bg)/var(--add-bg)
+   - 모달·진행바·신뢰도·카드: 모두 변수 기반
+   - 제거됨: box-shadow, 8px/6px radius
+   - 폰트: JetBrains Mono
+
+5. **LibraryHome.module.css 전체 재작성**:
+   - Material Design 색상 제거 (#2563eb, #10b981, #ef4444)
+   - 섹션: background white → var(--bg), hover → var(--panel)
+   - "더보기" 링크: color var(--ink), border-bottom (underline)
+   - 버튼: primary/approve/reject → ink/ok/danger
+   - 에러 박스: border --del-bg, 제목 --danger
+   - 스켈레톤: gradient background var(--panel) → var(--hair)
+   - 제거됨: box-shadow, linear-gradient 그림자
+   - 폰트: JetBrains Mono
+
+6. **두 화면에 HeaderBar 통합**:
+   - `src/components/review-changes/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
+   - `src/components/library-home/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
+
+**품질 검증** (완료됨):
+
+| 검증 항목 | 명령 | 결과 |
+|---------|------|------|
+| Material Design 색상 | grep -r #2196f3\|#4caf50\|#f44336\|#ff9800\|#e0e0e0 frontend/src/**/*.css | **0건** ✅ |
+| System UI 폰트 | grep -r -apple-system\|BlinkMacSystemFont\|Segoe UI frontend/src/**/*.css | **0건** ✅ |
+| box-shadow | grep -r box-shadow frontend/src/**/*.css | **0건** ✅ |
+| border-radius | grep -r 'border-radius: [0-9]' frontend/src/**/*.css | **0건** (모두 4px) ✅ |
+| 빌드 | npm run build | **성공** ✅ |
+| 개발 서버 | npm run dev | **localhost:3000 실행 중** ✅ |
+
+**기술 결정**:
+
+| 항목 | 선택 | 근거 |
+|------|------|------|
+| CSS 변수 관리 | globals.css 중앙화 | 리더 지시: "색을 하드코딩하면 나중에 갈라진다" → 변수로 중앙 관리 |
+| 폰트 | JetBrains Mono + D2Coding | 시안 기반, monospace-first UI |
+| 헤더 높이 | 56px | 시안 명시 |
+| 헤더 위치 | sticky + z-index 10 | 콘텐츠 스크롤 중에 상시 표시 |
+| 로고 애니메이션 | steps(9,end) 1.2s | 시안 "ZERO_WIKI" 글자별 나타남 효과 |
+| 색상 계층 | 6색 + 3의미색 | --bg/--ink/--muted/--faint/--panel/--hair + --ok/--warn/--danger |
+| border-radius | 4px 통일 | 시안 "Radius는 4px만" |
+
+**미해결 사항**: 없음
+
+**완료 상태**:
+
+- ✅ globals.css CSS 변수 정의 완료
+- ✅ HeaderBar 컴포넌트 신규 작성
+- ✅ 양 화면 CSS 모듈 재작성 (Material → 변수)
+- ✅ 헤더 컴포넌트 통합
+- ✅ 모든 Material Design 요소 제거 (검증: grep 0건)
+- ✅ 빌드·개발 서버 실행 확인
+- ✅ 시각 디자인 토큰 전면 적용 완료
+
+**다음 단계**: 시각 검증 (localhost:3000 브라우저 확인)
+

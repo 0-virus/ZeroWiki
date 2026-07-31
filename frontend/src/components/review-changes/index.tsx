@@ -13,6 +13,7 @@ import styles from './ReviewChanges.module.css';
 import { FilterTabs } from './FilterTabs';
 import { AccordionList } from './AccordionList';
 import { ProgressBar } from './ProgressBar';
+import { HeaderBar } from '../HeaderBar';
 
 export function ReviewChangesScreen() {
   const [changeSet] = useState<ChangeSet>(mockChangeSet);
@@ -79,7 +80,9 @@ export function ReviewChangesScreen() {
   };
 
   return (
-    <div className={styles.reviewScreenContainer}>
+    <>
+      <HeaderBar />
+      <div className={styles.reviewScreenContainer}>
       {/* 헤더 */}
       <div className={styles.reviewHeader}>
         <div className={styles.headerBreadcrumb}>
@@ -147,5 +150,6 @@ export function ReviewChangesScreen() {
         </button>
       </div>
     </div>
+    </>
   );
 }

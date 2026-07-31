@@ -25,9 +25,9 @@ function getLanguageLabel(lang: string): string {
 }
 
 function getConfidenceColor(confidence: number): string {
-  if (confidence >= 0.9) return '#4CAF50'; // 초록색
-  if (confidence >= 0.7) return '#FFC107'; // 노란색
-  return '#FF9800'; // 주황색
+  if (confidence >= 0.9) return 'var(--ok)'; // 초록색
+  if (confidence >= 0.7) return 'var(--warn)'; // 주황색
+  return 'var(--danger)'; // 빨강색
 }
 
 export function ExcerptBlock({
@@ -47,7 +47,7 @@ export function ExcerptBlock({
           <span className={styles.sourceTitle}>{sourceTitle}</span>
           {sourceUrl && (
             <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className={styles.sourceLink}>
-              🔗
+              근거 원문 보기 →
             </a>
           )}
         </div>

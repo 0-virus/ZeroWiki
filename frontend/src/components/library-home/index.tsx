@@ -10,6 +10,7 @@ import { ContradictionsSection } from './ContradictionsSection';
 import { PendingChangesSection } from './PendingChangesSection';
 import { RecentActivitiesSection } from './RecentActivitiesSection';
 import styles from './LibraryHome.module.css';
+import { HeaderBar } from '../HeaderBar';
 
 interface LibraryHomeProps {
   libraryId: string;
@@ -69,7 +70,9 @@ export const LibraryHome: React.FC<LibraryHomeProps> = ({ libraryId }) => {
   const home = data?.data.home;
 
   return (
-    <div className={styles.libraryHome}>
+    <>
+      <HeaderBar />
+      <div className={styles.libraryHome}>
       <header className={styles.header}>
         <h1>{data?.data.name || '도서관'}</h1>
         <p className={styles.subtitle}>
@@ -116,6 +119,7 @@ export const LibraryHome: React.FC<LibraryHomeProps> = ({ libraryId }) => {
         />
       </main>
     </div>
+    </>
   );
 };
 
