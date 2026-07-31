@@ -1,0 +1,6 @@
+source_page_id,target_page_id,relation_type,direction,confidence,label,근거_한줄
+page-001,page-015,EXPLAINS,forward,high,positive,개념 A가 개념 B를 설명한다
+page-045,page-067,RELATED_TO,bidirectional,medium,positive,두 기술이 보완 관계
+page-102,page-103,PART_OF,forward,low,positive,더 큰 주제의 부분
+page-020,page-089,DEPENDS_ON,forward,high,positive,선행 학습 필수
+page-050,page-051,,,low,negative,관련 없는 페이지 (오탐 측정용)

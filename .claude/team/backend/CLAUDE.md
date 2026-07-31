@@ -28,6 +28,7 @@ ZeroWiki의 데이터 모델과 서버 구현을 소유한다.
 ```
 backend/**
 .claude/team/backend/**
+evaluation/**
 docs/ZeroWiki-ERD-초안.md
 docs/검증-백엔드-ERD-API-정합성.md
 ```

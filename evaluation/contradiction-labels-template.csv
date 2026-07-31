@@ -1,0 +1,6 @@
+claim_A_statement,claim_B_statement,classification,판단_이유
+"Python은 정적 타입 언어다","Python은 동적 타입 언어다",TRUE_CONFLICT,기본 특성에서 직접 충돌
+"메모리 구조 X는 Y바이트다","메모리 구조 X는 Z바이트다 (최신 표준)",TIME_CHANGE,기술 버전 업데이트
+"이 알고리즘은 모든 환경에서 최적이다","이 알고리즘은 메모리 부족 환경에서는 비효율적이다",CONDITION_DIFF,조건에 따라 성능 달라짐
+"관점A: 이 정책은 효율적이다","관점B: 이 정책은 비효율적이다",VIEWPOINT_DIFF,전문가 입장 차이
+"이 현상은 원인 A 때문일 수 있다","이 현상은 원인 B 때문일 수 있다",POSSIBLE_CONFLICT,두 원인 모두 가능성 있음
