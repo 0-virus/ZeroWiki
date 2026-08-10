@@ -91,7 +91,7 @@ frontend와 backend가 각자 `docs/검증-프론트엔드-화면-API-갭.md`와
 | A-1 | 문서 100개 Import 완료율 95% 이상 | `test_ingest_100_documents` | 100개 중 95개 이상 COMPLETED 상태 | ✅ 자동 테스트 |
 | A-2 | 핵심 주제 구조 자동 생성 | Ingest 후 topic_groups 객체 검증 | 최소 5개 주제, 각 문서 분류율 95% | ✅ 자동 테스트 |
 | A-3 | 주요 답변 근거 추적 가능성 | 답변 citations 필드 검증 | 각 citation은 page_version_id + claim_id + source_version_id 포함 | ✅ 자동 테스트 |
-| A-4 | 의도적 모순 탐지율 80% 이상 | 테스트 데이터셋(32개 모순 쌍) | contradictions 테이블에 25개 이상 자동 탐지 | ✅ 자동 테스트 |
+| A-4 | 의도적 모순 탐지율 80% 이상 | 평가 세트 conflict 23건을 mapping manifest로 Ingest 결과와 조인 | 23건 중 19건 이상 자동 탐지. manifest 준비 전 Ingest-level 판정 차단 | ✅ 자동 테스트 |
 | A-5 | 엣지케이스 에러 처리 | API 400/413/422/429 응답 | 잘못된 입력, 크기 초과, 할당량 초과 시 정의된 오류 코드 반환 | ✅ 자동 테스트 |
 
 ### 3.2 사용자 평가 테스트 (5~10명 검증 사용자)

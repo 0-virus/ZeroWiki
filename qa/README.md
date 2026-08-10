@@ -1,91 +1,64 @@
-# ZeroWiki QA 테스트 시나리오
+# ZeroWiki QA
 
-**작성:** 2026-07-30  
-**기준:** `docs/검증-QA-계약-확정-체크리스트.md` 3절  
-**상태:** 테스트 시나리오 정의 완료, **실행 코드 미작성**
-
-⚠️ **중요:** 이 디렉터리의 모든 테스트 항목은 **아직 한 번도 실행되지 않았습니다.** `test_scenarios.md`의 모든 항목 상태는 "미실행"입니다(헌법 제4조 6항). 테스트 코드는 존재하지 않으며, Phase 0 구현 이후 작성될 예정입니다.
-
----
+**기준:** `docs/검증-QA-계약-확정-체크리스트.md` 3절과
+`docs/ZeroWiki-요구사항-정의서.md` 11절
+**상태:** 제품 테스트 시나리오 40개 정의, 제품 구현 대상 테스트는 전부 미실행
 
 ## 구조
 
-```
+```text
 qa/
-├── README.md (이 파일)
-├── test_scenarios.md (A-1~A-14, U-1~U-6, S-1~S-14 상세 시나리오)
-├── evaluation_data/ (정답 연결, 모순 후보 데이터셋)
-│   ├── contradiction_pairs.json (의도적 모순 쌍 32개)
-│   ├── quality_links.json (제안 연결 검증 데이터 100개)
-│   └── sample_documents/ (테스트용 샘플 문서)
+├── README.md
+├── test_scenarios.md
+├── verify_phase0_evaluation.py
+└── phase0-evaluation-acceptance-report.md
 ```
 
----
+- `test_scenarios.md`: A-1~A-18, U-1~U-6, S-1~S-16의 Precondition·단계·예상 결과.
+- `verify_phase0_evaluation.py`: `evaluation/*.csv`의 스키마·참조·유일성·enum·negative
+  규칙·중복·분모를 검사하는 표준 라이브러리 전용 검증기.
+- `phase0-evaluation-acceptance-report.md`: 평가 세트와 AC-3·AC-5 채점 계약의 독립
+  QA 인수 결과.
 
-## 검증 항목 매트릭스
+평가 CSV는 `evaluation/**`에 있으며 backend 소유다. QA는 해당 파일을 읽고 검증하며
+직접 수정하지 않는다.
 
-### A. 자동화 테스트 (Phase 0)
+## 현재 검증 상태
 
-| # | 항목 | 방식 | 상태 |
-| --- | --- | --- | --- |
-| **A-1** | 문서 100개 Import 완료율 95% | 자동 테스트 `test_ingest_100_documents` | 미실행 |
-| **A-2** | 핵심 주제 구조 자동 생성 | Ingest 후 topic_groups 검증 | 미실행 |
-| **A-3** | 주요 답변 근거 추적 가능성 | citations 필드(page_version_id + claim_id + source_version_id) | 미실행 |
-| **A-4** | 의도적 모순 탐지율 80% | contradictions 테이블 25개 이상 자동 탐지 | 미실행 |
-| **A-5** | 엣지케이스 에러 처리 | API 400/413/422/429 응답 검증 | 미실행 |
-| **A-6** | 위키 본문 한국어 종합 | pageVersion.markdownBody 전수 한국어 확인 | 미실행 |
-| **A-7** | Evidence 발췌문 원본 언어 유지 | excerpt가 원본 언어, detectedLanguage 일치 | 미실행 |
-| **A-8** | 전문 용어 1회 병기 규칙 | Markdown 본문 중복 병기 없음 (샘플 10페이지) | 미실행 |
-| **A-9** | CANCELLED 상태 구현 | 계획 승인 후 처리 중 작업 취소 기능 | 미실행 |
-| **A-10** | PAUSED_QUOTA 상태와 재개 | 구매 후 중단 단계로 복귀, 재과금 없음 | 미실행 |
-| **A-11** | UD-01 한도 초과 413 (파일당) | 200MB 초과 시 `413` 반환 | 미실행 |
-| **A-12** | UD-01 한도 초과 413 (ZIP당) | 1GB 초과 시 `413` 반환 | 미실행 |
-| **A-13** | UD-01 한도 초과 413 (Import당) | 1000개 초과 시 `413` 반환 | 미실행 |
-| **A-14** | UD-02 Access/Refresh 토큰 회전 | 15분 만료 후 Refresh, 30일 후 만료 | 미실행 |
+| 범위 | 상태 |
+| --- | --- |
+| 제품 자동화 시나리오 A-1~A-18 | 미실행 |
+| 사용자 평가 시나리오 U-1~U-6 | 미실행 |
+| 보안 시나리오 S-1~S-16 | 미실행 |
+| Phase 0 CSV 구조 인수 검사 | 실행 완료 — 구조 PASS |
+| Phase 0 offline 채점 계약 | 재인수 완료 |
+| Ingest-level AC-5 | mapping manifest 부재로 차단 |
 
-### U. 사용자 평가 테스트
+CSV 구조와 offline 채점 계약 PASS는 제품 기능이나 AC-3·Ingest-level AC-5의 통과를
+뜻하지 않는다. AC-3은 검증 사용자 5~10명의 평가가 필요한 사용자 인수 기준이고,
+Ingest-level AC-5는 gold `case_id`와 생성 `claim_id`를 잇는 mapping manifest가
+필요하다.
 
-| # | 항목 | 방식 | 상태 |
-| --- | --- | --- | --- |
-| **U-1** | 제안 연결 70% 유용도 | 검증 사용자 투표 (유용함/무관함) | 미실행 |
-| **U-2** | 2주 후 재사용 50% | 초기 5~10명 중 3명 이상 재방문 | 미실행 |
-| **U-3** | 기존 검색 대비 70% 유용 | 설문조사 Likert 척도 (1~5) | 미실행 |
-| **U-4** | 수동 분류 필요도 30% 이하 | Lint 검사 후 수정 항목 | 미실행 |
-| **U-5** | CANCELLED·PAUSED_QUOTA 상태 구별 | UI 메시지 차별화, 상태별 필터링 | 미실행 |
-| **U-6** | 변경 승인/거절/수정/보류 4개 액션 | 변경 검토 화면 버튼 활성화 + 서버 반영 | 미실행 |
+## 재현
 
-### S. 보안 테스트
+PowerShell에서 저장소 루트를 현재 디렉터리로 두고 실행한다.
 
-| # | 위협 | 방식 | 상태 |
-| --- | --- | --- | --- |
-| **S-1** | 프롬프트 인젝션 | 악의적 문서 Ingest → LLM이 명령 실행 안 함 | 미실행 |
-| **S-2** | ZIP 경로 탐색 | `../` 포함 파일 Ingest 차단 | 미실행 |
-| **S-3** | SSRF | 사설 IP 클리핑 요청 403 | 미실행 |
-| **S-4** | 비밀번호·API 키 저장 | `.env` 업로드 시 `422 SECRET_DETECTED` | 미실행 |
-| **S-5** | 도서관 간 정보 노출 | 다른 사용자 도서관 조회 시 404/403 | 미실행 |
-| **S-6** | 저작권 과도 재현 | 발췌문 비율 분석, 수동 검토 | 미실행 |
-| **S-7** | 비동기 작업 비용 폭탄 | 동일 Idempotency-Key 재전송 → 같은 결과 | 미실행 |
-| **S-8** | 토큰 탈취 | 만료된 token 401, 로테이션 검증 | 미실행 |
-| **S-9** | 웹 캐싱 민감정보 노출 | 공개 전 검사 결과, Cache-Control 헤더 | 미실행 |
-| **S-10** | 오류 응답 민감정보 누수 | 에러 응답·로그에 원본·토큰·URL 미포함 | 미실행 |
-| **S-11** | 사용자 간 원본 dedup 금지 | A·B 사용자 동일 원본 업로드 → 별도 저장 | 미실행 |
-| **S-12** | 도서관 참조 범위 초과 | 검색·답변 생성 시 library_references만 포함 | 미실행 |
-| **S-13** | 공개 페이지 내부 ID 노출 | 공개 응답에서 page_id·source_id 없음 | 미실행 |
-| **S-14** | 멱등성 캐시 서명 URL 제외 | 재요청 시 signedUrl·downloadUrl·토큰 다름 | 미실행 |
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+python qa/verify_phase0_evaluation.py
+```
 
----
+현재 구조가 유효하면 종료 코드 0과 다음 요약을 출력한다.
 
-## 다음 단계
-
-1. `test_scenarios.md` 작성: 각 항목별 상세 시나리오 (입력/조건/예상 결과)
-2. `evaluation_data/` 생성: 정답 연결 100개, 모순 쌍 32개
-3. 테스트 코드 작성: 자동화 테스트 (Python/Go/TypeScript)
-4. 실행 불가 항목 표기: "미실행" 상태 유지
-
----
+```text
+COUNTS pages=180 page_types={'concept': 127, 'flow': 16, 'source': 37} relations=84 positive=76 negative=8 contradictions=26 conflict=23 no_conflict=3
+RESULT PASS failures=0
+```
 
 ## 참고
 
-- 기준: `docs/검증-QA-계약-확정-체크리스트.md` 3절
-- 새 확정 항목(UD-01, 02, 06, 07, 14): A-11~A-14 시나리오 추가
-- 보안 필수 검증: S-1~S-14 (도서관 간 정보 노출, 사용자별 데이터 격리)
+- 제품·계약 정본: `docs/ZeroWiki-MVP-서비스-기획서.md` 3절,
+  `docs/ZeroWiki-요구사항-정의서.md` 11절·12절
+- 측정 기준: `docs/검증-QA-계약-확정-체크리스트.md` 3절
+- 상세 시나리오: `qa/test_scenarios.md`
+- Phase 0 인수 결과: `qa/phase0-evaluation-acceptance-report.md`

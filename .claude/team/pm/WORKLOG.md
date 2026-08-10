@@ -1156,3 +1156,29 @@ grep "LIMIT [0-9]" docs/PM-미확정결정-우선순위.md
 
 - 없음. PM-종합-현황.md 전면 갱신 완료.
 - 리더에게 보고 후, SendMessage로 main에 완료 통보 예정.
+
+---
+
+## 2026-08-10 — Phase 0 평가 데이터 인수 결과 PM 종합
+
+**무엇을 했는가**
+
+- backend·QA STATE, `evaluation/README.md`, QA 인수 보고서, JOURNAL, 요구사항 정의서 12절을 직접 대조했다.
+- 낡은 라벨링 대기와 계획 가정을 CSV 실측(pages 180, relations 84, contradictions 26) 및 독립 재인수 결과로 대체했다.
+- CSV 구조·offline 채점 계약 인수와 Ingest-level AC-5 mapping manifest 차단, AC-3 U-1 미실행을 구분했다.
+- 사용자 결정 5건(UD-03·10·19·20·22), Phase 0 직접 결정 4건(UD-11·17·25·29), Phase 4 별도 UD-26을 요구사항 정의서 12절의 결정 주체에 맞춰 분리했다.
+- 다음 한 걸음은 mapping manifest 계약 및 이를 소비하는 Ingest harness 착수로 권고(미확정)했다. LLM provider/model·유료 API 사용 범위·토큰/비용 예산은 사용자 결정·승인으로 분리했다.
+
+**산출물 경로**
+
+- `docs/PM-종합-현황.md`
+- `docs/PM-미확정결정-우선순위.md`
+- `.claude/team/pm/STATE.md`
+- `.claude/team/pm/WORKLOG.md`
+
+**미해결 사항**
+
+- Ingest-level AC-5는 versioned mapping manifest 부재로 차단.
+- AC-3은 U-1 사용자 5~10명 평가 미실행.
+- 라벨 의미 정확성 독립 이중 검토와 외부 NoteWiki 원본 대조 미실행.
+- 실제 외부 호출 전 LLM provider/model·유료 API 범위·토큰/비용 예산 사용자 결정·승인 필요.

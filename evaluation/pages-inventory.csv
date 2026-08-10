@@ -1,0 +1,181 @@
+page_id,page_slug,title,page_type,file_path
+page-001,anonymous-class,익명 클래스 (Anonymous Class),concept,wiki/concepts/anonymous-class.md
+page-002,aop,AOP (Aspect-Oriented Programming),concept,wiki/concepts/aop.md
+page-003,api-response-wrapper,API Response Wrapper (공통 응답 래퍼),concept,wiki/concepts/api-response-wrapper.md
+page-004,async-await,async / await,concept,wiki/concepts/async-await.md
+page-005,bean-validation,Bean Validation (@Valid · @NotBlank · @NotNull),concept,wiki/concepts/bean-validation.md
+page-006,cache-control,Cache-Control 헤더,concept,wiki/concepts/cache-control.md
+page-007,callback,Callback,concept,wiki/concepts/callback.md
+page-008,concurrency-problem,동시성 문제 (Race Condition),concept,wiki/concepts/concurrency-problem.md
+page-009,conditional-request,조건부 요청 & 캐시 검증 (Conditional Request),concept,wiki/concepts/conditional-request.md
+page-010,connection-pool,Connection Pool (커넥션 풀),concept,wiki/concepts/connection-pool.md
+page-011,container-virtualization,컨테이너 가상화,concept,wiki/concepts/container-virtualization.md
+page-012,content-negotiation,Content Negotiation (콘텐츠 협상),concept,wiki/concepts/content-negotiation.md
+page-013,cookie,Cookie (쿠키),concept,wiki/concepts/cookie.md
+page-014,cors,CORS (Cross-Origin Resource Sharing),concept,wiki/concepts/cors.md
+page-015,covering-index,커버링 인덱스 (Covering Index),concept,wiki/concepts/covering-index.md
+page-016,css-modules,CSS Modules,concept,wiki/concepts/css-modules.md
+page-017,css-selector,CSS Selector,concept,wiki/concepts/css-selector.md
+page-018,css-specificity,CSS 명시도와 우선순위,concept,wiki/concepts/css-specificity.md
+page-019,dao-pattern,DAO 패턴 (Data Access Object),concept,wiki/concepts/dao-pattern.md
+page-020,database-index,데이터베이스 인덱스 (Database Index),concept,wiki/concepts/database-index.md
+page-021,database-migration,데이터베이스 마이그레이션 (Database Migration / 형상 관리),concept,wiki/concepts/database-migration.md
+page-022,ddl-lock,DDL 락과 메타데이터 락 (DDL Lock / Metadata Lock),concept,wiki/concepts/ddl-lock.md
+page-023,dependency-injection,Dependency Injection (DI),concept,wiki/concepts/dependency-injection.md
+page-024,dispatcher-servlet,DispatcherServlet,concept,wiki/concepts/dispatcher-servlet.md
+page-025,docker-container,Docker Container,concept,wiki/concepts/docker-container.md
+page-026,docker-image,Docker Image,concept,wiki/concepts/docker-image.md
+page-027,docker,Docker,concept,wiki/concepts/docker.md
+page-028,domain,Domain (도메인),concept,wiki/concepts/domain.md
+page-029,dto-vs-entity,DTO vs Entity,concept,wiki/concepts/dto-vs-entity.md
+page-030,embedding,Embedding (임베딩),concept,wiki/concepts/embedding.md
+page-031,entity-manager,EntityManager / EntityManagerFactory,concept,wiki/concepts/entity-manager.md
+page-032,equals-hashcode,equals와 hashCode,concept,wiki/concepts/equals-hashcode.md
+page-033,es-modules,ES 모듈 (import / export),concept,wiki/concepts/es-modules.md
+page-034,etag,ETag (Entity Tag),concept,wiki/concepts/etag.md
+page-035,explain,EXPLAIN — MySQL 쿼리 실행 계획,concept,wiki/concepts/explain.md
+page-036,filter,Filter (서블릿 필터),concept,wiki/concepts/filter.md
+page-037,flyway,Flyway,concept,wiki/concepts/flyway.md
+page-038,forward-proxy,Forward Proxy,concept,wiki/concepts/forward-proxy.md
+page-039,forward-vs-redirect,Forward vs Redirect,concept,wiki/concepts/forward-vs-redirect.md
+page-040,functional-interface,함수형 인터페이스 (Functional Interface),concept,wiki/concepts/functional-interface.md
+page-041,generics,제네릭 (Generics),concept,wiki/concepts/generics.md
+page-042,gradle,Gradle,concept,wiki/concepts/gradle.md
+page-043,graph-view,그래프 뷰 (Graph View),concept,wiki/concepts/graph-view.md
+page-044,hibernate-ddl-auto,spring.jpa.hibernate.ddl-auto,concept,wiki/concepts/hibernate-ddl-auto.md
+page-045,hibernate,Hibernate,concept,wiki/concepts/hibernate.md
+page-046,high-availability,High Availability (고가용성),concept,wiki/concepts/high-availability.md
+page-047,hikaricp,HikariCP,concept,wiki/concepts/hikaricp.md
+page-048,horizontal-vs-vertical-scaling,Horizontal vs Vertical Scaling,concept,wiki/concepts/horizontal-vs-vertical-scaling.md
+page-049,http-cache,HTTP 캐시 (브라우저 캐시),concept,wiki/concepts/http-cache.md
+page-050,http-method-override,HTTP Method Override (HTTP 메서드 변환),concept,wiki/concepts/http-method-override.md
+page-051,http-status-codes,HTTP Status Codes (응답 상태 코드),concept,wiki/concepts/http-status-codes.md
+page-052,interceptor,Interceptor (스프링 인터셉터),concept,wiki/concepts/interceptor.md
+page-053,inversion-of-control,Inversion of Control (IoC),concept,wiki/concepts/inversion-of-control.md
+page-054,jacoco,JaCoCo (Java Code Coverage),concept,wiki/concepts/jacoco.md
+page-055,java-buffer,버퍼 (Buffer),concept,wiki/concepts/java-buffer.md
+page-056,java-record,Java record,concept,wiki/concepts/java-record.md
+page-057,javascript-async,동기 vs 비동기 (JavaScript),concept,wiki/concepts/javascript-async.md
+page-058,jdbc,JDBC (Java Database Connectivity),concept,wiki/concepts/jdbc.md
+page-059,jpa-association,JPA 연관 관계 (Association),concept,wiki/concepts/jpa-association.md
+page-060,jpa-auditing,JPA Auditing,concept,wiki/concepts/jpa-auditing.md
+page-061,jpa-entity-mapping,JPA Entity 매핑,concept,wiki/concepts/jpa-entity-mapping.md
+page-062,jpa,JPA (Java Persistence API),concept,wiki/concepts/jpa.md
+page-063,jpql,JPQL과 복잡한 쿼리,concept,wiki/concepts/jpql.md
+page-064,jsp,JSP (JavaServer Pages),concept,wiki/concepts/jsp.md
+page-065,jstl-el,JSTL과 EL (JSP 표현 도구),concept,wiki/concepts/jstl-el.md
+page-066,jvm-memory,JVM 메모리 구조,concept,wiki/concepts/jvm-memory.md
+page-067,jwt-claims,JWT Claims,concept,wiki/concepts/jwt-claims.md
+page-068,jwt,JWT (JSON Web Token),concept,wiki/concepts/jwt.md
+page-069,lambda,람다식 (Lambda),concept,wiki/concepts/lambda.md
+page-070,llm-wiki-pattern,LLM Wiki Pattern,concept,wiki/concepts/llm-wiki-pattern.md
+page-071,load-balancer,Load Balancer (로드 밸런서),concept,wiki/concepts/load-balancer.md
+page-072,load-balancing-algorithm,Load Balancing Algorithm (분배 알고리즘),concept,wiki/concepts/load-balancing-algorithm.md
+page-073,lombok,Lombok,concept,wiki/concepts/lombok.md
+page-074,markdown,마크다운 (Markdown),concept,wiki/concepts/markdown.md
+page-075,maven,Maven,concept,wiki/concepts/maven.md
+page-076,mutable-immutable,가변 객체 vs 불변 객체,concept,wiki/concepts/mutable-immutable.md
+page-077,mvc-pattern,MVC 패턴 (Servlet + JSP),concept,wiki/concepts/mvc-pattern.md
+page-078,mybatis,MyBatis,concept,wiki/concepts/mybatis.md
+page-079,n-plus-1-problem,N+1 문제,concept,wiki/concepts/n-plus-1-problem.md
+page-080,nginx,Nginx,concept,wiki/concepts/nginx.md
+page-081,node-modules,node_modules,concept,wiki/concepts/node-modules.md
+page-082,npm-dependency-files,npm 의존성 파일 (package.json / lock 파일),concept,wiki/concepts/npm-dependency-files.md
+page-083,obsidian-properties,옵시디언 속성 (Properties),concept,wiki/concepts/obsidian-properties.md
+page-084,obsidian-tags,옵시디언 태그 (Tags),concept,wiki/concepts/obsidian-tags.md
+page-085,obsidian,옵시디언 (Obsidian),concept,wiki/concepts/obsidian.md
+page-086,once-per-request-filter,OncePerRequestFilter,concept,wiki/concepts/once-per-request-filter.md
+page-087,optimistic-pessimistic-lock,낙관적 락 vs 비관적 락,concept,wiki/concepts/optimistic-pessimistic-lock.md
+page-088,orm,ORM (Object-Relational Mapping),concept,wiki/concepts/orm.md
+page-089,persistence-context,영속성 컨텍스트 (Persistence Context),concept,wiki/concepts/persistence-context.md
+page-090,pi,pi (코딩 에이전트),concept,wiki/concepts/pi.md
+page-091,pojo,POJO (Plain Old Java Object),concept,wiki/concepts/pojo.md
+page-092,preflight-request,예비 요청 (Preflight Request),concept,wiki/concepts/preflight-request.md
+page-093,prg-pattern,PRG 패턴 (Post-Redirect-Get),concept,wiki/concepts/prg-pattern.md
+page-094,prisma,Prisma,concept,wiki/concepts/prisma.md
+page-095,promise,Promise,concept,wiki/concepts/promise.md
+page-096,proxy,Proxy (프록시),concept,wiki/concepts/proxy.md
+page-097,querydsl,QueryDSL,concept,wiki/concepts/querydsl.md
+page-098,rag,RAG (Retrieval-Augmented Generation),concept,wiki/concepts/rag.md
+page-099,refresh-token,Refresh Token,concept,wiki/concepts/refresh-token.md
+page-100,restful-api,RESTful API,concept,wiki/concepts/restful-api.md
+page-101,reverse-proxy,Reverse Proxy,concept,wiki/concepts/reverse-proxy.md
+page-102,same-origin-policy,"동일 출처 정책 (Same-Origin Policy, SOP)",concept,wiki/concepts/same-origin-policy.md
+page-103,security-context,SecurityContext,concept,wiki/concepts/security-context.md
+page-104,serialization,직렬화 (Serialization),concept,wiki/concepts/serialization.md
+page-105,servlet-container,Servlet Container (Tomcat),concept,wiki/concepts/servlet-container.md
+page-106,servlet-lifecycle,Servlet 생명주기 & 싱글톤,concept,wiki/concepts/servlet-lifecycle.md
+page-107,servlet-spec,Servlet Specification (서블릿 스펙),concept,wiki/concepts/servlet-spec.md
+page-108,servlet,Servlet,concept,wiki/concepts/servlet.md
+page-109,session-auth,Session 인증,concept,wiki/concepts/session-auth.md
+page-110,short-circuit,쇼트 서킷 (Short Circuit),concept,wiki/concepts/short-circuit.md
+page-111,solid-principles,SOLID 원칙,concept,wiki/concepts/solid-principles.md
+page-112,spring-annotations,Spring 자주 쓰는 어노테이션 — 인덱스,concept,wiki/concepts/spring-annotations.md
+page-113,spring-bean,Spring Bean,concept,wiki/concepts/spring-bean.md
+page-114,spring-boot,Spring Boot,concept,wiki/concepts/spring-boot.md
+page-115,spring-data-jpa,Spring Data JPA,concept,wiki/concepts/spring-data-jpa.md
+page-116,spring-framework,Spring Framework,concept,wiki/concepts/spring-framework.md
+page-117,spring-security,Spring Security,concept,wiki/concepts/spring-security.md
+page-118,static-keyword,static 키워드,concept,wiki/concepts/static-keyword.md
+page-119,string-pool,String Pool,concept,wiki/concepts/string-pool.md
+page-120,swagger-oas,Swagger & OAS (OpenAPI Specification),concept,wiki/concepts/swagger-oas.md
+page-121,test-coverage,테스트 커버리지 (Test Coverage),concept,wiki/concepts/test-coverage.md
+page-122,three-tier-architecture,3-tier Layered Architecture,concept,wiki/concepts/three-tier-architecture.md
+page-123,transaction-propagation,트랜잭션 전파 (Propagation),concept,wiki/concepts/transaction-propagation.md
+page-124,transaction,트랜잭션 (Transaction),concept,wiki/concepts/transaction.md
+page-125,vector-database,Vector Database (벡터 DB),concept,wiki/concepts/vector-database.md
+page-126,web-clipper,옵시디언 웹 클리퍼 (Web Clipper),concept,wiki/concepts/web-clipper.md
+page-127,wikilink,위키링크 (Wikilink),concept,wiki/concepts/wikilink.md
+page-128,anonymous-class-to-lambda,흐름: 제네릭 → 함수형 인터페이스 → 익명 클래스 → 람다,flow,wiki/flows/anonymous-class-to-lambda.md
+page-129,browser-cache-flow,브라우저 캐시 전체 흐름 (요청 → 재사용 → 만료 → 검증),flow,wiki/flows/browser-cache-flow.md
+page-130,cookie-session-jwt,쿠키 → 세션 → JWT 인증 발전 흐름,flow,wiki/flows/cookie-session-jwt.md
+page-131,entity-to-production-schema,흐름: 엔티티 변경 → 운영 DB 스키마,flow,wiki/flows/entity-to-production-schema.md
+page-132,filter-vs-interceptor,Filter vs Interceptor — 두 가로채기 기술의 비교,flow,wiki/flows/filter-vs-interceptor.md
+page-133,js-async-evolution,흐름: JS 비동기의 발전 — Callback → Promise → async/await,flow,wiki/flows/js-async-evolution.md
+page-134,manual-di-to-spring-ioc,흐름: 직접 `new`에서 Spring IoC 컨테이너까지,flow,wiki/flows/manual-di-to-spring-ioc.md
+page-135,mybatis-to-jpa,흐름: MyBatis → JPA,flow,wiki/flows/mybatis-to-jpa.md
+page-136,npm-install-flow,흐름: npm 의존성 설치·동기화,flow,wiki/flows/npm-install-flow.md
+page-137,prisma-workflow,흐름: Prisma 사용 워크플로우,flow,wiki/flows/prisma-workflow.md
+page-138,rag-vs-llm-wiki,RAG vs LLM Wiki Pattern — 트레이드오프 비교,flow,wiki/flows/rag-vs-llm-wiki.md
+page-139,scaling-a-web-app,웹 앱 스케일링 흐름 — 단일 Tomcat에서 멀티 LB까지,flow,wiki/flows/scaling-a-web-app.md
+page-140,servlet-to-spring-mvc,흐름: Servlet/JSP → Spring MVC 진입,flow,wiki/flows/servlet-to-spring-mvc.md
+page-141,spring-mvc-request-flow,흐름: Spring MVC 요청 풀 파이프라인,flow,wiki/flows/spring-mvc-request-flow.md
+page-142,spring-security-jwt-auth-flow,Spring Security JWT 인증 흐름,flow,wiki/flows/spring-security-jwt-auth-flow.md
+page-143,spring-security-register-flow,Spring Security 회원가입 흐름,flow,wiki/flows/spring-security-register-flow.md
+page-144,authentication-note,인증 방식 필기,source,wiki/sources/authentication-note.md
+page-145,browser-cache-article,소스: 🌐 웹 브라우저의 Cache 전략 & 헤더 다루기,source,wiki/sources/browser-cache-article.md
+page-146,cors-article,소스: 🌐 악명 높은 CORS 개념 & 해결법 - 정리 끝판왕 👏,source,wiki/sources/cors-article.md
+page-147,coverage-standard,소스: 커버리지 기준,source,wiki/sources/coverage-standard.md
+page-148,css-cascade-priority,소스: CSS 참조 우선순위,source,wiki/sources/css-cascade-priority.md
+page-149,ddl-trap,컬럼 하나 추가했는데 서비스가 10분간 멈췄습니다 — DDL의 함정 (코딩애플 쇼츠),source,wiki/sources/ddl-trap.md
+page-150,docker-note,소스 요약: Docker 입문 노트,source,wiki/sources/docker-note.md
+page-151,equals-hashcode-note,소스: hashCode와 equals,source,wiki/sources/equals-hashcode-note.md
+page-152,flyway-article,소스: [DB] Flyway 란 무엇일까?,source,wiki/sources/flyway-article.md
+page-153,functional-interface-table,소스: Functional Interface,source,wiki/sources/functional-interface-table.md
+page-154,generics-lambda-note,"소스: 제네릭, 람다, 함수형 인터페이스, 익명 클래스",source,wiki/sources/generics-lambda-note.md
+page-155,index-trap,인덱스 걸었는데 왜 3초나 걸리죠 — 인덱스의 함정 (쇼츠),source,wiki/sources/index-trap.md
+page-156,index-what-is-it,index가 뭔지 설명해보세요 (코딩애플),source,wiki/sources/index-what-is-it.md
+page-157,java-buffer-note,소스: Java의 버퍼,source,wiki/sources/java-buffer-note.md
+page-158,jpa-lecture,소스: JPA 강의 노트 (MyBatis to JPA),source,wiki/sources/jpa-lecture.md
+page-159,js-async,소스: 비동기의 모든 것,source,wiki/sources/js-async.md
+page-160,js-import-export,소스: JavaScript Import와 Export,source,wiki/sources/js-import-export.md
+page-161,jvm-memory-note,소스: JVM의 메모리 할당,source,wiki/sources/jvm-memory-note.md
+page-162,load-balancing-video,Load Balancing — 로드 밸런서의 기초 개념과 역할 (코딩문),source,wiki/sources/load-balancing-video.md
+page-163,mutable-immutable-note,소스: 가변 객체 vs 불변 객체,source,wiki/sources/mutable-immutable-note.md
+page-164,mybatis-practice-debugging,소스: Spring Boot + MyBatis 실습 정리 (Claude 대화 디버깅),source,wiki/sources/mybatis-practice-debugging.md
+page-165,nodejs-dependency-management,소스: Node.js node_modules와 의존성 관리,source,wiki/sources/nodejs-dependency-management.md
+page-166,obsidian-basics-video,소스: 옵시디언 기초 강의 (YouTube),source,wiki/sources/obsidian-basics-video.md
+page-167,pi-dialogue,소스: pi 하네스 이해와 설정 대화,source,wiki/sources/pi-dialogue.md
+page-168,prisma-orm,소스: Prisma 필기,source,wiki/sources/prisma-orm.md
+page-169,proxy-forward-reverse-video,Proxy(프록시)란? Forward vs Reverse Proxy — 코딩문,source,wiki/sources/proxy-forward-reverse-video.md
+page-170,querydsl-reference-guide,소스: Querydsl Reference Guide (v5.0.0),source,wiki/sources/querydsl-reference-guide.md
+page-171,servlet-jdbc-debugging,소스: Servlet+JDBC 실습 디버깅 (Claude 대화),source,wiki/sources/servlet-jdbc-debugging.md
+page-172,servlet-jsp-dialogue,소스: Servlet과 JSP의 차이 및 활용 (Claude 대화),source,wiki/sources/servlet-jsp-dialogue.md
+page-173,short-circuit-note,소스: Java의 쇼트 서킷,source,wiki/sources/short-circuit-note.md
+page-174,spring-component-di-security-dialogue,Spring @Component · Bean · DI · Security Filter Chain 개념 문답,source,wiki/sources/spring-component-di-security-dialogue.md
+page-175,spring-framework-1-note,출처: 부트캠프 Spring Framework-1 강의자료,source,wiki/sources/spring-framework-1-note.md
+page-176,spring-transaction-proxy-dialogue,소스: Spring 도메인 구조와 @Transactional — 프록시 vs 컨테이너 (Claude 대화),source,wiki/sources/spring-transaction-proxy-dialogue.md
+page-177,static-note,소스: static의 개념과 활용,source,wiki/sources/static-note.md
+page-178,virtuber-spring-work-2026-06-21,Virtuber Spring 프로젝트 작업 (2026-06-21),source,wiki/sources/virtuber-spring-work-2026-06-21.md
+page-179,zeroverse-spring-practice,ZeroVerse Spring 실습 노트 (2026-06-01 ~ 06-09),source,wiki/sources/zeroverse-spring-practice.md
+page-180,zeroverse-spring-security-jwt-dialogue,ZeroVerse Spring Security JWT 로그인 인증 실습 대화,source,wiki/sources/zeroverse-spring-security-jwt-dialogue.md

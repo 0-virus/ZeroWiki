@@ -457,3 +457,134 @@
 - 해시는 근사 유사도를 표현할 수 없음 (완벽한 의미 정규화 전제 불가능)
 - **권고안 통합 시 "이 방법이 실제로 계산 가능한가"를 한 번 더 물어야 함**
 - QA의 역할: 근거 문서 검증 + 실현 가능성 검토
+
+---
+
+## 2026-08-10 22:04 — Phase 0 평가 세트 독립 QA 인수 검증
+
+**한 일**
+
+1. `evaluation/pages-inventory.csv`, `relation-labels.csv`,
+   `contradiction-labels.csv`를 backend와 독립적으로 검사했다.
+   - 정확한 헤더, UTF-8/LF, 필수값, ID/slug 참조, 유일성, self pair·중복 부재
+   - UD-16 관계 7종, positive/negative 규칙, 모순 5종+`NO_CONFLICT`
+   - 채점 분모 실측 및 타입별 분포
+2. `evaluation/README.md`의 AC-3·AC-5 채점식을 기획서 3절, QA 체크리스트
+   3절, 요구사항 정의서 AC-3·AC-5 및 QA 시나리오 A-4·U-1과 교차 대조했다.
+3. CSV 구조는 PASS했으나 채점 계약은 인수 거절했다.
+   - AC-3 사용자 평가를 positive gold recall로 대체하고 “정확도”로 오표기
+   - 모순 오탐율의 FPR/FDR 분모 혼동
+   - contradiction output↔gold stable 매칭 계약 부재
+   - 실제 positive 23건·5종과 A-4의 32건/25건·`DIRECT_CONTRADICTION` 불일치
+4. 실제 `qa/test_scenarios.md`를 검색해 A 18개, U 6개, S 16개, 총 40개임을
+   재계산하고 STATE를 갱신했다.
+
+**산출물**
+
+- `qa/verify_phase0_evaluation.py`
+- `qa/phase0-evaluation-acceptance-report.md`
+- `qa/README.md`
+- `.claude/team/qa/STATE.md`
+- `.claude/team/qa/WORKLOG.md` (이 항목 append)
+
+**검증**
+
+- `$env:PYTHONIOENCODING='utf-8'; python qa/verify_phase0_evaluation.py`
+  - 종료 코드 0
+  - `COUNTS pages=180 ... relations=84 positive=76 negative=8 contradictions=26 conflict=23 no_conflict=3`
+  - `RESULT PASS failures=0`
+- `rg -c "^### A-[0-9]+:" qa/test_scenarios.md` → 18
+- `rg -c "^### U-[0-9]+:" qa/test_scenarios.md` → 6
+- `rg -c "^### S-[0-9]+:" qa/test_scenarios.md` → 16
+
+**삭제·대체 기록**
+
+- `qa/README.md`의 과거 34개 매트릭스(A-1~A-14, U-1~U-6, S-1~S-14)와
+  존재하지 않는 `qa/evaluation_data/` 구조 설명을 제거했다.
+- 이유: 실제 정본 산출물은 `qa/test_scenarios.md`의 40개 시나리오와
+  `evaluation/**`의 CSV이며, 낡은 복제 목록이 현재 상태를 오도했다.
+- 어디로: 시나리오 상세는 기존 `qa/test_scenarios.md`에 그대로 보존되어 있고,
+  새 README는 그 파일과 이번 검증기·인수 보고서를 가리킨다. 판단·근거는
+  `qa/phase0-evaluation-acceptance-report.md`에 보존했다.
+
+**미해결**
+
+- backend 소유 `evaluation/README.md`와 평가 manifest/CSV의 채점 계약 정정 필요.
+- 리더 소유 `docs/ZeroWiki-요구사항-정의서.md` 11절 AC-5의 QA 항목 A-5 참조를
+  실제 A-4와 동기화할 필요가 있다.
+- 라벨 의미 정확성의 독립 이중 검토와 외부 NoteWiki 원본 대조는 미실행이다.
+
+**동시 변경 재검증 정정 (2026-08-10 22:06)**
+
+- backend가 검증 중 `evaluation/README.md`의 데이터셋 실측을 source 37 + concept
+  127 + flow 16 = 180으로 갱신했다. 최초 발견한 concept 124 표기 불일치는 해소됐다.
+- QA 인수 보고서와 STATE에서 해소된 finding을 제거했다. AC-3 식, 모순 오탐율 식,
+  contradiction 매칭 계약, `*_page_id`/slug 문제는 최종 재검증 시 그대로 남아 있다.
+
+---
+
+## 2026-08-10 22:21 — backend 반영 후 Phase 0 평가 세트 재인수
+
+**한 일**
+
+1. backend 변경을 독립 재검증했다.
+   - relation 헤더 `source_page_slug,target_page_slug`와 inventory exact join
+   - contradiction `case_id` 26개, `CT-001`~`CT-026` 형식·유일성·연속성
+   - UD-16 7종, negative 공란 규칙, 모순 5종+`NO_CONFLICT`, 중복·분모
+2. README의 채점 계약을 정본 AC-3·AC-5와 교차 대조했다.
+   - relation pair/strict recall, sampled FPR, bounded precision과 0분모 N/A 확인
+   - AC-3이 U-1 사용자 평가로 별도 유지됨을 확인
+   - contradiction recall, sampled FPR, FDR, case_id/exact-pair 규칙 확인
+3. QA A-4를 실제 평가 세트에 맞췄다.
+   - conflict 23건 중 최소 19건
+   - 확정 5종 enum
+   - `NO_CONFLICT` 3건은 sampled FPR 분모
+   - mapping manifest를 Ingest-level 실행 precondition으로 명시
+4. QA 체크리스트 3.1절 A-4도 같은 23/19 및 manifest 조건으로 동기화했다.
+5. 이전 findings를 재판정했다. offline 채점 계약 문제는 해소됐고, Ingest-level
+   page/claim→생성 `claim_id` mapping manifest 부재만 HIGH blocker로 남겼다.
+
+**산출물**
+
+- `qa/verify_phase0_evaluation.py`
+- `qa/phase0-evaluation-acceptance-report.md`
+- `qa/test_scenarios.md`
+- `qa/README.md`
+- `docs/검증-QA-계약-확정-체크리스트.md`
+- `.claude/team/qa/STATE.md`
+- `.claude/team/qa/WORKLOG.md` (이 항목 append)
+
+**검증**
+
+- `$env:PYTHONIOENCODING='utf-8'; python qa/verify_phase0_evaluation.py`
+  - 종료 코드 0, `RESULT PASS failures=0`
+  - pages 180, relations 84(76/8), contradictions 26(23/3)
+- `python evaluation/validate_evaluation.py`
+  - 종료 코드 0, `검증 완료: 오류 0건`
+
+**삭제·대체 기록**
+
+- `qa/test_scenarios.md` A-4의 가상 `evaluation_data/contradiction_pairs.json`,
+  32건/25건, `DIRECT_CONTRADICTION` 판단을 실제 `evaluation/**`의 23건/19건,
+  확정 5종, mapping manifest precondition으로 대체했다.
+- 같은 문서 하단의 존재하지 않는 `evaluation_data/` JSON 구조 설명을 실제
+  `evaluation/*.csv` 포인터와 미작성 manifest 설명으로 대체했다.
+- `docs/검증-QA-계약-확정-체크리스트.md` 3.1절 A-4의 32건/25건 기준을 실제
+  23건/19건과 manifest 차단 조건으로 대체했다.
+- `qa/phase0-evaluation-acceptance-report.md`의 이전 인수 거절 findings 본문을
+  재인수 보고서로 대체했다. 판단은 삭제하지 않고 새 보고서 3절의 재판정 표와
+  2026-08-10 22:04 WORKLOG 항목에 보존했다.
+
+**미해결**
+
+- Ingest-level AC-5용 mapping manifest 미작성.
+- AC-3 U-1 사용자 평가 미실행.
+- 라벨 의미 정확성 독립 이중 검토와 외부 NoteWiki 원본 대조 미실행.
+
+**최종 잔존 검색**
+
+- 활성 schema·시나리오·계약 파일에서 옛 CSV 헤더, `32개 의도적 모순`,
+  `25개 이상 자동 탐지`, `DIRECT_CONTRADICTION`, AC-5→A-5 표 참조를 검색했다.
+- 결과: `ACTIVE_STALE_REFERENCES=0` (종료 코드 0으로 명시 처리).
+- append-only WORKLOG와 재인수 보고서의 재판정 표에 남은 과거 문구는 판단 이력으로
+  의도적으로 보존했다.

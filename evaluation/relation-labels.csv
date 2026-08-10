@@ -1,0 +1,85 @@
+source_page_slug,target_page_slug,relation_type,direction,confidence,label,근거_한줄
+rag,embedding,APPLIES_TO,forward,high,positive,RAG의 검색 단계가 임베딩 벡터 유사도에 의존한다
+n-plus-1-problem,orm,RELATED_TO,bidirectional,high,positive,N+1은 ORM 사용 시 가장 흔하게 발생하는 성능 문제다
+hibernate,jpa,APPLIES_TO,forward,high,positive,Hibernate는 JPA 명세를 구현한 사실상 표준 구현체다
+callback,promise,CAUSES,forward,high,positive,콜백 지옥이 Promise 객체가 등장한 주요 원인이다
+javascript-async,async-await,EXPLAINS,forward,high,positive,동기/비동기 개념이 async-await 문법의 전제를 설명한다
+test-coverage,short-circuit,RELATED_TO,bidirectional,medium,positive,분기 커버리지의 예외 케이스에 쇼트 서킷이 직접 연관된다
+lambda,functional-interface,PART_OF,forward,high,positive,람다는 함수형 인터페이스를 구현하는 특별한 표현 형태다
+session-auth,jwt,CONTRASTS_WITH,bidirectional,high,positive,Stateful(세션) vs Stateless(JWT)의 대비되는 특성
+spring-data-jpa,jpa,DEPENDS_ON,forward,high,positive,Spring Data JPA는 JPA 위에 얹힌 추상화라 JPA 없이는 성립하지 않는다
+querydsl,jpql,DEPENDS_ON,forward,high,positive,QueryDSL은 JPQL을 타입 세이프하게 조립하는 빌더다
+persistence-context,entity-manager,DEPENDS_ON,forward,high,positive,영속성 컨텍스트는 EntityManager가 생성·관리하는 작업대다
+refresh-token,jwt,DEPENDS_ON,forward,high,positive,Refresh Token은 짧은 수명의 JWT Access Token 재발급을 전제로 한다
+vector-database,embedding,DEPENDS_ON,forward,high,positive,벡터 DB는 임베딩 벡터를 저장·검색하는 것이 존재 이유다
+flyway,database-migration,DEPENDS_ON,forward,high,positive,Flyway는 DB 마이그레이션 개념을 구현한 도구다
+covering-index,database-index,DEPENDS_ON,forward,high,positive,커버링 인덱스는 인덱스 구조를 전제로 한 최적화 상태다
+jacoco,test-coverage,DEPENDS_ON,forward,high,positive,JaCoCo는 커버리지 지표를 측정하는 도구다
+preflight-request,cors,DEPENDS_ON,forward,high,positive,예비 요청은 CORS 프로토콜의 사전 확인 절차다
+async-await,promise,DEPENDS_ON,forward,high,positive,async-await는 Promise 위의 문법 설탕이라 Promise 없이 동작하지 않는다
+once-per-request-filter,filter,DEPENDS_ON,forward,high,positive,OncePerRequestFilter는 서블릿 Filter를 상속한 기반 클래스다
+string-pool,mutable-immutable,DEPENDS_ON,forward,medium,positive,String이 불변이기 때문에 문자열 풀 공유 최적화가 가능하다
+jstl-el,jsp,DEPENDS_ON,forward,medium,positive,JSTL/EL은 JSP 안에서만 의미를 갖는 태그·표현식이다
+jwt,serialization,DEPENDS_ON,forward,medium,positive,JWT는 헤더·페이로드를 Base64URL로 직렬화해 전송한다
+dispatcher-servlet,servlet,DEPENDS_ON,forward,high,positive,DispatcherServlet은 서블릿 스펙 위에 구현된 Front Controller다
+cache-control,http-cache,PART_OF,forward,high,positive,Cache-Control은 HTTP 캐시를 조종하는 핵심 헤더다
+etag,conditional-request,PART_OF,forward,high,positive,ETag는 조건부 요청의 검증 수단 중 하나다
+docker-image,docker,PART_OF,forward,high,positive,이미지는 Docker 배포 모델을 구성하는 핵심 산출물이다
+docker-container,docker,PART_OF,forward,high,positive,컨테이너는 Docker 실행 모델의 런타임 단위다
+servlet-lifecycle,servlet,PART_OF,forward,high,positive,생명주기는 서블릿 개념의 하위 주제다
+transaction-propagation,transaction,PART_OF,forward,high,positive,전파 규칙은 트랜잭션의 한 속성이다
+load-balancing-algorithm,load-balancer,PART_OF,forward,high,positive,분배 알고리즘은 로드 밸런서의 동작 규칙이다
+security-context,spring-security,PART_OF,forward,high,positive,SecurityContext는 Spring Security의 인증 정보 보관소다
+jwt-claims,jwt,PART_OF,forward,high,positive,Claims는 JWT 페이로드를 구성하는 항목이다
+wikilink,obsidian,PART_OF,forward,high,positive,위키링크는 옵시디언의 핵심 기능이다
+graph-view,obsidian,PART_OF,forward,medium,positive,그래프 뷰는 옵시디언이 제공하는 시각화 기능이다
+jpa-association,n-plus-1-problem,CAUSES,forward,high,positive,연관 관계의 지연 로딩 조회가 N+1 쿼리를 유발한다
+same-origin-policy,cors,CAUSES,forward,high,positive,SOP가 막아둔 요청 때문에 CORS라는 예외 통로가 생겼다
+hibernate-ddl-auto,ddl-lock,CAUSES,forward,medium,positive,ddl-auto가 임의 시점에 ALTER TABLE을 던져 메타데이터 락을 유발한다
+concurrency-problem,optimistic-pessimistic-lock,CAUSES,forward,high,positive,동시성 문제를 막기 위해 낙관적/비관적 락이 도입됐다
+servlet-lifecycle,concurrency-problem,CAUSES,forward,high,positive,서블릿 싱글톤 인스턴스를 여러 요청이 공유해 race condition이 생긴다
+horizontal-vs-vertical-scaling,load-balancer,CAUSES,forward,medium,positive,수평 확장을 택하는 순간 요청 분배 장치가 필요해진다
+anonymous-class,lambda,CAUSES,forward,medium,positive,익명 클래스의 장황함이 람다 문법 도입의 동기가 됐다
+inversion-of-control,dependency-injection,EXPLAINS,forward,high,positive,IoC 원리가 DI가 왜 필요한지를 설명한다
+proxy,aop,EXPLAINS,forward,high,positive,Spring AOP는 프록시 객체 생성 원리로 동작을 설명한다
+explain,database-index,EXPLAINS,forward,high,positive,실행 계획이 인덱스가 실제로 타는지를 드러낸다
+container-virtualization,docker,EXPLAINS,forward,high,positive,컨테이너 가상화 원리가 Docker의 동작 근거다
+solid-principles,dependency-injection,EXPLAINS,forward,medium,positive,DIP를 비롯한 SOLID 원칙이 DI의 설계 근거다
+servlet-spec,servlet,EXPLAINS,forward,high,positive,서블릿 스펙이 서블릿이 지켜야 할 규칙을 규정·설명한다
+jvm-memory,static-keyword,EXPLAINS,forward,medium,positive,JVM 메모리 영역 구분이 static 멤버의 수명을 설명한다
+jvm-memory,string-pool,EXPLAINS,forward,medium,positive,String Pool이 Heap 안 별도 영역이라는 JVM 메모리 구조가 공유 최적화를 설명한다
+forward-proxy,reverse-proxy,CONTRASTS_WITH,bidirectional,high,positive,클라이언트 쪽 vs 서버 쪽 — 위치가 정반대인 프록시
+mybatis,jpa,CONTRASTS_WITH,bidirectional,high,positive,SQL Mapper vs ORM — 영속성 접근 철학이 대비된다
+filter,interceptor,CONTRASTS_WITH,bidirectional,high,positive,서블릿 컨테이너 영역 vs 스프링 영역의 가로채기 기술
+hibernate-ddl-auto,flyway,CONTRASTS_WITH,bidirectional,high,positive,스키마 자동 생성 vs 버전 관리된 마이그레이션
+servlet,jsp,CONTRASTS_WITH,bidirectional,high,positive,Java 안에 HTML vs HTML 안에 Java — 접근 방향이 반대다
+maven,gradle,CONTRASTS_WITH,bidirectional,high,positive,XML 선언형 vs 스크립트 기반 빌드 도구
+rag,llm-wiki-pattern,CONTRASTS_WITH,bidirectional,medium,positive,매번 재검색 vs 지속 컴파일되는 위키 — 지식 공급 전략이 대비된다
+nginx,reverse-proxy,APPLIES_TO,forward,high,positive,Nginx는 리버스 프록시를 실제로 구현한 대표 소프트웨어다
+hikaricp,connection-pool,APPLIES_TO,forward,high,positive,HikariCP는 커넥션 풀의 구현체다
+prisma,orm,APPLIES_TO,forward,high,positive,Prisma는 JS/TS 진영의 ORM 구현이다
+spring-boot,spring-framework,APPLIES_TO,forward,high,positive,Spring Boot는 Spring을 자동 구성으로 감싼 상위 계층이다
+dispatcher-servlet,mvc-pattern,APPLIES_TO,forward,high,positive,DispatcherServlet은 MVC의 Controller 진입점을 구현한다
+spring-bean,inversion-of-control,APPLIES_TO,forward,high,positive,Bean은 IoC 컨테이너가 관리하는 객체로 IoC의 실물이다
+bean-validation,dto-vs-entity,APPLIES_TO,forward,medium,positive,검증 어노테이션은 주로 DTO 필드에 적용된다
+jpa-auditing,jpa-entity-mapping,APPLIES_TO,forward,medium,positive,Auditing은 엔티티 매핑에 생성·수정 시각 필드를 얹는 기능이다
+api-response-wrapper,http-status-codes,APPLIES_TO,forward,medium,positive,공통 응답 래퍼가 상태 코드를 본문 필드로 함께 실어 나른다
+lombok,dependency-injection,APPLIES_TO,forward,medium,positive,@RequiredArgsConstructor가 생성자 주입 보일러플레이트를 대신한다
+cookie,session-auth,RELATED_TO,bidirectional,high,positive,세션 ID를 실어 나르는 매체가 쿠키다
+connection-pool,transaction,RELATED_TO,bidirectional,medium,positive,트랜잭션 수명 동안 커넥션이 점유되므로 풀 크기와 직결된다
+high-availability,load-balancer,RELATED_TO,bidirectional,high,positive,LB의 헬스 체크·장애 서버 제외가 고가용성의 실현 수단이다
+dao-pattern,jdbc,RELATED_TO,bidirectional,high,positive,DAO는 JDBC 호출을 격리하기 위해 등장한 패턴이다
+obsidian-tags,obsidian-properties,RELATED_TO,bidirectional,medium,positive,둘 다 노트에 메타데이터를 붙여 분류·검색하는 수단이다
+es-modules,node-modules,RELATED_TO,bidirectional,medium,positive,import 구문이 실제로 해석하는 대상이 node_modules의 패키지다
+jacoco,gradle,RELATED_TO,bidirectional,medium,positive,JaCoCo는 Gradle 태스크로 리포트·임계치 검증을 붙인다
+css-specificity,css-modules,RELATED_TO,bidirectional,medium,positive,CSS Modules의 로컬 스코프는 명시도 충돌을 회피하려는 대응이다
+markdown,wikilink,RELATED_TO,bidirectional,medium,positive,위키링크는 마크다운 문서 위에 얹힌 연결 문법이다
+three-tier-architecture,mvc-pattern,RELATED_TO,bidirectional,medium,positive,둘 다 책임 분리 구조지만 자르는 축(계층 vs 표현)이 다르다
+css-specificity,hikaricp,,,high,negative,CSS 우선순위와 JDBC 커넥션 풀은 도메인이 전혀 겹치지 않는다 (오탐 측정용)
+java-buffer,load-balancing-algorithm,,,high,negative,Java I/O 버퍼와 서버 분배 알고리즘은 무관하다 (오탐 측정용)
+obsidian-tags,jpql,,,high,negative,노트 태그와 객체 지향 쿼리는 관련이 없다 (오탐 측정용)
+npm-dependency-files,equals-hashcode,,,high,negative,npm 잠금 파일과 Java 동등성 규약은 무관하다 (오탐 측정용)
+java-buffer,http-cache,,,medium,negative,"둘 다 ""임시 저장""이라는 표현을 쓰지만 계층·목적이 완전히 다르다 (어려운 오탐 측정용)"
+domain,forward-proxy,,,medium,negative,"domain 페이지의 ""네트워크 도메인"" 언급 때문에 오연결되기 쉬우나 실제 관계 없음 (어려운 오탐 측정용)"
+static-keyword,graph-view,,,high,negative,Java static 키워드와 옵시디언 그래프 뷰는 무관하다 (오탐 측정용)
+serialization,css-modules,,,medium,negative,"둘 다 ""변환""을 다루지만 직렬화와 클래스명 해싱은 별개 주제다 (어려운 오탐 측정용)"

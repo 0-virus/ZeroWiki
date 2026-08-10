@@ -13,7 +13,7 @@
 
 충돌 시 항상 헌법이 우선한다. 하위 지침에 헌법과 어긋나는 조항이 있으면 그 조항은 무효다.
 
-루트 `CLAUDE.md`는 모든 세션에 자동 로드되며 헌법을 가리키는 포인터 역할을 한다.
+Claude에서는 루트 `CLAUDE.md`, Codex에서는 루트 `AGENTS.md`가 자동 로드되며 둘 다 헌법을 가리키는 포인터 역할을 한다. 두 실행기는 이 디렉터리의 역할 `CLAUDE.md`·`STATE.md`·`WORKLOG.md`를 공동 정본으로 사용한다.
 
 ## 파일 소유권 요약 (헌법 제1조)
 
@@ -23,7 +23,7 @@
 | frontend | `frontend/**`, `.claude/team/frontend/**`, `docs/검증-프론트엔드-화면-API-갭.md` |
 | qa | `qa/**`, `.claude/team/qa/**`, `docs/검증-QA-계약-확정-체크리스트.md` |
 | pm | `.claude/team/pm/**`, `docs/ZeroWiki-MVP-서비스-기획서.md`, `docs/PM-*.md` |
-| 리더 | `CLAUDE.md`, `docs/ZeroWiki-API-명세-초안.md`, `docs/에이전트-팀-운영-가이드.md`, `.claude/agents/**`, 모든 git 조작 |
+| 리더 | `CLAUDE.md`, `AGENTS.md`, `.codex/**`, `.agents/skills/**`, `docs/ZeroWiki-API-명세-초안.md`, `docs/에이전트-팀-운영-가이드.md`, `docs/Codex-에이전트-팀-운영-가이드.md`, `.claude/agents/**`, 모든 git 조작 |
 | 편집 금지 | `.claude/CONSTITUTION.md`, `docs/ZeroWiki-기획-인터뷰-전문.txt`, `docs/WikiHub-경쟁서비스-조사.md`, `.omc/**` |
 
 ### 리더가 지정한 신규 문서 소유자 (헌법 제1조 4항)
@@ -35,6 +35,7 @@
 | `docs/ZeroWiki-요구사항-정의서.md` | 리더 | 2026-07-29 | 기획서(pm)와 API 명세(리더) 사이의 계약 문서이며, ERD·API 양쪽의 상위 근거이므로 특정 구현 역할에 두지 않는다 |
 | `.claude/skills/**` | 리더 | 2026-07-29 | 팀 운영 절차를 정의하므로 `.claude/agents/**`와 같은 계층이다 |
 | `docs/PM-*.md` | pm | 2026-07-28 | 헌법 제1조 7항으로 이미 규정됨 (참고용 재기재) |
+| `AGENTS.md`, `.codex/**`, `.agents/skills/**`, `docs/Codex-에이전트-팀-운영-가이드.md` | 리더 | 2026-08-10 | 기존 팀의 Codex 네이티브 진입점·역할 정의·스킬·운영 문서이며 전체 역할을 조율한다 |
 
 요구사항 정의서는 기획서의 파생 문서다. 기획서가 바뀌면 pm이 리더에게 알리고, 리더가 요구사항 정의서를 갱신한 뒤 backend·frontend에 전파한다.
 
@@ -52,6 +53,10 @@
 정의 본문은 팀원 시스템 프롬프트에 **추가**되며(대체 아님) 필독 파일 경로를 포함한다. `.claude/team/` 아래 파일은 계층 자동 로드 대상이 아니므로 이 경로 명시가 로드를 보장한다.
 
 주의: 서브에이전트 정의의 `skills`·`mcpServers` frontmatter는 팀원으로 실행될 때 적용되지 않는다(가이드 4.3).
+
+### Codex 호환 실행
+
+Codex 역할 정의는 `.codex/agents/zerowiki-{역할}.toml`에 있다. 상세 실행법은 `docs/Codex-에이전트-팀-운영-가이드.md`를 따른다. Codex의 주 에이전트가 작업 계획과 역할 간 전달을 맡고, custom agent thread는 자기 소유 영역만 수행한다. 별도의 Codex용 STATE·WORKLOG를 만들지 않는다.
 
 ## 스폰 프롬프트 템플릿
 
@@ -141,6 +146,7 @@ frontend·qa도 동일한 형태로 경로만 바꾼다. 팀원 이름은 `backe
 | --- | --- |
 | 2026-07-28 | pm 역할 신설(헌법 v1.1). 기획서 소유권이 리더 → pm으로 이관 |
 | 2026-07-31 | "완료 보고 규약" 절 신설. "현재 상태" 절의 고정 수치·작업 목록을 정본 포인터로 대체 |
+| 2026-08-10 | Codex 네이티브 진입점·역할 에이전트·`$brief` 스킬 추가. 기존 역할 STATE·WORKLOG를 공동 정본으로 지정 |
 
 ### 2026-07-31 삭제 기록 (헌법 제7조 9항)
 

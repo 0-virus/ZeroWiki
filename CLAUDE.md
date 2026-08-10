@@ -23,6 +23,8 @@
 
 팀 운영 방법(스폰 프롬프트 템플릿, 작업 분할 원칙, **완료 보고 규약**)은 `.claude/team/README.md`, 에이전트 팀 기능 자체의 사용법은 `docs/에이전트-팀-운영-가이드.md`에 있다.
 
+Codex로 실행할 때는 루트 `AGENTS.md`가 진입점이며, `.codex/agents/*.toml`의 같은 네 역할이 이 표의 지침·상태·저널을 그대로 공유한다. Codex 전용 실행법은 `docs/Codex-에이전트-팀-운영-가이드.md`에 있다. 상태 파일을 `.codex` 아래에 복제하지 않는다.
+
 **완료 보고에는 검증 근거가 따라온다.** 편집한 파일을 다시 읽어 확인한 뒤 보고하고, 근거는 행 번호가 아니라 **검증 명령과 그 출력**으로 낸다. 근거 없는 완료 보고는 리더가 접수하지 않는다. 전문은 `.claude/team/README.md`의 "완료 보고 규약" 절에 있다.
 
 ## 팀 스킬
@@ -30,14 +32,20 @@
 | 스킬 | 용도 |
 | --- | --- |
 | `/brief` | 리더가 네 역할의 `STATE.md`·저널을 직접 읽고 종합해 지금 시작할 일을 보고한다. 세션 시작 시나 다음 작업을 정할 때 쓴다. 읽기 전용, 스폰 없음 |
+| `$brief` | Codex용 동일 절차. `.agents/skills/brief/SKILL.md`에서 정의하며 같은 `STATE.md`·저널을 읽는다 |
 
-정의는 `.claude/skills/{이름}/SKILL.md`에 있고 리더가 소유한다.
+Claude 정의는 `.claude/skills/{이름}/SKILL.md`, Codex 정의는 `.agents/skills/{이름}/SKILL.md`에 있고 둘 다 리더가 소유한다.
 
 ## 프로젝트 구조
 
 ```
 ZeroWiki-SaaS/
 ├── CLAUDE.md                     이 파일. 프로젝트 전체 지침 (리더 소유)
+├── AGENTS.md                     Codex 프로젝트 전체 지침 (리더 소유)
+├── .codex/
+│   ├── config.toml               Codex subagent 설정 (리더 소유)
+│   └── agents/                   Codex 역할 정의 zerowiki-{역할}.toml (리더 소유)
+├── .agents/skills/brief/         Codex 저장소 브리핑 스킬 (리더 소유)
 ├── .claude/
 │   ├── CONSTITUTION.md           절대 불변 헌법 (전원 편집 금지)
 │   ├── agents/                   역할 에이전트 정의 zerowiki-{역할}.md (리더 소유)
@@ -52,11 +60,11 @@ ZeroWiki-SaaS/
 │   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
 │   │   └── design-source/        외부에서 가져온 디자인 시안 원본 (frontend 소유)
 │   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
-├── evaluation/                   Phase 0 벤치마크 정답 라벨 CSV. 사용자가 작성, backend가 소비 (backend 소유)
-└── qa/                           테스트 시나리오 문서. 실행 코드는 미작성
+├── evaluation/                   Phase 0 정답 라벨 CSV·구조 검증기 (backend 소유)
+└── qa/                           테스트 시나리오·평가 세트 인수 보고서·독립 검증기
 ```
 
-`backend/`는 아직 없다. `qa/`는 2026-07-30에 생겼으나 테스트 시나리오 문서뿐이고 실행되는 코드는 없다. `frontend/`는 2026-07-30에 Next.js 프로젝트로 초기화되어 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)까지 구현됐고, 변경 검토·원문 발췌 표기·Ingest 진행 화면 설계 문서도 추가됐다. 없는 디렉터리를 있다고 가정하지 않는다.
+`backend/`는 아직 없다. `qa/`에는 테스트 시나리오와 Phase 0 평가 CSV의 구조·채점 계약을 검사하는 독립 검증기가 있으나, backend API·Ingest를 실행하는 테스트 코드는 아직 없다. `frontend/`는 2026-07-30에 Next.js 프로젝트로 초기화되어 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)까지 구현됐고, 변경 검토·원문 발췌 표기·Ingest 진행 화면 설계 문서도 추가됐다. 없는 디렉터리를 있다고 가정하지 않는다.
 
 ## 기준 문서
 
@@ -73,6 +81,7 @@ ZeroWiki-SaaS/
 | `docs/검증-QA-계약-확정-체크리스트.md` | 계약 권고안·테스트 변환·보안 매트릭스 | qa |
 | `docs/PM-*.md` | 종합 현황·결정 요청서 등 pm 산출물 | pm |
 | `docs/에이전트-팀-운영-가이드.md` | 에이전트 팀 기능 사용법 | 리더 |
+| `docs/Codex-에이전트-팀-운영-가이드.md` | Codex custom agent·상태 공유·실행 방법 | 리더 |
 | `docs/ZeroWiki-기획-인터뷰-전문.txt` | 기획서의 근거 사료 | **전원 금지** |
 | `docs/WikiHub-경쟁서비스-조사.md` | 경쟁 서비스 조사 | **전원 금지** |
 

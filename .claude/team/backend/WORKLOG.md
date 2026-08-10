@@ -947,3 +947,112 @@ BLOCKER 없음. 모든 불일치는 ERD 업데이트로 해결 가능.
    - LLM API 토큰 예산 할당 (36문서 기준)
    - 임베딩 모델 2~3개 선정
    - Week 1 스크립트 개발 준비
+
+---
+
+## 2026-08-10 — Phase 0 평가 데이터 인수 검증 및 계획 정합화
+
+**날짜**
+
+- 2026-08-10 KST
+
+**무엇을 했는가**
+
+1. 인수된 평가 CSV 3개를 재현 가능한 명령으로 검증했다.
+   - `pages-inventory.csv`: CSV 파싱·헤더·필수 필드·180행·page_id/slug 유일성·page_type 집계
+   - `relation-labels.csv`: 84행, 인벤토리 slug 참조, UD-16 7종, direction/confidence enum, positive/negative 규칙, 방향 무시 중복 쌍
+   - `contradiction-labels.csv`: 26행, 5종+`NO_CONFLICT`, 필수 필드, 방향 무시 중복 주장 쌍
+   - 검증 결과 오류 0건. 라벨의 판단 내용과 데이터 행은 수정하지 않았다.
+2. Python 표준 라이브러리만 사용하는 반복 검증 스크립트를 추가했다.
+3. `evaluation/README.md`의 잘못된 concept 124를 CSV 실측 127로 정정하고 source 37 / concept 127 / flow 16 / total 180을 명시했다.
+4. Phase 0 계획을 인수 현실에 맞췄다.
+   - 역사적 계획 가정 "36 source / 152 page"는 삭제하지 않고, 2026-08-10 실측으로 대체됐음을 명시했다.
+   - 사용자 라벨링 대기를 relation 84행·contradiction 26행 인수 완료로 전환했다.
+   - "미확정 5건"이라면서 UD-11·17·25·29 네 건만 열거한 모순을 바로잡았다. 요구사항 정의서 12절상 Phase 0 직접 대상은 이 4건이며, 다섯 번째 벤치마크 항목 UD-26은 Phase 4 사용자 테스트 별도 트랙이다.
+5. backend STATE를 평가 데이터 인수 완료 스냅샷으로 교체했다.
+
+**산출물 경로**
+
+- `evaluation/validate_evaluation.py` (신규)
+- `evaluation/README.md`
+- `.claude/team/backend/PHASE-0-벤치마크-계획.md`
+- `.claude/team/backend/STATE.md`
+- `.claude/team/backend/WORKLOG.md` (본 항목 append-only 추가)
+
+**삭제·대체 기록 (헌법 제7조 9항)**
+
+- 계획서의 36 source / 152 page, 사용자 라벨링 대기, 35~45개 라벨 목표는 2026-07-31 당시의 판단과 계획이므로 역사적 근거 문장을 유지했다.
+- 현재 상태·실행 대상 수치만 CSV 실측 37 source / 143 knowledge page / 180 inventory 및 총 110개 라벨 행으로 대체했다.
+- 판단·권고·트레이드오프는 삭제하지 않았다. 공개 벤치마크를 쓰지 않고 사용자 라벨을 사용한다는 판단도 유지했다.
+
+**검증 명령과 결과**
+
+```text
+python evaluation/validate_evaluation.py
+pages-inventory.csv: rows=180, source=37, concept=127, flow=16, total=180
+relation-labels.csv: rows=84, positive=76, negative=8
+contradiction-labels.csv: rows=26, TRUE_CONFLICT=5, TIME_CHANGE=5, CONDITION_DIFF=5, VIEWPOINT_DIFF=5, POSSIBLE_CONFLICT=3, NO_CONFLICT=3
+검증 완료: 오류 0건
+```
+
+**미해결 사항**
+
+- Phase 0 실행에는 LLM provider/model 선택, 유료 API 사용 범위, 토큰·비용 예산에 대한 사용자 승인이 필요하다.
+- 외부 NoteWiki 원본 본문을 저장소에 복제하지 않고 읽는 Ingest 입력 방식과 민감정보 검사 절차를 확인해야 한다.
+- UD-11·17·25·29는 Phase 0 측정 전까지 미확정이며, UD-26은 Phase 4 별도 트랙이다.
+
+---
+
+## 2026-08-10 — QA 독립 인수 HIGH-1~3·MEDIUM-1 후속 정정
+
+**날짜**
+
+- 2026-08-10 KST
+
+**무엇을 했는가**
+
+1. `qa/phase0-evaluation-acceptance-report.md` HIGH-1~3·MEDIUM-1을 `docs/ZeroWiki-요구사항-정의서.md` 11절 AC-3·AC-5와 대조해 수용했다.
+2. relation의 실제 slug 값을 반영해 헤더를 `source_page_slug`·`target_page_slug`로 변경하고 템플릿·README·계획·검증기를 동기화했다. 84개 라벨 행의 판단 내용은 바꾸지 않았다.
+3. contradiction 26행에 `CT-001`~`CT-026` stable `case_id`를 추가했다. 주장·분류·판단 이유는 바꾸지 않았다.
+4. 연결 지표를 pair recall·strict recall·sampled FPR·라벨된 84쌍 한정 bounded precision으로 분리했다. precision 분모 0은 N/A이며, 평가 universe 밖 출력은 사람이 판정하기 전 제외한다.
+5. AC-3은 CSV 지표가 아니라 U-1의 사용자 5~10명 유용성 평가라는 정본 계약을 복원했다.
+6. 모순 지표를 recall·sampled FPR(`NO_CONFLICT` 오탐/3)·FDR(오탐/사람이 판정한 전체 positive 탐지)로 분리하고 FDR 분모 0은 N/A로 고정했다.
+7. `case_id` 우선 조인과 NFKC·공백 축소·case-fold·claim 순서 무시 exact pair 보조 매칭을 정의했다. 근거 없는 의미 유사도 매칭은 허용하지 않았다.
+
+**산출물 경로**
+
+- `evaluation/relation-labels.csv`
+- `evaluation/relation-labels-template.csv`
+- `evaluation/contradiction-labels.csv`
+- `evaluation/contradiction-labels-template.csv`
+- `evaluation/README.md`
+- `evaluation/validate_evaluation.py`
+- `.claude/team/backend/PHASE-0-벤치마크-계획.md`
+- `.claude/team/backend/STATE.md`
+- `.claude/team/backend/WORKLOG.md` (본 항목 append-only)
+
+**구조 변경·대체 기록**
+
+- 오해를 유발한 relation `*_page_id` 헤더를 `*_page_slug`로 대체했다. 값과 라벨 판단은 보존했다.
+- contradiction에 기존 열을 삭제하지 않고 `case_id` 열만 추가했다.
+- 기존 "연결 정확도(AC-3)"와 단일 "모순 오탐율" 표현은 판단 삭제가 아니라 잘못된 지표 명칭·분모의 정정이며, 각각 오프라인 recall/precision과 FPR/FDR로 세분화했다.
+
+**미해결 사항**
+
+- contradiction case와 원본 `page_id`·`claim_id`, Ingest가 생성한 `claim_id`의 mapping manifest가 없다. 근거 없이 만들지 않았으며, 마련 전에는 Ingest-level AC-5 최종 재현·통과 선언이 불가능하다.
+- AC-3은 U-1 사용자 5~10명 평가가 필요하며 미실행이다.
+- QA 소유 검증 스크립트·인수 보고서는 새 헤더와 `case_id` 계약으로 재인수해야 한다. QA 파일은 수정하지 않았다.
+
+**검증 결과**
+
+```text
+python evaluation/validate_evaluation.py
+pages-inventory.csv: rows=180, source=37, concept=127, flow=16, total=180
+relation-labels.csv: rows=84, positive=76, negative=8
+contradiction-labels.csv: rows=26, case_ids=26, TRUE_CONFLICT=5, TIME_CHANGE=5, CONDITION_DIFF=5, VIEWPOINT_DIFF=5, POSSIBLE_CONFLICT=3, NO_CONFLICT=3
+검증 완료: 오류 0건
+```
+
+현재 계약 파일에서 `source_page_id|target_page_id|연결 정확도(AC-3)|모순 오탐율`을 검색한 결과는 0건이다.
+
+QA의 기존 `qa/verify_phase0_evaluation.py`는 새 헤더 동기화 전이므로 종료 코드 1과 `KeyError: 'source_page_id'`를 반환했다. 이는 backend CSV 실패가 아니라 QA 재인수 시 검증기를 `*_page_slug`·`case_id` 계약으로 갱신해야 한다는 명시적 잔여 조건이다.

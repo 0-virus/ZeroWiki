@@ -87,24 +87,32 @@
 **테스트 목적:** 모순 탐지 정확도 검증
 
 **Precondition:**
-- 모순 쌍 데이터셋: 32개 의도적 모순 쌍 (평가_data/contradiction_pairs.json)
-  - 예: ("A는 B이다", "A는 B가 아니다")
-  - 예: ("성능 X는 95%", "성능 X는 85%")
+- `evaluation/contradiction-labels.csv`: stable `case_id`를 가진 26개 후보
+  - 실제 conflict 23개: `TRUE_CONFLICT`, `TIME_CHANGE`, `CONDITION_DIFF`,
+    `VIEWPOINT_DIFF`, `POSSIBLE_CONFLICT`
+  - sampled negative 3개: `NO_CONFLICT`
+- 원본 page/claim과 seed 입력에서 Ingest가 생성한 `claim_id`를 `case_id`에 연결하는
+  mapping manifest 준비. manifest가 없으면 offline case 채점만 가능하고 이
+  Ingest-level AC-5 시나리오는 실행할 수 없다.
 
 **테스트 단계:**
-1. 모순 쌍 32개를 순차 Ingest
+1. manifest가 가리키는 모순 seed 문서를 Ingest
 2. Lint 완료 대기
 3. GET /libraries/{id}/contradictions
+4. 응답의 `claim_1_id`·`claim_2_id`를 manifest로 `case_id`에 조인
+5. conflict 23건의 탐지 recall과 `NO_CONFLICT` 3건의 sampled FPR을 별도 계산
 
 **예상 결과:**
-- contradictions 테이블에 25개 이상 자동 탐지 (80%)
+- 실제 conflict 23건 중 최소 19건 자동 탐지 (80% 이상)
+- `NO_CONFLICT`는 탐지 recall 분모에서 제외하고 sampled FPR의 분모 3으로 사용
 - 각 contradiction:
   - id: 고유 ID
   - claim_1_id, claim_2_id: 충돌하는 주장 ID
   - confidence: 0.7 이상
-  - classification: DIRECT_CONTRADICTION 등
+  - classification: `TRUE_CONFLICT`, `TIME_CHANGE`, `CONDITION_DIFF`,
+    `VIEWPOINT_DIFF`, `POSSIBLE_CONFLICT` 중 하나
 
-**상태:** 미실행
+**상태:** 미실행 — mapping manifest 부재로 Ingest-level 검증 차단
 
 ---
 
@@ -957,19 +965,13 @@ File: .env 포함 (AWS_ACCESS_KEY_ID=...)
 
 ---
 
-## 평가 데이터셋 (evaluation_data/)
+## 평가 데이터셋 (`evaluation/`)
 
-### contradiction_pairs.json
-- 의도적 모순 쌍 32개
-- 형식: [{"statement_1": "...", "statement_2": "...", "type": "DIRECT"}, ...]
-
-### quality_links.json
-- 제안 연결 100개 (평가용)
-- 형식: [{"library_a_id": "...", "page_a_id": "...", ...}, ...]
-
-### sample_documents/
-- A-1, A-2, A-3 테스트용 100개 샘플 문서
-- 다양한 형식: PDF, DOCX, MD
+- `pages-inventory.csv`: 평가 페이지 inventory
+- `relation-labels.csv`: positive/negative 관계 후보와 UD-16 relation type
+- `contradiction-labels.csv`: stable `case_id`, 5종 conflict와 `NO_CONFLICT`
+- Ingest-level A-4 실행에 필요한 page/claim→생성 `claim_id` mapping manifest는
+  미작성이다. 준비 전까지 `case_id` 보존 harness의 offline 채점만 가능하다.
 
 ---
 

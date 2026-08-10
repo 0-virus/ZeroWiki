@@ -15,6 +15,32 @@
 
 ---
 
+## 2026-08-10
+
+### 2. Phase 0 평가 데이터 인수 — 구조 통과, Ingest-level AC-5 조건부 차단
+
+**사용자 요청:** `gpt-5.6-sol` 모델 고정 없이 기본 모델과 `high` 추론 강도의 backend·qa Codex sub-agent로 Phase 0 평가 데이터 인수를 시작.
+
+**backend 결과:** 인수 CSV 실측을 source 37·concept 127·flow 16, 관계 84(positive 76·negative 8), 모순 26(conflict 23·NO_CONFLICT 3)으로 확정했다. 기존 36 source·152 page 계획 가정과 라벨링 대기 상태를 실측으로 대체하고 반복 검증기 `evaluation/validate_evaluation.py`를 추가했다. 관계 열을 실제 값에 맞게 `source_page_slug`·`target_page_slug`로 바꾸고, 모순 케이스에 stable `case_id`(`CT-001`~`CT-026`)를 부여했다.
+
+**qa 독립 검증과 시정:** 최초 구조 검증은 통과했지만 AC-3을 자동 정확도로 오인한 식, FPR·FDR 분모 혼동, AC-5 출력 매칭 키 부재를 발견해 채점 계약 인수를 반려했다. backend가 relation pair/strict recall·bounded precision·sampled FPR, contradiction recall·FPR·FDR을 분리하고 AC-3을 U-1 사용자 평가로 되돌린 뒤 QA가 재인수했다. `qa/verify_phase0_evaluation.py`, 인수 보고서, A-4 시나리오를 실제 분모 23건·통과 최소 19건·확정 5종으로 동기화했다.
+
+**리더 검증·정정:** 두 독립 검증기를 다시 실행해 모두 exit 0을 확인하고, 요구사항 정의서 11절의 AC-5 추적 항목을 잘못된 A-5에서 실제 A-4로 정정했다. offline CSV 구조와 채점 계약은 인수됐지만, 원본 page/claim에서 Ingest 생성 `claim_id`로 이어지는 mapping manifest가 없어 Ingest-level AC-5는 계속 차단한다. AC-3은 U-1 사용자 5~10명 평가 전까지 미실행이다.
+
+---
+
+### 1. Codex 네이티브 팀 실행 환경 추가
+
+**사용자 요청:** 저장소의 Claude 관련 문서를 빠짐없이 읽고, Codex에서 같은 역할 팀 시스템을 바로 실행할 수 있게 구성.
+
+**리더 조사:** `.claude/**`와 루트 `CLAUDE.md`의 역할 정의·헌법·스킬·STATE·WORKLOG·보조 설계 문서를 전부 읽고, 외부에서 팀 규칙을 참조하는 운영 가이드·PM·QA·evaluation 문서까지 역참조했다. Codex 공식 동작에서 `AGENTS.md`, `.codex/agents/*.toml`, `[agents]` 설정, `.agents/skills` 저장소 스킬, subagent thread 관리 방식을 확인했다.
+
+**리더 판단:** Claude 기록을 Codex 아래에 복제하면 STATE·WORKLOG가 갈라지므로, `.claude/team/{역할}/**`를 실행기 공통 정본으로 유지한다. Codex에는 네이티브 발견 파일만 얇게 추가한다.
+
+**산출:** `AGENTS.md`, `.codex/config.toml`, 역할 custom agent 4종, `.agents/skills/brief`, `docs/Codex-에이전트-팀-운영-가이드.md`. 루트 `CLAUDE.md`와 팀 README에도 새 구조·소유권·공동 정본 규칙을 동기화했다. 헌법은 수정하지 않았다.
+
+---
+
 ## 2026-07-31
 
 ### 진행 중

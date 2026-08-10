@@ -1,3 +1,38 @@
+# 이 파일은 automation의 source/runtime/secret 경계를 구현한다. 아래 순서도 정책의 일부다:
+# 넓은 제외 → allowlisted source 재포함 → build/dependency/env 재제외 순서를 유지한다.
+
 # OMC 툴 런타임 상태 (헌법 제1조 1항 편집 금지 경로)
 # 세션·체크포인트·HUD 상태가 세션마다 쌓이며 프로젝트 이력과 무관하다.
 .omc/
+
+# 패키지 파일
+node_modules/
+dist/
+
+# EnvFiles
+.env
+
+# etc
+.agent-workspaces/
+.agent-runtime/
+.codex/
+automation/
+
+# 프로젝트 자동화 소스와 Codex 설정은 버전 관리한다.
+!.codex/
+.codex/*
+!.codex/config.toml
+!.codex/agents/
+.codex/agents/*
+!.codex/agents/*.toml
+!automation/
+!automation/**
+automation/dist/
+automation/node_modules/
+
+# source 디렉터리 재포함 뒤에도 모든 실제 env 파일은 제외한다.
+.env
+.env.*
+**/.env
+**/.env.*
+!automation/.env.example
