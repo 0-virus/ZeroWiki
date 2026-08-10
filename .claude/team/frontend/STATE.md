@@ -3,17 +3,25 @@
 > **덮어쓰기 스냅샷.** 매 턴 종료 전에 이 파일 전체를 최신 상태로 갱신한다(헌법 제4조 1항).
 > 시간순 기록은 `WORKLOG.md`에 append 한다.
 
-마지막 갱신: 2026-07-31 (시안 시각 디자인 토큰 전면 적용 완료)
+마지막 갱신: 2026-08-11 (Phase 0 벤치마크 결과·Phase 1 착수 범위 반영)
 
 ## 현재 단계
 
-**시안 시각 디자인 토큰 전면 적용 완료** — 도서관 홈 + 변경 검토 양 화면에 시안의 완전한 시각 언어 적용 완료. globals.css에 CSS 변수 정의 (#fdfcfc bg, #201d1d ink, #646262 muted, JetBrains Mono 폰트). 공용 헤더 컴포넌트(HeaderBar.tsx) 추가 (56px sticky, 로고 typing 애니메이션, 네비게이션 링크 7개). 양 화면 CSS 모듈 재작성 (Material Design #2196f3·#4caf50·#ff9800 등 → var(--ink)·var(--ok)·var(--warn) 등). 모든 box-shadow 제거, border-radius 4px 통일. 폰트 스택 JetBrains Mono + D2Coding. **검증**: grep으로 Material Design 색상/System UI 폰트/box-shadow 0건 확인 ✅. 빌드 성공 ✅. 개발 서버 실행 중 (localhost:3000).
+**Phase 0 기술 검증 실행 완료·제품 게이트 조건부 FAIL; Phase 1 core 착수 허용**. 도서관 홈·변경 검토의 시각 토큰과 목업 컴포넌트는 존재하지만 실 API 연동은 없다. 현재 `frontend/src/app`에는 `/`와 `/review-changes` 라우트만 있고 `frontend/node_modules`가 없어 frontend 개발 서버·빌드·타입체크를 실행할 수 없다. 인증·원본 보관·도서관·Import·변경 승인·검색 골격은 착수할 수 있지만, 모순 자동 판정·자동 적용 UI는 품질 게이트 통과 전까지 차단하고 사용자 검토 제안으로만 취급한다. Phase 0 결정과 근거는 `docs/Phase-0-벤치마크-결과.md` 및 `docs/검증-프론트엔드-화면-API-갭.md` 2-C에 기록했다.
+
+## Phase 0 결정 반영
+
+- `UD-11`: 중요한 주장만 생성. frontend는 서버 Claim 배열·페이지네이션을 렌더링하며 생성량을 하드코딩하지 않는다.
+- `UD-17`: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384차원. 모델명·차원·관측 threshold는 UI에 노출하지 않는다.
+- `UD-25`: reference local budget은 scan p95 15초, synthesis/answer-generation p95 20초. 검색·citation을 포함한 answer endpoint는 Phase 1 integration에서 재검증하며 production SLA·고정 ETA로 일반화하지 않는다.
+- `UD-29`: 자동 identity key를 만들지 않는다. AI mapping 제안은 기존 변경 검토에서 사용자가 확정한다.
+- 모순 품질: 6-class accuracy 19.2%, sampled FPR 100%이므로 자동 판정·자동 적용 UI를 제공하지 않는다. 독립 평가 accuracy 80% 이상 통과 전까지 사용자 검토 제안만 허용한다.
 
 ## 진행 중 작업
 
 1. ✅ **변경 검토 화면 컴포넌트 구현 완료** (2026-07-30)
    - 산출물: `src/components/review-changes/` 6개 파일
-   - 2단계 위험도 UI (SAFE/DANGER, MINOR/MAJOR 계약 기반)
+   - 2단계 위험도 UI (SAFE/DANGER 표시, wire `MINOR | MAJOR`와 API 8.1절 정본 일치)
    - 아코디언 목록 + 필터 탭 + 일괄 승인 + 진행 카운터
 
 2. ✅ **도서관 홈 화면 컴포넌트 구현 완료** (2026-07-30)
@@ -61,38 +69,36 @@
    - `src/components/review-changes/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
    - `src/components/library-home/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
 
-5. ✅ **품질 검증** (2026-07-31):
+5. ✅ **시각 토큰 정적 검증** (2026-07-31):
    - grep #2196f3|#4caf50|#f44336|#ff9800|#e0e0e0 등: **0건** ✅
    - grep -apple-system|Segoe UI 등: **0건** ✅
    - grep box-shadow: **0건** ✅
    - grep border-radius [0-9]: **0건** (모두 4px) ✅
-   - npm run build: **성공** ✅
-   - npm run dev: **실행 중, localhost:3000** ✅
+   - `npm.cmd run build`: **실행 시 실패** — `frontend/node_modules` 부재로 `next`를 찾지 못함
+   - `npm.cmd exec -- tsc --noEmit`: **실행 시 실패** — `next`, `react`, `diff` 모듈 부재
+   - 개발 서버: **실행 확인 불가** — frontend 의존성 및 backend 실 API 서버 부재 (`backend/`에는 Phase 0 benchmark script만 존재)
+
+6. ✅ **Ingest 진행 문서 상태명 정합화** (2026-08-11)
+   - `frontend/screens/ingest-progress.md`의 active `QUESTION_WAITING` 표기를 모두 확정 계약 `QUESTION_REVIEW`로 변경
 
 ## 다음 작업
 
-**1순위: 시각 검증 (브라우저)**
-- localhost:3000 도서관 홈 방문
-- localhost:3000/review-changes 변경 검토 화면 방문
-- 확인 항목:
-  * 헤더 배치 (56px, sticky)
-  * 로고 애니메이션 (typing effect 9ch)
-  * 색상 적용 (배경 #fdfcfc, 텍스트 #201d1d, 버튼 색상)
-  * 폰트 (JetBrains Mono)
-  * 위험도 배지 (DANGER 빨강, SAFE 녹색)
-  * 필터 탭 스타일 (active 검정 배경, 흰 글자)
-  * 반응형 (모바일 320px)
-  * 다크 모드 (있으면 테스트, 없으면 생략)
+**1순위: Phase 1 core vertical slice 착수**
+- 인증 → 도서관/헌법 → 업로드·Import → Ingest 계획 승인·polling → 변경 검토·적용 → 검색·홈 갱신
+- `UD-11·17·25·29` 결정은 서버 결과를 소비하는 형태로 연결하고 client matching·고정 ETA·모델 노출을 금지
+- 모순 섹션은 사용자 검토 제안만 제공하며 자동 판정·자동 적용 action은 차단
 
-**2순위: 일부 미완료 항목 정리** (선택사항, 기획서 및 pm 승인 후)
-- 위험도 텍스트 (MAJOR/MINOR → DANGER/SAFE 표시는 UI만, API 계약은 유지)
-- 헤더의 네비게이션 라우트 확정 (현재 임시: '/' 대부분)
+**2순위: API·frontend 계약 잔존 참조 확인**
+- API 8.1절 `MINOR | MAJOR`·API 6.1절 `QUESTION_REVIEW`와 frontend 타입·polling 흐름의 실제 연동 시 일치 여부 검증
 
-**3순위: Ingest 진행 화면 설계 및 구현**
+**3순위: 의존성 설치 후 재검증**
+- `npm.cmd ci`, `npm.cmd run build`, `npm.cmd exec -- tsc --noEmit`, 라우트·렌더링 확인
 
 ## 차단 요인
 
-- 없음 (개발 서버 실행 중, 즉시 시각 검증 가능)
+- `frontend/node_modules` 부재로 build/typecheck/dev 실행 불가
+- backend 실 API 구현 부재로 현재 화면은 목업만 사용 (`backend/`에는 Phase 0 benchmark script만 존재)
+- 모순 자동 판정·자동 적용은 accuracy 80% 이상 독립 평가 전까지 차단됨(현재 6-class accuracy 19.2%, sampled FPR 100%). 이는 사용자 검토 제안 UI와 Phase 1 core 착수를 막지 않음
 
 ## 소유 산출물
 
@@ -105,9 +111,10 @@
 | `frontend/src/components/library-home/LibraryHome.module.css` | **재작성 완료** (Material Design → 변수) | 2026-07-31 |
 | `frontend/src/components/review-changes/index.tsx` | **갱신** (HeaderBar import + 통합) | 2026-07-31 |
 | `frontend/src/components/library-home/index.tsx` | **갱신** (HeaderBar import + 통합) | 2026-07-31 |
-| `docs/검증-프론트엔드-화면-API-갭.md` | **유지** (갭 12건 변함 없음) | 2026-07-30 |
-| `.claude/team/frontend/STATE.md` | **현재 스냅샷** (시각 디자인 토큰 전면 적용) | 2026-07-31 |
-| `.claude/team/frontend/WORKLOG.md` | **2026-07-31 항목 append** (토큰 적용, HeaderBar, CSS 재작성) | 2026-07-31 |
+| `frontend/screens/ingest-progress.md` | **갱신** (active `QUESTION_REVIEW` 상태명 정합화) | 2026-08-11 |
+| `docs/검증-프론트엔드-화면-API-갭.md` | **갱신** (Phase 0 결정·착수 범위·모순 UI 차단·API 계약 반영 기록) | 2026-08-11 |
+| `.claude/team/frontend/STATE.md` | **현재 스냅샷** (Phase 0 benchmark 결과·Phase 1 착수 범위 반영) | 2026-08-11 |
+| `.claude/team/frontend/WORKLOG.md` | **2026-08-11 항목 append** (Phase 0 결정·모순 UI 차단·Phase 1 범위) | 2026-08-11 |
 
 ## 루트 CLAUDE.md 업데이트 필요
 
@@ -124,16 +131,18 @@
   * --ink (#201d1d): 주 텍스트·주 버튼 배경
   * --muted (#646262): 보조 텍스트·필터 탭 기본
   * --panel (#f8f7f7): 호버·배경 변화
-  * --danger (#ff3b30): 거절·MAJOR·위험
-  * --ok (#30d158): 승인·MINOR·안전
+  * --danger (#ff3b30): 거절·위험 표시
+  * --ok (#30d158): 승인·안전 표시
   * --warn (#ff9f0a): 수정요청·경고
   * --hair (rgba 12%): 테두리·구분선
 - **제거된 Material Design**: 파란색 (#2196f3), 주황색 (#ff9800), 빨강색 (#f44336) 등 완전 제거. 시안의 6색 체계로 통일.
 
-## 확정 계약 (변경 불가)
+## 현재 확인된 계약
 
-- API 계약 준수: 항목별 `POST /reviews`, MINOR/MAJOR 필드 유지
-- 2단계 위험도 UI: SAFE (MINOR) / DANGER (MAJOR)
+- 변경 판단은 API 명세 8.1절의 4종(`APPROVE`, `REJECT`, `REQUEST_CHANGES`, `DEFER`)을 따른다.
+- diff는 Phase 1 클라이언트 계산, polling은 `Retry-After` 우선·Ingest 2초 기본값(UD-05·UD-04)이다.
+- 위험도 wire enum은 `MINOR | MAJOR`, UI label은 `SAFE | DANGER`이며 API 8.1절의 필터·응답·일괄 승인 예시와 일치한다.
+- Ingest 질문 상태는 `QUESTION_REVIEW`이며 API 2.7·6.1절과 frontend 흐름이 일치한다.
 - 헤더 높이: 56px, sticky positioning
 - 폰트: JetBrains Mono 우선, D2Coding 폴백
 - 배경: #fdfcfc, 텍스트: #201d1d

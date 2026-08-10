@@ -15,6 +15,28 @@
 
 ---
 
+## 2026-08-11
+
+### 1. Phase 0 지속 작업·리더 의사결정 위임
+
+**사용자 결정:** Phase 0 완료까지 네 역할 에이전트에게 작업을 맡기고, 미확정 판단은 리더가 결정하며 기록·보고를 남기도록 위임했다. 커밋·브랜치 변경·push는 요청하지 않았다.
+
+**역할 작업:** backend는 stdlib benchmark·mapping manifest 골격과 ERD 위험도 계약을, QA는 cross-platform newline 검사와 benchmark 독립 verifier를, frontend는 실제 화면/API 갭과 `MINOR|MAJOR` wire·`SAFE|DANGER` 표시·`QUESTION_REVIEW` 계약을, PM은 Phase 0 의존 사슬과 현황 문서를 갱신했다. 리더는 실제 파일을 교차 검증해 backend JSON manifest와 QA CSV manifest 불일치, CSV parser 들여쓰기 오류, QA recall-only false PASS를 시정했다.
+
+### 2. Phase 0 실측 완료 — 100문서 통과, 모순 품질 gate 실패
+
+**환경·입력:** NoteWiki inventory 180건 중 실제 파일 163건·누락 17건을 확인했다. 관계 84건 중 실제 평가 가능 73건(positive 66·negative 7), 누락 endpoint 제외 11건을 분모에 명시했다. `D:\ZeroWikiPhase0`에 로컬 runtime/cache를 두고 Ollama `qwen3:1.7b`를 SHA 검증 후 사용했다. 4B는 blob 다운로드 뒤 Windows/D-drive 검증 정지가 반복돼 실행하지 못했고 유료 외부 호출은 하지 않았다.
+
+**100문서 결과:** 첫 run은 128 output-token 절단으로 64%만 완료됐다. 제한을 256으로 높이고 실패 행만 resume해 100/100을 완료했다. 문서당 평균 input 2,069.46·output 179.98 token, scan 평균 9.567초/p95 14.000초, synthesis 평균 12.989초/p95 19.319초다. Markdown 100/100 byte hash 왕복, 1,000 change set replay p95 0.0000697초, constitution top-level 12필드 JSON Schema를 확인했다.
+
+**관계·UD:** multilingual MiniLM 384차원은 relation ROC-AUC 0.9632·warm 100문서 3.418초, MPNet 768차원은 AUC 0.9848·32.289초였다. 리더는 UD-11 중요한 주장만, UD-17 MiniLM 384, UD-25 reference local p95 budget scan 15초·synthesis/answer-generation 20초, UD-29 AI mapping 제안+사용자 승인을 확정했다. UD-13은 이벤트 재생 유지, UD-15는 Schema v1을 고정했다.
+
+**품질 판정과 시정:** 모순 결과가 26건 모두 `CONDITION_DIFF`여서 recall은 100%지만 sampled FPR 100%, 6-class accuracy 19.2%였다. 기존 QA verifier가 recall만으로 이를 `PASS`하던 결함을 발견해 전체 classification accuracy 80% gate를 추가했고 최종 validator는 의도대로 exit 1이다. QA가 추가로 발견한 Windows root-relative `/absolute.md` 허용 결함은 backend 공통 경로 validator에서 `drive`·`root`를 거부하고 회귀 self-check를 추가해 해소했다. 따라서 **Phase 0 기술 검증 실행은 완료했지만 product gate는 조건부 FAIL**이다. Phase 1 core는 착수할 수 있으나 모순 자동 판정·적용은 더 강한 모델이 독립 gate를 통과할 때까지 차단한다.
+
+**산출:** `backend/scripts/phase0_benchmark.py`, `backend/contracts/library-constitution.schema.json`, `evaluation/results/**`, `qa/verify_phase0_benchmark.py`, `docs/Phase-0-벤치마크-결과.md`. 상세 역할 기록은 각 STATE·WORKLOG를 따른다.
+
+---
+
 ## 2026-08-10
 
 ### 2. Phase 0 평가 데이터 인수 — 구조 통과, Ingest-level AC-5 조건부 차단

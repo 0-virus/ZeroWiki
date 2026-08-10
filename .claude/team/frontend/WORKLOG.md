@@ -1107,3 +1107,128 @@
 
 **다음 단계**: 시각 검증 (localhost:3000 브라우저 확인)
 
+---
+
+## 2026-08-11 — Phase 0 완료 지원 문서·계약 정합화
+
+**한 일**
+
+- 실제 저장소를 재검증해 `frontend/src/app` 라우트가 `/`·`/review-changes`뿐이고, `frontend/node_modules`와 `backend/`가 없어 실 API·개발 서버·빌드 실행 상태가 아님을 `STATE.md`에 반영했다.
+- `docs/검증-프론트엔드-화면-API-갭.md`에 Phase 0 벤치마크 결정 `UD-11·UD-17·UD-25·UD-29`의 Claim 목록·검색·polling/ETA·Claim 동일성 UX 영향을 기록했다.
+- API 명세 8.1절의 위험도 문안(`HIGH`, `SAFE/REVIEW/HIGH`)과 frontend 타입(`MINOR/MAJOR`, `SAFE/DANGER`), API 2.7·6.1절의 `QUESTION_REVIEW`/`QUESTION_WAITING` 충돌을 현재 문안·권고(미확정)·근거로 기록했다. API 명세는 편집하지 않았다.
+- gap 문서의 Ingest 흐름 표기는 정본 후보인 `QUESTION_REVIEW`로 맞추되, 2-D에 원문 충돌과 리더 확정 요청을 보존했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+- `docs/검증-프론트엔드-화면-API-갭.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**검증**
+
+- `rg --files frontend/src/app` → `page.tsx`, `review-changes/page.tsx`, `layout.tsx`, `globals.css`
+- `Test-Path frontend/node_modules` → `False`
+- `rg -n "fetch\(|axios|/api/v1" frontend/src` → 실행 fetch 없음, library home의 주석 처리된 fetch만 존재
+- `npm.cmd run build` → 실패: `'next' is not recognized`
+- `npm.cmd exec -- tsc --noEmit` → 실패: `next`, `react`, `diff` 모듈 부재
+- `git status --short` → 편집 전 출력 없음 (커밋·Git 조작 없음)
+
+**미해결 사항**
+
+- 리더가 API 8.1절 위험도 wire enum과 API 6.1절 질문 대기 상태명을 확정해야 한다.
+- Phase 0 `UD-11·UD-17·UD-25·UD-29`는 실제 Ingest 벤치마크 전까지 미확정이며, frontend는 서버 결과를 소비하는 UI만 고정할 수 있다.
+- 의존성 설치와 backend API 구현 전에는 실연동·빌드·브라우저 검증을 완료로 보고할 수 없다.
+
+## 2026-08-11 — 리더 계약 확정 및 갭 문서 후속 정리
+
+**한 일**
+
+- 리더 확정에 따라 갭 문서의 위험도 계약을 `MINOR | MAJOR` wire와 `SAFE | DANGER` UI label로 갱신했다. API 8.1절의 기존 `HIGH`/3단계 문안은 리더의 API 정본 반영 대기로 남겼다.
+- Ingest 질문 상태를 `QUESTION_REVIEW`로 확정 문안화하고, API 6.1절의 기존 `QUESTION_WAITING`은 리더의 API 정본 반영 대기로 기록했다.
+- `docs/검증-프론트엔드-화면-API-갭.md` 4행·639행의 trailing whitespace를 제거했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+- `docs/검증-프론트엔드-화면-API-갭.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**검증**
+
+- `git diff --check -- docs/검증-프론트엔드-화면-API-갭.md` → 수정 전 4행·639행 trailing whitespace 2건 확인 후 수정
+- `rg`로 `QUESTION_WAITING`은 API 충돌 근거 문맥에만 남고, 흐름·확정 문안은 `QUESTION_REVIEW`인지 확인
+- `rg`로 `MINOR | MAJOR` wire 및 `SAFE | DANGER` UI label 확정 문안 확인
+
+**미해결 사항**
+
+- API 명세 8.1·6.1절 정본 반영은 리더 소유 작업이다.
+- 의존성·backend 부재로 실연동·빌드·브라우저 검증은 여전히 차단되어 있다.
+
+## 2026-08-11 — 공유 backend 현실 재확인
+
+**한 일**
+
+- 공유 작업공간에 생성된 `backend/`를 읽기 전용으로 확인했다. 현재 `backend/scripts/phase0_benchmark.py`만 있으며 API 서버 구현은 없으므로 STATE의 “backend 디렉터리 부재” 표현을 “backend 실 API 서버 부재·benchmark script만 존재”로 정정했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+
+**검증**
+
+- `rg --files backend` → `backend/scripts/phase0_benchmark.py`만 확인
+- `Get-Content backend/scripts/phase0_benchmark.py -TotalCount 80` → Phase 0 harness이며 실제 LLM/API 서버 호출 구현 없음 확인
+
+**미해결 사항**
+
+- backend API 서버 및 frontend 의존성 부재로 실연동·빌드·브라우저 검증은 차단되어 있다.
+
+## 2026-08-11 — Phase 0 벤치마크 최종 기록 및 Phase 1 착수 범위 반영
+
+**한 일**
+
+- `docs/Phase-0-벤치마크-결과.md`를 읽고 Phase 0 기술 검증 실행 완료·제품 게이트 조건부 FAIL을 frontend STATE와 갭 문서에 반영했다.
+- 인증·원본 보관·도서관·Import·변경 승인·검색 골격은 Phase 1 착수가 허용됨을 기록했다.
+- 모순 6-class accuracy 19.2%, sampled FPR 100%에 따라 모순 자동 판정·자동 적용 UI를 차단하고, 독립 평가 accuracy 80% 이상 전까지 사용자 검토 제안만 허용하도록 명시했다.
+- `UD-11` 중요 주장만 생성, `UD-17` multilingual MiniLM 384차원, `UD-25` scan p95 15초·synthesis/answer p95 20초 reference local budget, `UD-29` 자동 identity key 금지·사용자 mapping 확정 결정을 기록했다.
+- API 명세의 위험도 `MINOR | MAJOR`와 질문 상태 `QUESTION_REVIEW`가 정본에 반영된 현재 상태에 맞춰 frontend 갭·STATE의 이전 반영 대기 문구를 정리했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+- `docs/검증-프론트엔드-화면-API-갭.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**근거**
+
+- `docs/Phase-0-벤치마크-결과.md` 1·3·4·5·7절
+- `docs/ZeroWiki-API-명세-초안.md` 8.1·6.1절
+
+**미해결 사항**
+
+- 모순 자동 판정·자동 적용은 독립 평가 accuracy 80% 이상 전까지 차단된다.
+- frontend 의존성 부재로 frontend build/typecheck/dev 및 실 API 브라우저 검증은 계속 차단되어 있다.
+
+## 2026-08-11 — Ingest active 상태명 정합화
+
+**한 일**
+
+- `frontend/screens/ingest-progress.md`의 active `QUESTION_WAITING` 표기 4곳을 확정 계약 `QUESTION_REVIEW`로 변경했다.
+- 문서 최종 갱신일을 2026-08-11로 갱신하고, STATE 소유 산출물 목록에 반영했다.
+
+**산출물**
+
+- `frontend/screens/ingest-progress.md`
+- `.claude/team/frontend/STATE.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**검증**
+
+- `rg -n "QUESTION_WAITING" frontend` → active frontend 문서에서 0건
+- `rg -n "QUESTION_REVIEW" frontend/screens/ingest-progress.md` → 흐름·상태표·질문 패널·polling 표기 확인
+- `git diff --check -- frontend/screens/ingest-progress.md .claude/team/frontend/STATE.md .claude/team/frontend/WORKLOG.md` → whitespace 오류 없음
+
+**미해결 사항**
+
+- Ingest 화면은 설계 문서 정합화만 완료됐으며 실 API 연동·렌더링 검증은 frontend 의존성과 backend API 부재로 차단되어 있다.
+

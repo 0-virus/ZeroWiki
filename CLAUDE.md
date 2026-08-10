@@ -55,16 +55,16 @@ ZeroWiki-SaaS/
 │       ├── JOURNAL.md            네 역할을 관통하는 시간순 통합 업무 기록 (리더 소유)
 │       └── {역할}/               CLAUDE.md · STATE.md · WORKLOG.md (각 역할 소유)
 ├── docs/                         기준 문서·검증 문서 (아래 표 참조)
-├── backend/                      미생성. Spring Boot 앱 + Ingest Worker
+├── backend/                      Phase 0 stdlib benchmark harness·constitution JSON Schema (Spring Boot 앱·Ingest Worker는 미생성)
 ├── frontend/                     Next.js + TypeScript 프로젝트. 도서관 홈 화면 1차 구현 + 화면 설계 4종
 │   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
 │   │   └── design-source/        외부에서 가져온 디자인 시안 원본 (frontend 소유)
 │   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
-├── evaluation/                   Phase 0 정답 라벨 CSV·구조 검증기 (backend 소유)
+├── evaluation/                   Phase 0 정답 라벨 CSV·구조 검증기·실측 결과 (backend 소유)
 └── qa/                           테스트 시나리오·평가 세트 인수 보고서·독립 검증기
 ```
 
-`backend/`는 아직 없다. `qa/`에는 테스트 시나리오와 Phase 0 평가 CSV의 구조·채점 계약을 검사하는 독립 검증기가 있으나, backend API·Ingest를 실행하는 테스트 코드는 아직 없다. `frontend/`는 2026-07-30에 Next.js 프로젝트로 초기화되어 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)까지 구현됐고, 변경 검토·원문 발췌 표기·Ingest 진행 화면 설계 문서도 추가됐다. 없는 디렉터리를 있다고 가정하지 않는다.
+`backend/`에는 Phase 0 기술 검증용 stdlib harness와 constitution JSON Schema만 있다. Spring Boot API·Ingest Worker는 아직 없다. `qa/`에는 평가 CSV와 Phase 0 benchmark 산출물을 독립 검증하는 실행기가 있다. 2026-08-11 Phase 0 기술 검증 실행은 완료됐지만 모순 classification accuracy gate가 실패했으므로 Phase 1에서 모순 자동 판정·적용은 차단한다. `frontend/`는 Next.js 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)와 화면 설계 문서를 보유한다. 없는 구현을 있다고 가정하지 않는다.
 
 ## 기준 문서
 

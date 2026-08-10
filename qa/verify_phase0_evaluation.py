@@ -65,10 +65,21 @@ class CheckResult:
             self.failures.append(message)
 
 
+def valid_newlines(raw: bytes) -> bool:
+    """Accept a Windows checkout without accepting mixed or bare CR bytes."""
+    without_crlf = raw.replace(b"\r\n", b"")
+    return b"\r" not in without_crlf and not (
+        b"\r\n" in raw and b"\n" in without_crlf
+    )
+
+
 def read_csv(path: Path, expected_headers: list[str], result: CheckResult) -> list[dict[str, str]]:
     raw = path.read_bytes()
     result.check(not raw.startswith(b"\xef\xbb\xbf"), f"{path.name}: UTF-8 BOM 없음")
-    result.check(b"\r" not in raw, f"{path.name}: LF 줄바꿈")
+    result.check(
+        valid_newlines(raw),
+        f"{path.name}: LF 또는 CRLF 줄바꿈(혼합·bare CR 금지)",
+    )
 
     try:
         text = raw.decode("utf-8")
@@ -83,8 +94,12 @@ def read_csv(path: Path, expected_headers: list[str], result: CheckResult) -> li
         result.check(False, f"{path.name}: CSV 파싱 ({exc})")
         return []
 
-    result.check(reader.fieldnames == expected_headers, f"{path.name}: 정확한 헤더 스키마")
-    result.check(all(None not in row for row in rows), f"{path.name}: 열 개수 일치")
+    headers_ok = reader.fieldnames == expected_headers
+    columns_ok = all(None not in row for row in rows)
+    result.check(headers_ok, f"{path.name}: 정확한 헤더 스키마")
+    result.check(columns_ok, f"{path.name}: 열 개수 일치")
+    if not headers_ok or not columns_ok:
+        return []
     return rows
 
 

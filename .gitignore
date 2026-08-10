@@ -8,6 +8,7 @@
 # 패키지 파일
 node_modules/
 dist/
+__pycache__/
 
 # EnvFiles
 .env

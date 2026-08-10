@@ -1,6 +1,6 @@
 ﻿# Ingest 진행 화면 설계
 
-**최종 갱신**: 2026-07-30  
+**최종 갱신**: 2026-08-11
 **상태**: 설계 중  
 **기준 문서**:
 - ZeroWiki-MVP-서비스-기획서.md 10절 (Ingest 파이프라인)
@@ -30,7 +30,7 @@ Ingest(대량 Import) 작업의 진행 상태를 실시간으로 표시하는 �
 `
 QUEUED → SCANNING → PLAN_REVIEW
   ↓
-PROCESSING → QUESTION_WAITING
+PROCESSING → QUESTION_REVIEW
   ↓
 CHANGE_REVIEW → COMPLETED
 `
@@ -54,7 +54,7 @@ FAILED (종결)
 | SCANNING | 파란색 | 🔍 | (진행도 표시) |
 | PLAN_REVIEW | 파란색 | 📋 | [계획 승인] 필수 |
 | PROCESSING | 파란색 | ⚙️ | (진행도 표시) |
-| QUESTION_WAITING | 노랑색 | ❓ | [답변] 필수 |
+| QUESTION_REVIEW | 노랑색 | ❓ | [답변] 필수 |
 | CHANGE_REVIEW | 주황색 | 📝 | [검토] 필수 |
 | COMPLETED | 초록색 | ✓ | (완료) |
 | FAILED | 빨강색 | ✗ | [재시도] 또는 (종결) |
@@ -121,7 +121,7 @@ FAILED (종결)
 └─────────────────────────────────────┘
 `
 
-**QUESTION_WAITING 상태**:
+**QUESTION_REVIEW 상태**:
 `
 ┌─────────────────────────────────────┐
 │ ❓ AI 질문에 답하기                  │
@@ -376,7 +376,7 @@ POST /libraries/{libraryId}/change-sets/{changeSetId}/reviews
 | --- | --- | --- |
 | SCANNING | 2초 | 진행도 표시 필요 |
 | PROCESSING | 2초 | 진행도 표시 필요 |
-| PLAN_REVIEW·QUESTION_WAITING | 1초 | 사용자 입력 대기 |
+| PLAN_REVIEW·QUESTION_REVIEW | 1초 | 사용자 입력 대기 |
 | 기본 | 2초 (또는 Retry-After 헤더) | UD-04 확정 |
 
 ---

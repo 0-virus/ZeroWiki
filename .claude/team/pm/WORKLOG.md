@@ -1182,3 +1182,96 @@ grep "LIMIT [0-9]" docs/PM-미확정결정-우선순위.md
 - AC-3은 U-1 사용자 5~10명 평가 미실행.
 - 라벨 의미 정확성 독립 이중 검토와 외부 NoteWiki 원본 대조 미실행.
 - 실제 외부 호출 전 LLM provider/model·유료 API 범위·토큰/비용 예산 사용자 결정·승인 필요.
+
+---
+
+## 2026-08-11 — Phase 0 완료 전 지속 작업 지시 및 PM 정본 대조
+
+**무엇을 했는가**
+
+- 사용자의 지시(Phase 0 완료까지 지속 작업, 필요한 의사결정의 리더 위임)를 기록했다. 요구사항 정의서 12절의 미확정 UD 값 확정이나 Phase 0 완료 선언으로 해석하지 않았다.
+- `docs/PM-종합-현황.md`의 역할 갱신일을 실제 STATE와 대조해 PM 2026-08-11, backend 2026-08-10, frontend 2026-07-31, QA 2026-08-10으로 갱신했다.
+- QA `.claude/team/qa/WORKLOG.md`가 실제 존재하고 2026-08-10 기록까지 있음을 확인해 기존 `(미생성)` 표기를 대체했다.
+- 프론트엔드 갭 정본(`docs/검증-프론트엔드-화면-API-갭.md`) 2절을 내용 검색해 활성 16건(#1·#4·#5·#6·#7·#10·#11·#12·#13~#20), 해소 #2·#3·#8·#9를 구분하고, 후속 4절의 #22 잔존 및 #23·#24 해소를 별도 기록했다. 기존의 “18건 미해소” 문구와 해소 #2·#3을 미해소로 열거한 표기를 대체했다. #21은 별도 항목이 없어 수치에 넣지 않았다.
+- 기획서 23절의 Phase 배치와 요구사항 12절의 차단 기능을 대조해 UD-03을 Phase 1 도서관 한도/Phase 2 처리량 과금으로 분리하고, UD-10·UD-19를 Phase 2로 정렬했다. benchmark 결과와 UD 값을 새로 확정하지 않았다.
+- Phase 0의 남은 완료 기준(실제 Ingest·품질·비용·시간·Markdown 왕복 근거)과 `mapping manifest → Ingest harness → 지표 → UD-11·17·25·29 → QA A-4 → 결과 문서 → 완료 판정` 의존 사슬을 종합 문서와 STATE에 명시했다.
+
+**산출물 경로**
+
+- `docs/PM-종합-현황.md`
+- `docs/PM-미확정결정-우선순위.md`
+- `.claude/team/pm/STATE.md`
+- `.claude/team/pm/WORKLOG.md`
+
+**삭제·대체 기록**
+
+- `docs/PM-종합-현황.md`의 낡은 “미해소 API 갭 18건” 집계 및 #2·#3 미해소 표기는 정본 상태와 충돌해 활성 16건 표기와 해소 상태로 대체했다. 판단 이력은 이 항목에 남겼다.
+- 같은 문서의 QA `(미생성)` WORKLOG 표기는 실제 파일을 확인한 뒤 `.claude/team/qa/WORKLOG.md` 경로와 최신 상태로 대체했다.
+- `docs/PM-미확정결정-우선순위.md`의 UD-03·UD-10·UD-19 일괄 Phase 1 긴급 표기는 기획서 23절·요구사항 12절의 기능 Phase와 충돌해 Phase별 의존성 표기로 대체했다. 기존 권고·선택지는 삭제하지 않았다.
+
+**미해결 사항**
+
+- 실제 Ingest 실행, benchmark 결과 문서, mapping manifest, QA A-4 재검증이 아직 없다. Phase 0는 완료 전이다.
+- AC-3 U-1, 라벨 의미 독립 이중 검토·외부 원본 대조, 외부 호출 전 provider/model·유료 API·토큰/비용 승인도 남아 있다.
+
+---
+
+## 2026-08-11 — 공유 frontend 상태 후속 종합
+
+**무엇을 했는가**
+
+- 공유 작업 중 갱신된 `.claude/team/frontend/STATE.md`(2026-08-11)를 다시 읽고 `docs/PM-종합-현황.md`의 frontend 갱신일과 상태를 2026-08-11로 정정했다.
+- frontend의 `node_modules`·backend 부재로 실 API, build, typecheck, dev 검증이 미완료임을 반영했다.
+- `docs/검증-프론트엔드-화면-API-갭.md` 2-C·2-D의 UD-11·17·25·29 영향 및 위험도 enum·Ingest 질문 상태명 충돌을 PM 차단 요인으로 추가했다. API 명세는 수정하지 않았다.
+
+**산출물 경로**
+
+- `docs/PM-종합-현황.md`
+- `.claude/team/pm/STATE.md`
+- `.claude/team/pm/WORKLOG.md`
+
+**미해결 사항**
+
+- frontend 계약은 리더 확정 전이며, 의존성 설치·backend 구현 전 실연동 검증을 완료로 보고할 수 없다.
+
+---
+
+## 2026-08-11 — Phase 0 최종 결과·Phase 1 gate 종합
+
+**무엇을 했는가**
+
+- `docs/Phase-0-벤치마크-결과.md`와 실제 `evaluation/results/**`를 기준으로 PM 종합 현황·결정 우선순위·STATE를 갱신했다.
+- 100문서 100%, UD-11·17·25·29 확정, Markdown 왕복·replay·schema 완료를 기록했다.
+- 모순 accuracy 19.2%·sampled FPR 100%를 product gate FAIL로 남기고 Phase 1 core만 허용했다.
+
+**리더 시정**
+
+- PM 에이전트의 최종 갱신이 지연돼 남아 있던 “Phase 0 완료 전”, “mapping manifest 미작성”, “결과 문서 미생성” 문구를 실제 산출물과 정합화했다.
+
+**남은 사항**
+
+- 모순 자동 판정·적용은 더 강한 모델이 독립 classification accuracy 80% gate를 통과할 때까지 차단한다.
+- 사용자 결정 UD-03·10·19·20·22와 Phase 4 AC-3·UD-26은 계속 추적한다.
+
+---
+
+## 2026-08-11 — PM 최종 계약 문구·실제 blocker 재검증
+
+**무엇을 했는가**
+
+- `docs/PM-종합-현황.md` 2.2절의 이미 해소된 위험도·질문 상태 충돌 문구를 현재 계약(`MINOR|MAJOR`, UI `SAFE|DANGER`, `QUESTION_REVIEW`)으로 대체했다.
+- 남은 실제 제품 blocker를 `docs/Phase-0-벤치마크-결과.md`와 `evaluation/results/**`의 모순 classification accuracy `19.2%`, sampled FPR `100%`로 명시했다. 모순 자동 판정·적용은 계속 차단한다.
+
+**산출물 경로**
+
+- `docs/PM-종합-현황.md`
+- `.claude/team/pm/WORKLOG.md`
+
+**검증**
+
+- PM 활성 문서에서 `SAFE/REVIEW/HIGH`, `QUESTION_WAITING`, `mapping manifest 미작성`, `결과 문서 미생성`을 내용 검색해 잔존이 없음을 확인했다.
+- `qa/verify_phase0_benchmark.py` 재검증 결과는 `RESULT FAIL failures=1`이며 실패 사유는 accuracy `0.192 >= 0.800` gate 하나다.
+
+**미해결 사항**
+
+- 모순 품질 gate와 frontend 의존성/backend API 부재는 남아 있다. 커밋하지 않았다.

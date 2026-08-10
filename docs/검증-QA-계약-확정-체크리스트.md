@@ -94,6 +94,13 @@ frontend와 backend가 각자 `docs/검증-프론트엔드-화면-API-갭.md`와
 | A-4 | 의도적 모순 탐지율 80% 이상 | 평가 세트 conflict 23건을 mapping manifest로 Ingest 결과와 조인 | 23건 중 19건 이상 자동 탐지. manifest 준비 전 Ingest-level 판정 차단 | ✅ 자동 테스트 |
 | A-5 | 엣지케이스 에러 처리 | API 400/413/422/429 응답 | 잘못된 입력, 크기 초과, 할당량 초과 시 정의된 오류 코드 반환 | ✅ 자동 테스트 |
 
+**A-4 독립 인수 명령:** `qa/verify_phase0_benchmark.py`에 backend schema v1
+manifest, generated claim CSV, benchmark output, contradiction output 경로를 인자로
+전달한다. 검증기는 26개 `case_id` 전체 대응·gold/generated claim join·manifest hash를
+확인하고, conflict recall(최소 19/23)과 분류 정확도를 함께 검사한다. `NO_CONFLICT`
+오탐은 sampled FPR로 반드시 출력하며, recall만 충족하고 정확도·FPR이 붕괴한 실행은
+Phase 0 품질 gate를 통과시키지 않는다. 산출물 부재는 FAIL이 아니라 BLOCKED로 기록한다.
+
 ### 3.2 사용자 평가 테스트 (5~10명 검증 사용자)
 
 | # | 검증 기준 | 측정 방식 | 통과 조건 | 평가 방식 |

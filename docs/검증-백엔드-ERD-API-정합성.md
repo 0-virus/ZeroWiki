@@ -258,8 +258,8 @@ Phase 1 코어 범위 내 엔터티 36개:
 | `QUEUED` | 작업 생성 | SCANNING | 초기 상태 |
 | `SCANNING` | 파일 스캔 중 | PLAN_REVIEW | 진행 중 |
 | `PLAN_REVIEW` | 계획 승인 대기 | PROCESSING | nextAction: APPROVE_PLAN |
-| `PROCESSING` | 문서 처리 중 | QUESTION_WAITING 또는 CHANGE_REVIEW | 진행 중 |
-| `QUESTION_WAITING` | 질문 대기 | PROCESSING | nextAction: ANSWER_QUESTIONS |
+| `PROCESSING` | 문서 처리 중 | QUESTION_REVIEW 또는 CHANGE_REVIEW | 진행 중 |
+| `QUESTION_REVIEW` | 질문 대기 | PROCESSING | nextAction: ANSWER_QUESTIONS |
 | `CHANGE_REVIEW` | 변경 검토 대기 | COMPLETED | nextAction: REVIEW_CHANGES |
 | `COMPLETED` | 작업 완료 | - | 종료 상태 |
 | `PAUSED_QUOTA` | 처리량 부족 | PROCESSING | nextAction: PURCHASE_QUOTA |
@@ -291,7 +291,7 @@ Phase 1 코어 범위 내 엔터티 36개:
 1. 파일 제공 → QUEUED
 2. 스캔 완료 → SCANNING → PLAN_REVIEW
 3. 계획 승인 → PROCESSING
-4. 문서 처리 → QUESTION_WAITING (선택) → PROCESSING (계속)
+4. 문서 처리 → QUESTION_REVIEW (선택) → PROCESSING (계속)
 5. 처리 완료 → CHANGE_REVIEW
 6. 변경 적용 → COMPLETED
 
@@ -341,7 +341,7 @@ POST /change-sets/{changeSetId}/apply (libraryVersion 생성)
 
 **미확정:** 기획서 11절 "일괄 승인"과 "개별 승인" 분류의 자동화 기준
 
-- ERD에는 `risk_level` (SAFE, REVIEW, HIGH)이 있으나
+- ERD의 `risk_level` wire enum은 `MINOR`, `MAJOR`이며 UI 표시는 `SAFE`, `DANGER`로 분리된다.
 - API 명세 8.1절 "안전한 항목 일괄 승인" 요청에서 자동 판정 로직 미정
 
 **영향:**
@@ -544,7 +544,7 @@ ORDER BY p.updated_at DESC;
 #### 변경 세트 목록 (API 8.1절)
 
 ```
-GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
+GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=MAJOR
 ```
 
 **ERD 인덱스:**
@@ -1330,4 +1330,52 @@ REQUEST_CHANGES 호출 → 202 Accepted:
 - 리더 지적 배경: 재생성 소요 시간이 항목 규모에 따라 가변
 
 ---
+
+## 10. Phase 0 기술 실행 검증 및 제품 게이트 (2026-08-11)
+
+### 10.1 실행 산출물
+
+`backend/scripts/phase0_benchmark.py`를 표준 라이브러리 우선 harness로 검증했다. 입력 원본은 저장소 밖 `C:\Users\halma\Desktop\NoteWiki`에서 읽었고, 로컬 Ollama `qwen3:1.7b`를 scan·synthesis 양 단계에 사용했다. 유료 외부 호출 비용은 `$0`이며 이 모델은 production provider 확정이 아닌 Phase 0 기준선이다.
+
+근거 산출물:
+
+- `docs/Phase-0-벤치마크-결과.md`
+- `evaluation/results/phase0-benchmark.csv` — 100행, `COMPLETED` 100
+- `evaluation/results/phase0-metrics.json` — token·시간·모순·왕복·replay
+- `evaluation/results/phase0-manifest.json` 및 `phase0-generated-claims.csv` — 26 case 조인
+- `evaluation/results/phase0-contradictions.csv` — QA 출력 계약
+- `backend/contracts/library-constitution.schema.json` — required/properties 12필드, `additionalProperties=false`
+
+검증 명령 결과:
+
+```text
+python -B backend/scripts/phase0_benchmark.py --self-check       → self-check: PASS
+python -B evaluation/validate_evaluation.py                      → 검증 완료: 오류 0건
+python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
+  → 구조·완료율·AC-5 PASS, classification accuracy 0.192 < 0.800
+  → RESULT FAIL failures=1
+```
+
+### 10.2 측정 결과와 게이트
+
+| 항목 | 실측·판정 |
+| --- | --- |
+| 입력 | inventory 180, 존재 163, 누락 17; relation 84 중 평가 가능 73 (positive 66 / negative 7) |
+| 2단계 Ingest | 100/100 완료, 평균 scan 9.567초, p95 14.000초, 평균 synthesis 12.989초, p95 19.319초 |
+| token | 평균 input 2,069.46, output 179.98 / 문서 |
+| Markdown 왕복 | 100/100 byte hash 일치 |
+| UD-13 | 1,000 change set × 25 replay, median 0.0000619초, p95 0.0000697초; 1초 기준 미초과 → Phase 1 event replay, snapshot은 보류 |
+| UD-15 | JSON Schema v1 12필드 및 닫힌 객체 검증 통과 |
+| UD-17 | 73개 평가 가능 relation으로 MiniLM 384d를 Phase 1 기본 후보로 선택; MPNet은 차원·warm 시간 trade-off로 보류 |
+| 모순 품질 | conflict recall 1.000이나 sampled FPR 1.000, 6-class accuracy 0.192 |
+
+**제품 게이트: 조건부 FAIL.** 문서 처리·관계 후보·저장·검토 흐름의 Phase 1 코어 착수는 허용한다. 모순 자동 판정·자동 적용은 금지하고 사용자 검토 제안으로만 보존한다. 독립 평가에서 6-class accuracy 0.800 이상을 통과하기 전에는 이 게이트를 닫지 않는다.
+
+### 10.3 계약 결정 및 제한
+
+- `change_sets.risk_level`, `change_items.risk_level`의 wire enum은 `MINOR | MAJOR`; UI 표시만 `SAFE | DANGER`다(ERD 4.6절, 1.6 개정 이력). 두 표현을 자동 승인 근거로 혼용하지 않는다.
+- 질문 대기 canonical 상태는 `QUESTION_REVIEW`, `nextAction=ANSWER_QUESTIONS`다(ERD 4.4절; 본 문서 2.1~2.2절).
+- UD-29 결과 전까지 Claim 자동 동일성 판정·자동 `claim_key` 매칭은 금지한다. 현재 generated claim ID는 평가 조인용이며 production identity가 아니다.
+- UD-11은 중요한 주장만 생성하는 기준선(100문서에서 7,501 관측 문장 대비 100 important claims)으로 기록한다. UD-25의 p95는 Phase 1 integration에서 citation·검색을 포함해 재검증한다.
+- 누락 원본 17건과 relation 제외 분모 11건은 성공으로 위장하지 않는다. AC-5 조인은 QA 출력 구조를 통과했지만 원본 Claim의 실서비스 대응은 별도 근거 manifest가 필요하다.
 

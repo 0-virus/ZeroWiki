@@ -1,7 +1,7 @@
 # ZeroWiki REST API 명세 초안
 
 작성일: 2026-07-27  
-최종 수정: 2026-07-29 (요구사항 정의서 0.2 기준 조정)  
+최종 수정: 2026-08-11 (Phase 0 리더 계약 정합화)
 상태: MVP API 계약 초안  
 기준 문서: `ZeroWiki-MVP-서비스-기획서.md`(1순위), `ZeroWiki-요구사항-정의서.md`(요구사항 근거), `ZeroWiki-ERD-초안.md`
 
@@ -208,7 +208,7 @@ MVP 웹 클라이언트는 polling을 기본으로 한다. 추후 SSE를 추가�
 
 | 작업 | 기본 간격 | 근거 |
 | --- | --- | --- |
-| Ingest | 2초 | 단계 전이가 잦고 사용자 입력 대기 상태(`PLAN_REVIEW`·`QUESTION_WAITING`)를 빨리 감지해야 한다 |
+| Ingest | 2초 | 단계 전이가 잦고 사용자 입력 대기 상태(`PLAN_REVIEW`·`QUESTION_REVIEW`)를 빨리 감지해야 한다 |
 | AI 답변 | 1초 | 사용자가 화면 앞에서 기다린다 |
 | Lint·Export | 5초 | 중간 입력이 없고 진행도 표시로 충분하다 |
 
@@ -473,16 +473,19 @@ CONCEPT 페이지가 없는 도서관은 빈 배열을 반환한다. 이는 계�
     "defaultReviewDays": 365
   },
   "riskPolicy": {
-    "factUpdate": "HIGH",
-    "deleteContent": "HIGH"
+    "factUpdate": "MAJOR",
+    "deleteContent": "MAJOR"
   },
   "privacyPolicy": {
     "blockSecrets": true
   },
+  "rejectedPatterns": [],
   "naturalLanguageRules": "원 논문과 공식 문서를 우선하고 관점 차이를 모순으로 단정하지 않는다.",
   "changeReason": "운영 장애 사례를 포함하도록 목적을 확장"
 }
 ```
+
+`expectedVersion`은 동시성 제어 메타데이터이며 constitution 본문이 아니다. 나머지 12필드는 `backend/contracts/library-constitution.schema.json` v1을 따른다(UD-15, Phase 0 확정).
 
 ### 4.3 도서관 참조
 
@@ -695,8 +698,8 @@ GET /sources?type=WEB&libraryId=<uuid>&q=consensus&limit=20
 | `SCANNING` | 스캔 완료 | `PLAN_REVIEW` | 계획·비용 표시, 승인 요청 |
 | `PLAN_REVIEW` | `POST /plan-approval` (`APPROVE`) | `PROCESSING` | `202`. polling 유지 |
 | `PLAN_REVIEW` | `POST /plan-approval` (`REJECT`) | `CANCELLED` | 종료 |
-| `PROCESSING` | 맥락 불분명 항목 발생 | `QUESTION_WAITING` | 질문 표시 (FR-ING-05) |
-| `QUESTION_WAITING` | `POST /answers` | `PROCESSING` | polling 유지 |
+| `PROCESSING` | 맥락 불분명 항목 발생 | `QUESTION_REVIEW` | 질문 표시 (FR-ING-05) |
+| `QUESTION_REVIEW` | `POST /answers` | `PROCESSING` | polling 유지 |
 | `PROCESSING` | 처리 완료 | `CHANGE_REVIEW` | `changeSetId`로 검토 화면 이동 |
 | `CHANGE_REVIEW` | 변경 세트 `apply` 및 후속 Lint 완료 | `COMPLETED` | 종료 |
 | 임의 진행 상태 | 처리량 소진 | `PAUSED_QUOTA` | 구매 안내. **`FAILED` 아님** |
@@ -704,7 +707,7 @@ GET /sources?type=WEB&libraryId=<uuid>&q=consensus&limit=20
 | 임의 진행 상태 | `POST /cancel` | `CANCELLED` | 종료 |
 | 임의 진행 상태 | 복구 불가 오류 | `FAILED` | `POST /retry`로 실패 항목만 재시도 |
 
-`QUESTION_WAITING`은 **작업 전체를 멈추지 않는다.** 맥락이 불분명한 항목만 보류하고 나머지는 계속 처리한다(FR-ING-05). 따라서 `QUESTION_WAITING` 상태에서도 `progress.completed`가 증가할 수 있다.
+`QUESTION_REVIEW`는 **작업 전체를 멈추지 않는다.** 맥락이 불분명한 항목만 보류하고 나머지는 계속 처리한다(FR-ING-05). 따라서 `QUESTION_REVIEW` 상태에서도 `progress.completed`가 증가할 수 있다.
 
 ### 6.2 Notion Import
 
@@ -980,7 +983,7 @@ feedbackType: DIFFERENT_TOPIC | NOT_CAUSAL | WEAK_SOURCE | IRRELEVANT | DUPLICAT
 목록 필터:
 
 ```text
-GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
+GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=MAJOR
 ```
 
 변경 세트 응답은 낙관적 잠금을 위해 `revision`을 포함한다(2.6절, ERD 4.6절 `change_sets.revision`). 클라이언트는 이 값을 검토·적용 요청의 `expectedRevision`·`expectedChangeSetRevision`에 그대로 넣는다.
@@ -991,14 +994,13 @@ GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
     "id": "b63466af-62f3-477a-8258-e2aa23044c9c",
     "libraryId": "cc9be2b2-acde-4554-b3fd-2599d3f2ad18",
     "status": "READY_FOR_REVIEW",
-    "riskLevel": "HIGH",
+    "riskLevel": "MAJOR",
     "summary": "Raft 자료 20건 Ingest 결과",
     "baseLibraryVersionNo": 12,
     "counts": {
       "total": 34,
-      "safe": 28,
-      "review": 4,
-      "high": 2
+      "minor": 28,
+      "major": 6
     },
     "revision": 4
   }
@@ -1061,7 +1063,7 @@ GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH
 {
   "expectedRevision": 4,
   "selection": {
-    "riskLevels": ["SAFE"]
+    "riskLevels": ["MINOR"]
   },
   "decision": "APPROVE"
 }

@@ -3,42 +3,44 @@
 > **덮어쓰기 스냅샷.** 매 턴 종료 전에 이 파일 전체를 최신 상태로 갱신한다(헌법 제4조 1항).
 > 시간순 기록은 `WORKLOG.md`에 append 한다.
 
-마지막 갱신: 2026-08-10 22:38 +09:00
+마지막 갱신: 2026-08-11 04:28 +09:00
 
 ## 현재 단계
 
-**Phase 0 평가 데이터 offline 인수 완료 — mapping manifest 계약·Ingest harness 착수 우선순위 정렬**
+**Phase 0 기술 검증 실행 완료·product gate 조건부 FAIL — Phase 1 core 착수 허용, 모순 자동 판정·적용 차단**
 
 ## 진행 중 작업
 
-없음. backend·QA 인수 결과를 PM 종합·결정 요청 문서에 반영했다.
+Phase 0 결과와 Phase 1 허용 범위를 PM 종합·결정 요청 문서에 동기화했다. frontend 계약의 해소된 enum/status 문구와 실제 모순 품질 blocker를 재검색·정정했다.
 
 ## 완료 항목
 
 1. 평가 CSV 실측을 반영했다: pages 180(source 37 / concept 127 / flow 16), relations 84(positive 76 / negative 8), contradictions 26(conflict 23 / `NO_CONFLICT` 3).
-2. CSV 구조·offline 채점 계약 인수와 Ingest-level AC-5 차단을 구분했다.
-3. AC-3은 U-1 사용자 5~10명 유용성 평가이며 미실행임을 분리했다.
-4. 요구사항 정의서 12절 기준으로 사용자 결정 5건(UD-03·10·19·20·22), Phase 0 직접 벤치마크 4건(UD-11·17·25·29), Phase 4 별도 UD-26을 구분했다.
-5. 다음 한 걸음을 mapping manifest 계약 및 이를 소비하는 Ingest harness 착수로 권고했다.
+2. 100문서 100%, 관계 후보 비교, token·시간, Markdown 왕복, replay, constitution schema 결과를 종합했다.
+3. UD-11·17·25·29 확정과 AC-3·UD-26 Phase 4 분리를 반영했다.
+4. 모순 accuracy 19.2%·sampled FPR 100%를 product gate FAIL로 기록했다.
+5. Phase 1 core는 허용하고 모순 자동 판정·적용은 독립 accuracy 80% 전까지 차단했다.
+6. API 위험도 `MINOR|MAJOR`, UI `SAFE|DANGER`, 질문 상태 `QUESTION_REVIEW`가 현재 계약임을 확인했다.
 
 ## 다음 작업
 
-1. backend가 versioned mapping manifest 계약·생성 절차와 Ingest harness를 마련하면 QA의 A-4 Ingest-level AC-5 재검증 결과를 종합한다.
-2. 실제 외부 호출 전 LLM provider/model, 유료 API 사용 범위, 토큰·비용 예산에 대한 사용자 결정·승인을 추적한다.
-3. U-1 사용자 5~10명이 준비되면 AC-3 결과를, Phase 4에서는 UD-26 승인 피로 테스트 결과를 별도 반영한다.
+1. Phase 1 core scaffolding 진행을 종합한다.
+2. 더 강한 contradiction 모델의 동일 26건 독립 gate 결과를 추적한다.
+3. 사용자 결정 UD-03·10·19·20·22와 Phase 4 AC-3·UD-26을 계속 추적한다.
 
 ## 차단 요인
 
-- Ingest-level AC-5: gold `case_id`와 생성 `claim_id`를 잇는 mapping manifest 부재.
-- AC-3: U-1 사용자 유용성 평가 미실행.
-- 실제 외부 호출: LLM provider/model·유료 API 범위·토큰/비용 예산 사용자 결정·승인 필요.
+- 모순 자동 판정·적용: classification accuracy 19.2%·sampled FPR 100%.
+- Spring Boot API·Ingest Worker·frontend 실 API 연동은 아직 없다.
+- frontend `node_modules` 부재로 build/typecheck는 미실행이다.
+- 사용자 결정 UD-03·10·19·20·22와 Phase 4 AC-3·UD-26이 남아 있다.
 
 ## 소유 산출물
 
 | 경로 | 상태 | 산출물 유형 |
 | --- | --- | --- |
 | `docs/ZeroWiki-MVP-서비스-기획서.md` | 변경 없음 | 기획서 (진실 1순위) |
-| `docs/PM-미확정결정-우선순위.md` | 2026-08-10 갱신 | 결정 요청서·실행 승인 경계 |
-| `docs/PM-종합-현황.md` | 2026-08-10 갱신 | 종합 현황·의존 사슬·권고 |
+| `docs/PM-미확정결정-우선순위.md` | 2026-08-11 갱신 | 결정 요청서·실행 승인 경계 |
+| `docs/PM-종합-현황.md` | 2026-08-11 갱신 | 종합 현황·의존 사슬·권고 |
 | `.claude/team/pm/CLAUDE.md` | 변경 없음 | 역할 지침 |
-| `.claude/team/pm/WORKLOG.md` | 2026-08-10 append | 시간순 기록 |
+| `.claude/team/pm/WORKLOG.md` | 2026-08-11 append | 시간순 기록 |

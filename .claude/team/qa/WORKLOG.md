@@ -588,3 +588,109 @@
 - 결과: `ACTIVE_STALE_REFERENCES=0` (종료 코드 0으로 명시 처리).
 - append-only WORKLOG와 재인수 보고서의 재판정 표에 남은 과거 문구는 판단 이력으로
   의도적으로 보존했다.
+
+---
+
+## 2026-08-11 04:00 — Phase 0 실제 산출물 독립 인수 및 품질 gate
+
+**한 일**
+
+1. Windows checkout에서 기존 `b"\r" not in raw` 검사가 CRLF를 거짓 실패시키던
+   원인을 최소 수정했다. `valid_newlines()`는 LF/CRLF를 모두 허용하고 mixed/bare CR은
+   거부한다. BOM·UTF-8·헤더·열 수·CSV enum/참조/유일성 검사는 유지했다.
+2. `qa/verify_phase0_benchmark.py`를 backend 실제 contract에 맞췄다.
+   - schema v1 manifest의 `run_id`/cases/gold/generated IDs와 manifest hash 검증
+   - `phase0-generated-claims.csv` 전체 26 case join 및 contradiction output join
+   - per-document benchmark 100행·완료율·유한 metric 검증
+   - recall만으로 통과하지 않도록 분류 정확도 최소 0.80 gate 추가
+   - 산출물 경로는 CLI 인자로 받아 도착 후 재실행 가능
+   - self-check에 LF/CRLF 회귀와 recall-only false PASS 방지 추가
+3. 실제 결과를 독립 실행했다. 구조·mapping·100/100 완료는 통과했으나
+   `recall=1.000`, `sampled_fpr=1.000`, `classification_accuracy=0.192`여서
+   `RESULT FAIL`, exit 1을 확인했다.
+4. metrics JSON을 교차 확인했다. Markdown roundtrip 100개/불일치 0, event replay
+   1000 change sets·25회·p95 약 0.000070초·snapshot 미필요는 PASS했다.
+5. constitution schema 구조(12 properties/12 required), backend path traversal·ZIP
+   member·secret redaction을 독립 확인했다. `../`와 backslash traversal/redaction은
+   PASS지만 Windows root-relative `/absolute.md`는 backend validator가 허용해 FAIL이다.
+6. QA report, README, QA checklist, STATE를 실제 판정으로 갱신했다. `evaluation/**`,
+   backend 소유 파일은 수정하지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`
+- `python evaluation/validate_evaluation.py` → 기존 구조 validator 오류 0건
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`
+- `python qa/verify_phase0_benchmark.py --manifest evaluation/results/phase0-manifest.json --generated-claims evaluation/results/phase0-generated-claims.csv --benchmark-output evaluation/results/phase0-benchmark.csv --expected-documents 100 --contradiction-output evaluation/results/phase0-contradictions.csv` → `BENCHMARK_METRICS ... completion_rate=1.000`, `AC5_METRICS ... recall=1.000 sampled_fpr=1.0 classification_accuracy=0.192`, `RESULT FAIL failures=1`, exit 1
+- `python backend/scripts/phase0_benchmark.py --source-root C:\Users\halma\Desktop\NoteWiki --roundtrip --allow-missing` → 163 files roundtrip PASS, inventory 180 중 17 누락
+
+**미해결·보고**
+
+- HIGH: contradiction 분류 품질 FAIL. 모델/분류 전략 개선 후 동일 validator 재실행 필요.
+- HIGH: backend `relative_path('/absolute.md')` root-relative 허용. backend에 정확한 재현과
+  path anchor 거부 수정 필요. QA는 소유권 밖 파일을 편집하지 않았다.
+- MEDIUM: 전체 NoteWiki inventory 17개 원본 누락. 100문서 실행 범위와 혼용 금지.
+- local Ollama 비용 0은 실제 provider 비용이 아니며, API citation·U-1·S-1~S-16은
+  미실행이다.
+- 커밋·git 조작 없음.
+
+---
+
+## 2026-08-11 — HIGH path finding 리더 시정 재검증
+
+- 리더가 backend `relative_path()`에서 Windows `drive`·`root`를 즉시 거부하도록 수정했다.
+- self-check에 `../escape.md`, `/absolute.md`, `C:\absolute.md` 회귀를 추가했다.
+- `python backend/scripts/phase0_benchmark.py --self-check`를 재실행해 PASS를 확인했다.
+- 경로 보안 HIGH는 해소됐다. 남은 product gate blocker는 모순 classification accuracy 0.192다.
+
+---
+
+## 2026-08-11 04:23 — path guard 후속 QA 독립 재검증
+
+**한 일**
+
+- 헌법 → `.claude/team/qa/CLAUDE.md` → `STATE.md` 순으로 재독했다.
+- backend가 추가한 `candidate.drive`·`candidate.root` guard와 path self-check를 읽고,
+  QA report의 과거 HIGH-2는 발견 당시 사실로 보존하면서 현재 판정을 해결 완료(PASS)로
+  갱신했다.
+- `STATE.md` timestamp를 갱신했다. product blocker는 contradiction accuracy 하나로
+  남겼다.
+
+**검증 명령과 실제 결과**
+
+- `python backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`
+- 독립 path/redaction probe → `relative_path`가 `../escape.md`,
+  `wiki/../escape.md`, `/absolute.md`, `C:\\absolute.md`, 빈 경로를 모두 거부;
+  `safe_zip_member` traversal과 `redact_secrets`도 PASS; exit 0
+- `python qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`
+- `python evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`
+
+**현재 판정**
+
+- path security: **PASS / finding resolved**
+- contradiction product gate: **FAIL** (`accuracy=0.192`, `sampled_fpr=1.000`)
+- Phase 1 quality entry: **BLOCKED** until contradiction output is improved and rerun.
+
+---
+
+## 2026-08-11 04:32 — report 상단 mapping manifest 상태 정정
+
+**한 일**
+
+- 실제 schema v1 manifest·generated claims 도착 사실을 반영해
+  `qa/phase0-evaluation-acceptance-report.md` 상단 판정을 갱신했다.
+- 과거 HIGH-1 mapping manifest 부재 finding과 당시 재현·필요 변경은 보존하고,
+  현재는 manifest hash/gold/generated 전체 join PASS, contradiction 품질 gate FAIL로
+  분리했다.
+
+**검증**
+
+- `python qa/verify_phase0_benchmark.py --self-check` → PASS
+- `python qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`
+- 실제 benchmark validator → mapping PASS, `accuracy=0.192`, `sampled_fpr=1.000`,
+  `RESULT FAIL`, exit 1
+- `git diff --check`는 최종 종료 전에 실행한다.
+
+**미해결**
+
+- contradiction 분류 품질 개선 및 동일 산출물 재실행 필요.

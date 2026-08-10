@@ -1,0 +1,50 @@
+{
+  "run_date": "2026-08-11",
+  "runtime": "fastembed 0.8.0 / ONNX Runtime 1.28.0 / CPU",
+  "method": "각 문서의 title과 본문 앞 4000자를 임베딩하고 relation gold pair의 cosine similarity ROC-AUC를 비교했다.",
+  "denominators": {
+    "inventory_rows": 180,
+    "available_rows": 163,
+    "missing_rows": 17,
+    "relation_rows": 84,
+    "evaluable_relation_rows": 73,
+    "excluded_missing_endpoint": 11,
+    "evaluable_positive": 66,
+    "evaluable_negative": 7
+  },
+  "models": [
+    {
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "dimension": 384,
+      "roc_auc": 0.9632,
+      "mean_positive_similarity": 0.6970,
+      "mean_negative_similarity": 0.4156,
+      "observed_youden_j": 0.9242,
+      "observed_threshold": 0.5129,
+      "warm_100_documents_seconds": 3.418,
+      "warm_seconds_per_document": 0.0342
+    },
+    {
+      "model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+      "dimension": 768,
+      "roc_auc": 0.9848,
+      "mean_positive_similarity": 0.8297,
+      "mean_negative_similarity": 0.6186,
+      "observed_youden_j": 0.8939,
+      "observed_threshold": 0.7465,
+      "warm_100_documents_seconds": 32.289,
+      "warm_seconds_per_document": 0.3229
+    }
+  ],
+  "decision": {
+    "ud": "UD-17",
+    "selected_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "dimension": 384,
+    "reason": "MPNet의 AUC 이득은 0.0216이지만 차원은 2배이고 warm 100문서 처리는 약 9.4배 느렸다. MVP 검색 기본값은 MiniLM으로 두고 실제 검색 실패가 측정될 때만 MPNet을 재검토한다."
+  },
+  "limitations": [
+    "negative 표본은 7건이므로 threshold와 Youden J는 탐색값이며 독립 테스트 성능이 아니다.",
+    "FastEmbed 0.8.0의 현재 mean pooling 동작을 사용했다.",
+    "누락된 원본 endpoint가 포함된 관계 11건은 비교에서 제외했다."
+  ]
+}

@@ -1,7 +1,7 @@
 # ZeroWiki 팀 종합 현황
 
 작성일: 2026-07-29 23:50 UTC  
-**최종 갱신: 2026-08-10 (Phase 0 평가 데이터 인수 결과 및 실행 차단 조건 반영)**
+**최종 갱신: 2026-08-11 (Phase 0 기술 검증 완료·product gate 조건부 FAIL)**
 대상: 리더 + 팀 전체  
 기준 문서: `docs/ZeroWiki-요구사항-정의서.md` 12절(정본), 각 역할의 `STATE.md`, `.claude/team/JOURNAL.md`, `docs/PM-미확정결정-우선순위.md`
 
@@ -11,51 +11,37 @@
 
 | 역할 | 단계 | 산출물 | 상태 | 주요 차단 |
 | --- | --- | --- | --- | --- |
-| **PM** | Phase 0 | 종합 현황, 결정 요청서 | 🔄 평가 인수 결과 반영 완료 | mapping manifest 계약·Ingest harness 착수 순서 정렬 |
-| **Backend** | Phase 0 | ERD v1.5, 평가 CSV·검증기·벤치마크 계획 | ✅ CSV 구조·offline 채점 계약 인수 완료 | Ingest-level AC-5 mapping manifest, 실행 전 LLM·유료 API 승인 |
-| **Frontend** | Phase 0 | 도서관 홈 + 변경 검토 화면 | ✅ 하이파이 시안 기반 전면 재구현 완료 | — |
-| **QA** | Phase 0 | 테스트 시나리오·독립 검증기·평가 인수 보고서 | ✅ CSV 구조·offline 채점 계약 재인수 완료 | Ingest-level AC-5 mapping manifest, AC-3 U-1 미실행 |
+| **PM** | Phase 0 → 1 | 종합 현황, 결정 요청서 | ✅ Phase 0 결과·착수 범위 종합 | 모순 자동 판정 gate 추적 |
+| **Backend** | Phase 0 → 1 | ERD, benchmark harness·결과, constitution schema | ✅ 기술 검증 실행 완료 | 모순 classification accuracy 19.2% |
+| **Frontend** | Phase 1 준비 | 도서관 홈 + 변경 검토 화면 | ✅ 계약 정합화 완료 | `node_modules`·실 API 부재 |
+| **QA** | Phase 0 → 1 | 테스트 시나리오·독립 검증기·인수 보고서 | ⚠️ 구조 통과·모순 품질 FAIL | 더 강한 모델의 독립 accuracy gate |
 
-**코드 진행도** — Frontend: Next.js 프로젝트 + 도서관 홈·변경 검토 화면 2종 구현(목록 데이터 기반, 실 API 미연동). Backend/QA: 실행 코드 없음(문서 단계).  
-**UD 정본상 미확정:** 사용자 결정 5건(UD-03·10·19·20·22), Phase 0 직접 벤치마크 4건(UD-11·17·25·29), Phase 4 별도 사용자 테스트 1건(UD-26). 실행에 필요한 **LLM provider/model 선택·유료 API 사용 범위·토큰/비용 예산은 별도 사용자 결정·승인 사항**이다.
+**코드 진행도** — Frontend는 목업·실 API 미연동이며 `node_modules`가 없다. Backend는 Phase 0 stdlib harness와 schema만 있고 Spring Boot API·Ingest Worker는 아직 없다. QA는 실제 benchmark 산출물 verifier를 보유한다.
+**UD 정본:** Phase 0에서 UD-11·17·25·29를 확정했다. 사용자 결정 5건(UD-03·10·19·20·22)과 Phase 4 사용자 테스트 UD-26은 계속 추적한다.
+
+**사용자 지시와 리더 판정 (2026-08-11):** 사용자는 Phase 0 완료까지 지속 작업과 의사결정을 리더에게 위임했다. 기술 검증 실행은 완료했다. 100문서·관계·시간/token·왕복·replay·schema는 통과했지만 모순 품질은 FAIL이다. Phase 1 core는 착수하고 모순 자동 판정·적용은 차단한다.
 
 ---
 
 ## 2. 역할별 상세
 
-### 2.1 Backend — 평가 데이터 인수 완료, Ingest 실행 준비
+### 2.1 Backend — Phase 0 실행 완료, Phase 1 core 준비
 
-**단계:** Phase 0 평가 데이터 구조·참조 무결성 인수 완료, Ingest 프로토타입 실행 준비(마지막 갱신: 2026-08-10 22:30 KST).
+**단계:** Phase 0 기술 검증 실행 완료. 100문서 2단계 benchmark는 100/100, Markdown 왕복은 100/100, replay는 1,000 change set p95 0.0000697초다.
 
-**인수된 사실** (`.claude/team/backend/STATE.md`, `evaluation/README.md`):
+- mapping manifest와 generated claim join을 생성했고 QA 구조 검증을 통과했다.
+- 관계 후보는 MiniLM 384차원으로 확정했다(ROC-AUC 0.9632, warm 100문서 3.418초).
+- constitution 12필드 JSON Schema v1을 고정했다.
+- 모순은 recall 100%지만 accuracy 19.2%·sampled FPR 100%로 product gate 실패다.
+- Spring Boot API·Ingest Worker는 아직 없으므로 Phase 1 core 구현은 이제 착수 대상이다.
 
-- 페이지 인벤토리 180행: source 37 / concept 127 / flow 16. 지식 페이지(concept + flow)는 143개다.
-- 연결 라벨 84행: positive 76 / negative 8. endpoint slug 참조, UD-16 7종, direction·confidence·중복 규칙을 통과했다.
-- 모순 라벨 26행: conflict 23 / `NO_CONFLICT` 3. stable `case_id` 26개와 5종 분류 계약을 통과했다.
-- `evaluation/validate_evaluation.py` 반복 검증 결과 오류 0건이다.
-- 기존 계획의 원본·페이지 수와 라벨링 대기는 **역사적 가정**이며, 현재 실행 입력은 위 실측 CSV다.
-
-**인수 범위와 차단 경계:**
-
-- ✅ CSV 구조·참조 무결성과 offline 채점 계약은 인수됐다.
-- ⛔ Ingest-level AC-5는 원본 page/claim·gold `case_id`·생성 `claim_id`를 잇는 versioned mapping manifest가 없어 차단됐다.
-- ⏳ AC-3은 CSV 지표가 아니라 U-1 사용자 5~10명의 실제 제안 관계 유용성 평가이며 미실행이다.
-- ⏳ 라벨 의미 정확성의 독립 이중 검토와 외부 NoteWiki 원본 대조는 별도 위험으로 남아 있다.
-
-**미확정 계약 분리** (`docs/ZeroWiki-요구사항-정의서.md` 12절):
-
-- Phase 0 직접 결정: UD-11(Claim 생성 범위), UD-17(임베딩 모델·차원), UD-25(성능 목표), UD-29(Claim 동일성 판정).
-- Phase 4 별도 트랙: UD-26(개별 승인 상한). Phase 0 직접 결정 대상에 포함하지 않는다.
-- 사용자 결정 5건: UD-03·10·19·20·22. 기존 결정 요청서를 유지하되, 현재 한 걸음과 혼합하지 않는다.
-- 실행 전 별도 사용자 결정·승인: LLM provider/model 선택, 유료 API 사용 범위, 토큰·비용 예산.
-
-**다음 작업:** mapping manifest 계약과 생성 절차를 먼저 고정하고, 그 계약을 소비하는 Ingest harness를 착수한다. provider/model·유료 API 예산은 사용자가 결정·승인한 뒤 실제 외부 호출에 적용한다.
+**차단:** 모순 자동 판정·적용. 더 강한 모델이 독립 classification accuracy 80% gate를 통과할 때까지 사용자 검토 제안으로만 다룬다.
 
 ---
 
-### 2.2 Frontend — 변경 검토 화면 재구현 완료, 도서관 홈 실 API 연동 준비
+### 2.2 Frontend — 목업 화면 구현 완료, Phase 0 계약 정합화 진행
 
-**단계:** Phase 0 화면 설계·구현 단계 (마지막 갱신: 2026-07-31 11:20)
+**단계:** Phase 0 완료 지원 — frontend 현실·계약 정합화 진행(마지막 갱신: 2026-08-11).
 
 **완료 항목:**
 - ✅ **Next.js 프로젝트 초기화** (2026-07-30)
@@ -78,19 +64,23 @@
 
 **차단 요인 & 해소된 사항:**
 
+- `frontend/node_modules`와 backend API 구현이 없어 실 API 연동·build/typecheck/dev 검증을 완료로 보고할 수 없다.
+- API 명세 8.1절 위험도 wire enum은 `MINOR|MAJOR`, UI 표시는 `SAFE|DANGER`, API 2.7·6.1절 질문 상태는 `QUESTION_REVIEW`로 현재 정합화됐다(`docs/검증-프론트엔드-화면-API-갭.md` 2-D). 남은 실제 blocker는 모순 classification accuracy `19.2%`·sampled FPR `100%`이며 자동 판정·적용은 차단한다.
+- Phase 0에서 UD-11·17·25·29를 확정했고 화면 계약에 반영했다. 모순 자동 판정·적용 UI는 독립 accuracy gate 전까지 차단한다(`docs/검증-프론트엔드-화면-API-갭.md` 2-C).
+
 **1. "검토(REVIEW)" 필터 탭 처리 방향 — ✅ 해소됨 (2026-07-31)**
 - **사용자 결정**: 2단계 UI 채택, "검토(REVIEW)" 탭 제거
 - **frontend 구현**: `FilterTab` → `ALL|SAFE|DANGER` 3개, `UIRiskLevel`·`mapRiskLevelToUI()` 완전 제거
-- **리더 검증**: 잔존 코드 0건, 타입체크 통과, 필터 로직 정확(`SAFE→MINOR`, `DANGER→MAJOR`)
+- **리더 검증**: 2026-07-31 당시 잔존 코드 0건·타입체크 통과·필터 로직 정확(`SAFE→MINOR`, `DANGER→MAJOR`)을 기록했다. 2026-08-11 현재 frontend 의존성 부재로 재실행은 미검증이다.
 - 근거: `.claude/team/JOURNAL.md` 항목 11·12 (사용자 결정 2026-07-31, 리더 검증 완료)
 
-**2. 미해소 API 갭 18건** (backend/리더 담당)
+**2. API 갭 목록 — 정본 2절 활성 16건** (backend/리더 담당)
 
 | 갭 # | 내용 | 소유자 | 상태 |
 | --- | --- | --- | --- |
 | #1 | 글로벌 홈 전체 도서관 횡단 조회 | 리더 | ⏳ |
-| #2 | 도서관 홈 요약 응답 스키마 | backend | ⏳ |
-| #3 | "주요 주제" 정의 (기획서 16절) | 리더 | ⏳ |
+| #2 | 도서관 홈 요약 응답 스키마 | backend | ✅ 해소 (UD-28 반영) |
+| #3 | "주요 주제" 정의 (기획서 16절) | 리더 | ✅ 해소 (UD-28 반영) |
 | #4 | 페이지 주제/태그 필드 | backend | ⏳ |
 | #5 | 배치 근거 조회 API | backend | ⏳ |
 | #6 | 활동 집계 API (활동 잔디) | backend | ⏳ |
@@ -100,60 +90,68 @@
 | #12 | Ingest 계획 승인 후 상태 전이 | backend | ⏳ |
 | #13~20 | 변경 검토·알림·발음표기·업로드 검증·세션 관리 | 소유자별 | ⏳ |
 
-**3. 해소된 갭 4건 ✅**
+정본 2절의 활성 항목은 #1·#4·#5·#6·#7·#10·#11·#12·#13~#20이다. 후속 4절의 **#22(변경 영향 범위 API)** 는 별도 잔존 갭이며, #23·#24는 해소됐다. #21은 본문에서만 참조되고 별도 갭 항목이 없어 수치에 포함하지 않는다.
+
+**3. 해소된 갭 6건 ✅**
+- ✅ 갭 #2: 도서관 홈 요약의 `topics` 산출 기준 (2026-07-29, UD-28 확정)
+- ✅ 갭 #3: 주요 주제 산출 기준 (2026-07-29, UD-28 확정)
 - ✅ 갭 #8: diff 표현 (2026-07-29, UD-05 확정: Phase 1 스냅샷 + 클라이언트 diff)
 - ✅ 갭 #9: polling 간격 (2026-07-29, UD-04 확정: 기본값 2초)
 - ✅ 갭 #23: REQUEST_CHANGES 재생성 감지 (2026-07-30 backend 확정, 2026-07-31 frontend 구현·리더 검증)
 - ✅ 갭 #24: 모순 조회 API (2026-07-30 리더 확인)
 
 **다음 작업:**
-1. 미해소 갭 18건을 소유자별 분류해 전달 (backend/리더에게)
-2. Ingest 진행 화면 컴포넌트 구현 (2순위)
-3. 도서관 홈 실 API 연동 (3순위)
+1. 리더가 위험도 enum·질문 상태명을 확정하면 frontend 계약을 정합화한다.
+2. 인증→도서관/헌법→업로드→Ingest→변경 검토의 첫 vertical slice를 설계한다.
+3. 의존성 설치 후 build/typecheck와 라우트·렌더링을 재검증한다.
 
 ---
 
-### 2.3 QA — offline 재인수 완료, Ingest-level 판정 보류
+### 2.3 QA — benchmark 독립 검증 완료, 모순 품질 FAIL
 
-**단계:** Phase 0 평가 세트 재인수 완료(마지막 갱신: 2026-08-10 22:21 KST).
+**단계:** Phase 0 구조·실행 산출물 독립 검증 완료(마지막 갱신: 2026-08-11).
 
 **완료 항목** (`.claude/team/qa/STATE.md`, `qa/phase0-evaluation-acceptance-report.md`):
 
 - `qa/verify_phase0_evaluation.py`와 backend validator가 동일 실측에서 모두 종료 코드 0을 반환했다.
 - relation slug 헤더, contradiction stable `case_id`, pair/strict recall·bounded precision·sampled FPR, contradiction recall·FPR·FDR와 0분모 N/A 계약을 재인수했다.
-- A-4는 conflict 23건 중 최소 19건 탐지, 확정 5종 enum, `NO_CONFLICT` sampled FPR, mapping manifest 선행 조건으로 동기화됐다.
+- mapping manifest·100문서 결과·contradiction output의 run ID와 join을 검증했다.
+- recall-only verifier가 전부 conflict로 예측한 결과를 false PASS하던 결함을 발견해 전체 classification accuracy 80% gate를 추가했다.
 - 제품 테스트 시나리오는 A 18개·U 6개·S 16개로 총 40개가 정의돼 있으나, 제품 구현 대상 테스트는 모두 미실행이다.
 
 **남은 차단과 위험:**
 
-1. Ingest-level AC-5: gold `case_id`와 생성 `claim_id` 쌍을 잇는 mapping manifest 미작성.
-2. AC-3: U-1 검증 사용자 5~10명의 실제 유용성 평가 미실행.
-3. 라벨 의미 정확성 독립 이중 검토와 외부 NoteWiki 원본 대조 미실행.
-4. sampled FPR 분해능: relation negative 8건은 1건당 12.5%p, contradiction `NO_CONFLICT` 3건은 1건당 33.3%p다.
+1. 모순 classification accuracy 19.2%·sampled FPR 100%로 품질 gate 실패.
+2. AC-3: U-1 검증 사용자 5~10명의 실제 유용성 평가는 Phase 4에서 실행한다.
+3. sampled FPR 분해능: contradiction `NO_CONFLICT` 3건은 1건당 33.3%p다.
 
-**다음 작업:** backend가 mapping manifest와 생성 절차를 제공한 뒤 A-4 Ingest-level AC-5를 실행한다. AC-3은 사용자 모집·U-1 실행이 가능한 시점에 별도로 판정한다.
+**다음 작업:** 더 강한 contradiction 모델 후보의 동일 26건 독립 재평가. 그전에는 모순 자동 판정·적용을 허용하지 않는다.
 
 ---
 
-### 2.4 PM — 평가 인수 경계와 실행 우선순위 종합
+### 2.4 PM — Phase 0 결과와 Phase 1 허용 범위 종합
 
-**단계:** backend·QA의 Phase 0 평가 데이터 인수 결과를 제품 범위·결정 주체·의존 사슬 기준으로 종합(마지막 갱신: 2026-08-10).
+**단계:** Phase 0 기술 검증 완료·product gate 조건부 FAIL을 종합(마지막 갱신: 2026-08-11).
 
 **확정 사실:**
 
 - 평가 CSV는 실측 180/84/26행이며 구조·offline 채점 계약이 독립 검증을 통과했다.
-- 이 인수는 Ingest-level AC-5 또는 AC-3의 통과를 뜻하지 않는다.
-- 요구사항 정의서 12절의 미확정 분류는 사용자 결정 5건, Phase 0 직접 벤치마크 4건, Phase 4 별도 UD-26으로 유지한다.
+- UD-11·17·25·29는 Phase 0 결과로 확정했다.
+- AC-3·UD-26은 Phase 4 사용자 테스트로 유지한다.
 
-**권고(미확정) — 다음 한 걸음:** **mapping manifest 계약 및 이를 소비하는 Ingest harness 착수**.
+**다음 한 걸음:** **Phase 1 core scaffolding 착수.**
 
-- 근거: offline 입력은 준비됐지만 실제 Ingest 출력의 `claim_id`와 gold `case_id`를 잇지 못해 AC-5가 막혀 있다.
-- 트레이드오프: harness부터 임의 조인을 넣으면 빠르게 보이지만, 매칭 계약 변경 시 scorer·결과를 다시 만들어야 한다.
-- 대안: 먼저 offline 모델 비교만 수행할 수 있으나 Ingest-level AC-5 차단을 해소하지 못하므로 우선순위가 낮다.
+- 허용: 인증·원본 보관·도서관·Import·변경 승인·검색 골격.
+- 차단: 모순 자동 판정·자동 적용.
+- 계약: wire `MINOR|MAJOR`, UI `SAFE|DANGER`, 질문 상태 `QUESTION_REVIEW`.
 
-**의존 사슬:** mapping manifest 계약·생성 절차 → Ingest harness → Phase 0 실행·offline/ingest 지표 수집 → UD-11·17·25·29 근거 → Phase 1 설계. AC-3은 사용자 5~10명 U-1, UD-26은 Phase 4 사용자 테스트로 각각 별도 분기한다.
+**의존 사슬:** Phase 1 core → 실제 API integration benchmark → 더 강한 contradiction 모델 독립 gate. AC-3·UD-26은 Phase 4 사용자 테스트로 분기한다.
 
 **사용자 결정 묶음:** 기존 UD-03·10·19·20·22는 결정 요청서대로 유지한다. 실제 외부 호출 전에는 LLM provider/model, 유료 API 사용 범위, 토큰·비용 예산에 대한 사용자 결정·승인이 추가로 필요하다.
+
+**Phase 0 상태:** 기술 검증 실행 완료. 상세 결과 문서는 `docs/Phase-0-벤치마크-결과.md`다. 모순 품질 실패는 숨기지 않고 Phase 1 기능 gate로 이관한다.
+
+**남은 검증:** 실제 Spring Boot/Ingest Worker가 생긴 뒤 reference budget과 citation을 integration으로 재검증한다.
 
 ---
 
@@ -163,8 +161,8 @@
 
 | UD | 내용 | Phase | 차단 기능 | 문서 |
 | --- | --- | --- | --- | --- |
-| **UD-03** | Free·Basic·Advanced 처리량 단위 | 1 | API 18절 3 / 가격 모델 | PM-미확정결정-우선순위.md 2.2절 |
-| **UD-10** | Notion OAuth·결제 공급자 선정 | 1 | API 18절 10 / 외부 연동 | PM-미확정결정-우선순위.md 2.3절 |
+| **UD-03** | Free·Basic·Advanced 처리량 단위 | 1(도서관 한도) / 2(처리량 과금) | API 18절 3 / 가격 모델 | PM-미확정결정-우선순위.md 2.2절 |
+| **UD-10** | Notion OAuth·결제 공급자 선정 | 2 | API 18절 10 / 외부 연동 | PM-미확정결정-우선순위.md 2.3절 |
 | **UD-19** | 처리량 표시 단위·토큰 환산 규칙 | 2 | ERD 8절 9 / 과금 UI | PM-미확정결정-우선순위.md 2.4절 |
 | **UD-20** | 감사 로그 보존 기간·접근 정책 | 2 | ERD 8절 10 / 감사 시스템 | PM-미확정결정-우선순위.md 2.5절 |
 | **UD-22** | 신고 처리 주체·검토 기한 | 3 | 기획서 15절 / 공개·포크 | 미확정 |
@@ -178,27 +176,27 @@
 - 데이터 모델: UD-12(Claim 재사용), UD-13(이벤트 재생), UD-15(JSON Schema), UD-16(관계 유형), UD-18(Notion 중복)
 - 스케줄/기능: UD-21(Lint 스케줄), UD-23(알림 보존), UD-28(주요 주제)
 
-### 3.3 벤치마크·사용자 테스트 필요 — Phase 0 직접 4건 + Phase 4 별도 1건
+### 3.3 벤치마크 결정 완료 4건 + Phase 4 별도 1건
 
 | UD | 내용 | 대상 | 방법 | 우선순위 | 비고 |
 | --- | --- | --- | --- | --- | --- |
-| **UD-11** | Claim 세밀도 (중요 vs 모든 문장) | API·구조 설계 | Phase 0 Ingest 실행·품질/비용 비교 | 🔴 필수 | Phase 1 구현 조건 |
-| **UD-17** | pgvector 임베딩 모델·차원 | 검색 설계 | Phase 0 후보 비교 | 🟡 중요 | provider/model·비용 승인 필요 |
-| **UD-25** | 성능 목표 수치 (스캔·응답 시간) | 인프라 설계 | Phase 0 실행 시간·비용 측정 | 🟡 중요 | NFR 정량화 |
-| **UD-29** | Claim 동일성 판정 메커니즘 | Claim 버전 연속성 | Phase 0 Ingest 결과와 mapping 검증 | 🔴 필수 | mapping manifest와 직접 연결 |
+| **UD-11** | 중요한 주장만 생성 | API·구조 설계 | 100문서 7,501문장 대비 100 Claim | ✅ 확정 | 모순 자동 판정 차단 |
+| **UD-17** | MiniLM 384차원 | 검색 설계 | embedding 후보 2종 비교 | ✅ 확정 | MPNet은 품질 필요 시 재검토 |
+| **UD-25** | reference p95 scan 15초·generation 20초 | 인프라 설계 | 100문서 실측 | ✅ 확정 | Phase 1 integration 재검증 |
+| **UD-29** | AI 제안 + 사용자 승인 | Claim 버전 연속성 | mapping manifest·품질 결과 | ✅ 확정 | 자동 identity key 금지 |
 | **UD-26** | 개별 승인 건수 상한 (승인 피로) | UX 설계 | **Phase 4 사용자 테스트** | 🟢 별도 | Phase 0 직접 결정 대상 아님 |
 
-**인수와 결정의 경계:** CSV 구조·offline 채점 계약 인수는 위 UD를 확정하지 않는다. UD-11·17·25·29는 실제 Ingest 실행 결과로, UD-26은 Phase 4 사용자 피로 테스트로 확정 근거를 만든다.
+**경계:** UD-11·17·25·29는 확정했다. UD-26은 Phase 4 사용자 피로 테스트로 결정한다.
 
 ---
 
 ## 4. 우선순위 & 리더의 즉시 행동
 
-### 권고(미확정) — 다음 한 걸음 하나
+### 다음 한 걸음 하나
 
-**mapping manifest 계약 및 Ingest harness를 착수한다.** manifest에는 최소한 seed source/page/claim 식별자, gold `case_id`, Ingest 생성 `claim_id` 쌍, 버전과 생성 절차가 포함돼야 한다. 이 계약을 먼저 고정해야 A-4 Ingest-level AC-5가 재현 가능하고 UD-29 근거도 같은 경로에서 수집할 수 있다.
+**Phase 1 core scaffolding을 착수한다.** 인증·원본 보관·도서관·Import·변경 승인·검색 골격을 우선하며 모순 자동 판정·적용은 feature gate로 막는다.
 
-**의존 사슬:** mapping manifest → Ingest harness → Phase 0 실행·지표 수집 → UD-11·17·25·29 근거 → Phase 1 설계. AC-3 U-1과 Phase 4 UD-26은 이 사슬의 선행 조건이 아니라 별도 검증 분기다.
+**의존 사슬:** Phase 1 core → 실제 API integration benchmark → 더 강한 contradiction 모델 독립 gate. AC-3 U-1과 UD-26은 Phase 4 분기다.
 
 **사용자 결정·승인 분리:** harness의 로컬 계약·골격 작업과 별개로, 실제 외부 호출 전에 LLM provider/model, 유료 API 사용 범위, 토큰·비용 예산을 사용자에게 결정·승인받는다. 기존 사용자 UD-03·10·19·20·22도 정본 12절과 결정 요청서에서 계속 추적한다.
 
@@ -210,12 +208,13 @@
 
 - **기획서 ↔ 요구사항**: 2건 불일치 해소 (17절 알림·20절 작업 상태)
 - **요구사항 ↔ ERD·API**: 기술 결정 12건 반영으로 정합성 확보
-- **frontend 갭**: 4건 해소(#8·#9·#23·#24 확정) + 18건 미해소 (backend/리더 담당)
+- **frontend 갭**: 정본 2절 활성 16건(#1·#4·#5·#6·#7·#10·#11·#12·#13~#20) + 후속 4절 #22 잔존, #2·#3·#8·#9·#23·#24 해소. #21은 별도 항목 부재로 미집계.
+- **frontend 계약**: wire `MINOR|MAJOR`, UI `SAFE|DANGER`, 질문 상태 `QUESTION_REVIEW`로 정합화 완료(`docs/검증-프론트엔드-화면-API-갭.md` 2-D).
 
 ### 5.2 범위 & 우선순위 관리 ✅ 정책 준수
 
 - **MVP 범위**: 기획서 22절 제외 목록 엄격히 준수
-- **Phase 순서**: 기획서 23절 준수. **UD-26만 Phase 4로 이관** (UX 테스트 필요)
+- **Phase 순서**: Phase 0 기술 검증 실행 완료. Phase 1 core 착수 허용, 모순 자동 판정·적용 차단. **UD-26은 Phase 4** 사용자 테스트로 유지한다.
 - **제품 정합성**: 모든 역할이 기획서 기준으로 작업. 범위 이탈 없음
 
 ### 5.3 기술 결정 완료 ✅ 신속한 수렴
@@ -233,8 +232,8 @@
 | --- | --- | --- | --- |
 | **UD-26 Phase 4 분리** | 벤치마크 트랙 | 기술 성능이 아닌 승인 피로 사용자 테스트로 분리 | ✅ Phase 배치만 확정, 값은 미확정 |
 | **평가 데이터 실측** | 계획 가정 대체 | source 37·지식 페이지 143·총 180, 관계 84, 모순 26으로 인수 | ✅ offline 인수 |
-| **AC-5 재현 경계** | 실행 계약 | stable `case_id`만으로 Ingest `claim_id` 조인 불가 | ⛔ manifest 대기 |
-| **UD-29 UX 영향** | Phase 0 미확정 | Claim 동일성 판정으로 버전 변경 시 승인량 증가 가능성 → Ingest 실행 근거 필요 | 🟡 미확정 |
+| **AC-5 품질 경계** | 실행 계약 | mapping join은 통과했으나 accuracy 19.2%·FPR 100% | ⛔ 자동 판정 차단 |
+| **UD-29 UX 영향** | Phase 0 확정 | AI mapping 제안은 기존 변경 승인 흐름에서 사용자가 확정 | ✅ 확정 |
 | **Frontend "검토" 탭** | 3단계 시안 vs 2단계 계약 | 사용자 2단계 UI 선택 → frontend 구현 완료 & 리더 검증 통과 | ✅ 해소됨 |
 
 ### 5.5 근거 문서 & 상호 참조
@@ -251,15 +250,15 @@
 
 ---
 
-## 6. 현황 수치 (2026-08-10 기준)
+## 6. 현황 수치 (2026-08-11 기준)
 
 ### 6.1 코드 진행도
 
 | 항목 | 산출물 | 상태 |
 | --- | --- | --- |
-| **Frontend** | Next.js 프로젝트 초기화, 도서관 홈·변경 검토 화면 2종 | 목록 데이터 기반, 실 API 미연동. 변경 검토는 2단계 UI 확정(사용자 결정) & 리더 검증 통과 |
-| **Backend** | ERD v1.5, 평가 CSV·검증기·Phase 0 계획 | CSV 구조·offline 채점 계약 인수 완료, Ingest harness 미착수 |
-| **QA** | 테스트 시나리오 40개, 독립 검증기, 인수 보고서 | offline 재인수 완료, 제품 구현 테스트·AC-3 미실행 |
+| **Frontend** | Next.js 프로젝트 초기화, 도서관 홈·변경 검토 화면 2종 | 목업·실 API 미연동. `node_modules` 부재; Phase 0 계약 반영 완료 |
+| **Backend** | ERD, Phase 0 harness·결과, constitution schema | 기술 검증 실행 완료. Spring Boot API·Worker는 미구현 |
+| **QA** | 테스트 시나리오, 평가·benchmark 독립 검증기 | 구조 통과, 모순 품질 gate FAIL, AC-3은 Phase 4 |
 
 ### 6.2 기획서 수정·유보 상태
 
@@ -271,14 +270,14 @@
 | 기획서 22절 | 변경 없음 | 22절 | 사용자 승인 없는 MVP 제외 목록 변경 금지 | ✅ 유지 |
 | 기획서 23절 | 변경 없음 | 23절 | 사용자 승인 없는 Phase 정의 변경 금지 | ✅ 유지 |
 
-### 6.3 정합성 상태 (2026-08-10)
+### 6.3 정합성 상태 (2026-08-11)
 
 | 대상 | 상태 | 기준 | 갱신일 |
 | --- | --- | --- | --- |
 | **기획서 ↔ 요구사항** | 2건 불일치 해소, 정합성 확보 | `docs/ZeroWiki-요구사항-정의서.md` 12절 v1.1 | 2026-07-31 |
 | **요구사항 ↔ ERD** | 기술 9건 확정, v1.5 정합성 확인 | ERD 8절 + UD 정본 | 2026-07-31 |
 | **요구사항 ↔ API 명세** | 기술 4건 확정, 18절 미확정 정의 | API 명세 18절 + UD 정본 | 2026-07-31 |
-| **Frontend 갭** | 4건 해소(#8·#9·#23·#24) / 18건 미해소 | `docs/검증-프론트엔드-화면-API-갭.md` 2절 | 2026-07-31 ✅ |
+| **Frontend 갭** | 정본 2절 활성 16건 + 후속 #22 잔존; #2·#3·#8·#9·#23·#24 해소; #21 미집계 | `docs/검증-프론트엔드-화면-API-갭.md` 2절·4절 | 2026-08-11 |
 | **미확정 분류** | 사용자 5 + Phase 0 직접 4 + Phase 4 별도 1 | 요구사항 정의서 12절 | 2026-08-10 |
 
 ---
@@ -313,20 +312,20 @@
 
 | 역할 | STATE.md | WORKLOG.md | 갱신일 | 상태 |
 | --- | --- | --- | --- | --- |
-| **PM** | `.claude/team/pm/STATE.md` | `.claude/team/pm/WORKLOG.md` | 2026-07-31 | ✅ 최신 |
-| **Backend** | `.claude/team/backend/STATE.md` | `.claude/team/backend/WORKLOG.md` | 2026-07-31 | ✅ 최신 |
-| **Frontend** | `.claude/team/frontend/STATE.md` | `.claude/team/frontend/WORKLOG.md` | 2026-07-31 | ✅ 최신 |
-| **QA** | `.claude/team/qa/STATE.md` | (미생성) | 2026-07-27 | ⏳ 미갱신 |
+| **PM** | `.claude/team/pm/STATE.md` | `.claude/team/pm/WORKLOG.md` | 2026-08-11 | ✅ 최신 |
+| **Backend** | `.claude/team/backend/STATE.md` | `.claude/team/backend/WORKLOG.md` | 2026-08-10 | ✅ 최신 |
+| **Frontend** | `.claude/team/frontend/STATE.md` | `.claude/team/frontend/WORKLOG.md` | 2026-08-11 | ✅ 최신 |
+| **QA** | `.claude/team/qa/STATE.md` | `.claude/team/qa/WORKLOG.md` | 2026-08-10 | ✅ 최신 |
 
 ### 7.3 검증 & 결정 문서
 
 | 문서 | 소유 | 내용 | 갱신일 |
 | --- | --- | --- | --- |
 | `docs/검증-백엔드-ERD-API-정합성.md` | backend | ERD·API 교차 검증, 기술 9건 권고안 | 2026-07-30 ✅ |
-| `docs/검증-프론트엔드-화면-API-갭.md` | frontend | 갭 4건 해소(#8·#9·#23·#24) + 18건 미해소(backend/리더 담당) | 2026-07-31 ✅ |
-| `qa/phase0-evaluation-acceptance-report.md` | qa | CSV 구조·offline 채점 계약 인수, Ingest-level AC-5 차단 | 2026-08-10 ✅ |
-| `docs/PM-미확정결정-우선순위.md` | pm | 사용자 결정 5건 요청서 | 2026-07-30 ✅ |
-| `docs/PM-종합-현황.md` | pm | 종합 스냅샷 (본 문서) | 2026-07-31 ✅ |
+| `docs/검증-프론트엔드-화면-API-갭.md` | frontend | 정본 2절 활성 16건 + 후속 #22 잔존; #2·#3·#8·#9·#23·#24 해소; 2-C·2-D 추가 대조 | 2026-08-11 ✅ |
+| `qa/phase0-evaluation-acceptance-report.md` | qa | CSV·benchmark 계약 인수, 모순 품질 gate FAIL | 2026-08-11 ⚠️ |
+| `docs/PM-미확정결정-우선순위.md` | pm | 사용자 결정 5건 요청서 | 2026-08-11 ✅ |
+| `docs/PM-종합-현황.md` | pm | 종합 스냅샷 (본 문서) | 2026-08-11 ✅ |
 
 ### 7.4 벤치마크 & 계획
 
@@ -335,4 +334,4 @@
 | `.claude/team/backend/PHASE-0-벤치마크-계획.md` | backend | 실측 source 37·지식 페이지 143·총 인벤토리 180, 실행 차단 조건 | 2026-08-10 ✅ 갱신 |
 | `evaluation/relation-labels-template.csv` | backend | 연결 라벨 템플릿 (20~30건, 부정 예시 포함) | 2026-07-31 ✅ |
 | `evaluation/contradiction-labels-template.csv` | backend | 모순 라벨 템플릿 (10~15건, 분류 5종) | 2026-07-31 ✅ |
-| `docs/Phase-0-벤치마크-결과.md` | (미생성) | Phase 0 완료 후 산출 예정 | — |
+| `docs/Phase-0-벤치마크-결과.md` | leader | 100문서·관계·모순·token/시간·왕복·replay·UD 결정 | 2026-08-11 ✅ |

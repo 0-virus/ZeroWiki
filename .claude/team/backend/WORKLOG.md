@@ -1056,3 +1056,69 @@ contradiction-labels.csv: rows=26, case_ids=26, TRUE_CONFLICT=5, TIME_CHANGE=5, 
 현재 계약 파일에서 `source_page_id|target_page_id|연결 정확도(AC-3)|모순 오탐율`을 검색한 결과는 0건이다.
 
 QA의 기존 `qa/verify_phase0_evaluation.py`는 새 헤더 동기화 전이므로 종료 코드 1과 `KeyError: 'source_page_id'`를 반환했다. 이는 backend CSV 실패가 아니라 QA 재인수 시 검증기를 `*_page_slug`·`case_id` 계약으로 갱신해야 한다는 명시적 잔여 조건이다.
+
+---
+
+## 2026-08-11 — Phase 0 기술 실행 검증 및 조건부 제품 게이트 기록
+
+**날짜**
+
+- 2026-08-11 KST
+
+**무엇을 했는가**
+
+1. `backend/scripts/phase0_benchmark.py`를 다시 읽고 AST/self-check를 실행했다. CSV parser 들여쓰기 수정과 로컬 Ollama scan·synthesis 기본값 `qwen3:1.7b`를 확인했다. 단일 문서 smoke check 주석은 전체 benchmark와 혼동되지 않도록 정정했다.
+2. `C:\Users\halma\Desktop\NoteWiki`를 읽기 전용 입력으로 사용한 결과 산출물을 검증했다. 100문서 2단계 처리 100/100, 평균 input/output token 2,069.46/179.98, 평균 scan/process 9.567/12.989초, Markdown 100/100 hash 일치였다.
+3. `evaluation/results/` 계약을 검증했다. manifest 26 case, generated claim pair 26건, contradiction 출력 26건, benchmark 100행이 QA CSV headers·join·완료율 검사를 통과했다. relation 분모는 전체 84 중 누락 endpoint 11행을 제외한 73건으로 보존했다.
+4. 모순 품질은 conflict recall 1.000이지만 sampled FPR 1.000, 6-class accuracy 0.192였다. QA verifier의 실제 종료 결과는 `RESULT FAIL failures=1`이며, 이를 제품 게이트 조건부 FAIL로 기록했다. 모순 자동 판정·자동 적용은 차단하고 사용자 검토 제안만 허용한다.
+5. UD-13은 1,000 change set × 25 replay p95 0.0000697초로 1초 기준을 통과해 Phase 1 event replay를 유지한다. UD-15는 `backend/contracts/library-constitution.schema.json`의 required/properties 12필드 및 `additionalProperties=false`를 확인했다. UD-17은 73개 평가 가능 relation 비교 결과 MiniLM 384d를 기준선으로 기록했다. UD-29는 자동 Claim 동일성·자동 `claim_key` 매칭 금지로 기록했다.
+6. `docs/ZeroWiki-ERD-초안.md`에 UD-13/15/17/29 측정 판단과 revision 1.7을 반영하고, `risk_level` wire enum을 `MINOR|MAJOR`, UI 표시를 `SAFE|DANGER`, 질문 상태를 `QUESTION_REVIEW`/`ANSWER_QUESTIONS`로 유지했다. `docs/검증-백엔드-ERD-API-정합성.md`에 실행 증거·조건부 게이트·제한을 추가했다. STATE를 최신 스냅샷으로 갱신했다.
+7. 실행으로 생성된 `backend/scripts/__pycache__/phase0_benchmark.cpython-313.pyc`와 그 디렉터리를 backend 범위에서 정확히 정리했다. 외부 유료 API, 비밀 값, NoteWiki 원문·LLM 응답 본문은 저장하지 않았다.
+
+**산출물 경로**
+
+- `backend/scripts/phase0_benchmark.py`
+- `backend/contracts/library-constitution.schema.json`
+- `evaluation/results/phase0-benchmark.csv`
+- `evaluation/results/phase0-manifest.json`
+- `evaluation/results/phase0-generated-claims.csv`
+- `evaluation/results/phase0-contradictions.csv`
+- `evaluation/results/phase0-metrics.json`
+- `evaluation/results/phase0-embedding-comparison.json`
+- `docs/Phase-0-벤치마크-결과.md`
+- `docs/ZeroWiki-ERD-초안.md`
+- `docs/검증-백엔드-ERD-API-정합성.md`
+- `.claude/team/backend/STATE.md`
+
+**검증 명령과 실제 결과**
+
+```text
+python -B backend/scripts/phase0_benchmark.py --self-check
+→ self-check: PASS
+
+python -B evaluation/validate_evaluation.py
+→ 검증 완료: 오류 0건
+
+python -B -c "ast.parse(...phase0_benchmark.py...)"
+→ AST_PARSE=PASS
+
+python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
+→ 구조·완료율·AC-5 PASS; classification accuracy 0.192 < 0.800
+→ RESULT FAIL failures=1
+```
+
+**미해결 사항**
+
+- inventory 원본 17건과 해당 relation 11행은 누락 분모로 남아 있다.
+- generated claim ID는 평가 조인용이며 실제 원본 Claim identity mapping이 아니다. UD-29 자동 동일성 판정은 금지한다.
+- 모순 품질 게이트가 닫히기 전 Phase 1에서는 모순 자동 판정·자동 적용을 제공하지 않는다.
+- AC-3 U-1 사용자 평가와 citation/search integration p95는 미실행이다.
+- production provider/model 및 유료 비용 예산은 사용자 결정 전 미확정이며, `qwen3:4b`는 후속 최적화 트랙이다.
+
+---
+
+## 2026-08-11 — Windows root-relative 경로 HIGH 시정
+
+- QA가 `relative_path('/absolute.md')`가 Windows에서 즉시 거부되지 않는 HIGH finding을 보고했다.
+- 리더가 `Path.is_absolute()`뿐 아니라 `drive`·`root`를 trust boundary에서 거부하도록 수정했다.
+- `../escape.md`, `/absolute.md`, `C:\absolute.md` 회귀 self-check를 추가했고 harness self-check PASS를 확인했다.

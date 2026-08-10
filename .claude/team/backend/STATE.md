@@ -3,104 +3,102 @@
 > **덮어쓰기 스냅샷.** 매 턴 종료 전에 이 파일 전체를 최신 상태로 갱신한다(헌법 제4조 1항).
 > 시간순 기록은 `WORKLOG.md`에 append 한다.
 
-마지막 갱신: 2026-08-10 22:30 KST (QA 후속 평가 계약 정정 완료)
+마지막 갱신: 2026-08-11 03:57 KST (Phase 0 실행 검증 및 조건부 제품 게이트 기록)
 
 ## 현재 단계
 
-**Phase 0 평가 데이터 구조 인수 완료 · 채점 계약 QA 재인수 대기 · Ingest 프로토타입 실행 준비 단계.**
+**Phase 0 기술 실행 완료 · 제품 게이트 조건부 FAIL · Phase 1 코어 착수 허용.**
 
-- 인벤토리: source 37 / concept 127 / flow 16 / total 180
-- 지식 페이지: concept + flow = 143
-- 연결 라벨: 84행 (positive 76 / negative 8)
-- 모순 라벨: 26행 (실제 모순 23 / `NO_CONFLICT` 3)
-- AC-1("문서 100개 Import 완료율 95%") 정식 검증은 기존 결정대로 Phase 1에서 수행한다.
+100문서 2단계 로컬 benchmark와 결과 계약 검증은 완료했다. 모순 자동 판정 품질은 게이트를 통과하지 못했으므로 Phase 1에서는 사용자 검토 제안으로만 취급하고 자동 판정·자동 적용을 차단한다.
 
 ## 진행 중 작업
 
-없음. 평가 CSV의 구조·참조 무결성 검증과 계획 문서 정합화까지 완료했다.
+없음. Phase 1 backend 코어 구현은 리더의 작업 배분에 따라 착수할 수 있다.
 
 ## 완료 항목
 
-### Phase 0 평가 데이터 인수 검증 (2026-08-10)
+### Phase 0 실행·산출물
 
-1. `evaluation/pages-inventory.csv`
-   - 표준 CSV 파싱 성공, 정확한 헤더 확인
-   - `page_id` 180개와 `page_slug` 180개 각각 유일
-   - `page_type` 실측: source 37 / concept 127 / flow 16
-2. `evaluation/relation-labels.csv`
-   - 모든 endpoint slug가 인벤토리를 참조
-   - UD-16 7종, direction, confidence, positive/negative 규칙 충족
-   - 방향 무시 중복 페이지 쌍 없음
-3. `evaluation/contradiction-labels.csv`
-   - 5종 모순 분류와 `NO_CONFLICT`만 사용
-   - 빈 필드와 방향 무시 중복 주장 쌍 없음
-4. `evaluation/validate_evaluation.py`
-   - 외부 의존성 없이 위 검사를 반복 실행
-   - 최종 실행 결과: 오류 0건
-5. 문서 정합화
-   - `evaluation/README.md`의 concept 수를 실측 127로 정정하고 검증 명령 추가
-   - Phase 0 계획의 역사적 36 source / 152 page 가정을 37 source / 143 knowledge page / 180 inventory 실측으로 대체
-   - 사용자 라벨링 대기를 인수 완료로 전환
-   - Phase 0 직접 결정 대상은 UD-11·17·25·29의 4건으로 정정하고 UD-26은 Phase 4 별도 트랙으로 유지
+1. `backend/scripts/phase0_benchmark.py`
+   - 표준 라이브러리 우선 CSV/path safety/Markdown byte roundtrip/manifest/로컬 Ollama HTTP harness
+   - CSV parser 들여쓰기 오류 수정
+   - scan·synthesis 기본 모델을 모두 `qwen3:1.7b`로 고정(Phase 0 실행 기준선)
+   - 문서별 실패 격리·resume·token/time 집계
+2. 실제 결과 검증
+   - `evaluation/results/phase0-benchmark.csv`: 100행, `COMPLETED` 100
+   - 평균 input/output token: 2,069.46 / 179.98
+   - 평균 scan/process: 9.567초 / 12.989초; p95: 14.000초 / 19.319초
+   - Markdown 왕복: 100/100 hash 일치
+   - `phase0-manifest.json`·generated claims·contradictions: 26 case 조인과 QA CSV schema 통과
+3. 입력 분모 보존
+   - inventory 180, 존재 163, 누락 17
+   - relation 84 중 평가 가능 73 (positive 66 / negative 7), 누락 endpoint 영향 11행
+   - 누락 원본을 성공으로 세지 않고 별도 분모로 기록
+4. `backend/contracts/library-constitution.schema.json`
+   - JSON Schema v1, `required`/`properties` 12필드, `additionalProperties=false`
+5. UD 실행 판단
+   - UD-11: 중요한 주장만 생성하는 기준선(관측 문장 7,501 대비 100 important claims)
+   - UD-13: 1,000 change set × 25 replay, p95 0.0000697초 < 1초 → Phase 1 event replay, snapshot 보류
+   - UD-15: 12필드 JSON Schema v1 기록
+   - UD-17: 평가 가능 relation 73건 비교 결과 MiniLM 384d를 Phase 1 기본 후보로 선택
+   - UD-25: scan p95 15초·synthesis p95 20초 reference budget; citation/search 포함 integration 재검증 필요
+   - UD-29: 자동 Claim 동일성·자동 `claim_key` 매칭 금지; AI 제안 후 사용자 승인만 허용
+6. 계약 정합화
+   - ERD `risk_level` wire enum: `MINOR | MAJOR`; UI 표시: `SAFE | DANGER`
+   - 질문 대기 canonical 상태: `QUESTION_REVIEW`, `nextAction=ANSWER_QUESTIONS`
+   - ERD 및 backend 검증 문서에 Phase 0 측정·게이트 기록
 
-### QA 독립 인수 후속 정정 (2026-08-10)
+## 검증 결과
 
-1. relation endpoint 헤더를 실제 값에 맞춰 `source_page_slug`·`target_page_slug`로 변경하고 템플릿·계획·검증기를 동기화했다.
-2. contradiction 26행에 stable `case_id`(`CT-001`~`CT-026`)를 추가하고 유일성·형식 검사를 추가했다.
-3. 연결 지표를 pair recall·strict recall·bounded precision·sampled FPR로 분리했다. AC-3은 U-1 사용자 5~10명 유용성 평가이며 CSV로 대체할 수 없음을 명시했다.
-4. 모순 지표를 recall, sampled FPR, FDR로 분리하고 FDR 분모가 0이면 N/A로 처리하도록 고정했다.
-5. contradiction의 원본 page/claim 및 생성 `claim_id` 매핑이 없어 stable ID만으로는 Ingest-level AC-5를 재현할 수 없음을 blocker로 기록했다.
+```text
+python -B backend/scripts/phase0_benchmark.py --self-check
+→ self-check: PASS
+
+python -B evaluation/validate_evaluation.py
+→ 검증 완료: 오류 0건
+
+python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
+→ 구조·완료율·AC-5 PASS
+→ Phase 0 contradiction classification accuracy 0.192 < 0.800
+→ RESULT FAIL failures=1
+```
+
+제품 게이트는 **조건부 FAIL**이다. conflict recall 1.000만으로 통과시키지 않으며 sampled FPR 1.000 및 6-class accuracy 0.192를 근거로 모순 자동 판정을 차단한다.
 
 ## 다음 작업
 
-1. **실행 전 사용자 결정 확보**
-   - LLM provider/model 후보와 Phase 0 토큰·비용 예산
-   - 유료 API 사용 및 외부 호출 범위
-2. **Ingest 입력 방식 확정**
-   - 외부 NoteWiki 원본 본문을 저장소에 복제하지 않고 읽는 방식
-   - 민감정보·비밀 차단과 사용자 계정 내부 격리 확인
-3. **Phase 0 프로토타입 구현·실행**
-   - 1단계 scan / 2단계 synthesis / 메트릭 수집
-   - 평가 CSV로 연결 오프라인 지표와 모순 조건부 오프라인 지표 채점
-   - AC-3은 U-1 사용자 평가로 별도 검증
-   - AC-5는 원본 page/claim → 생성 `claim_id` mapping 확보 후 최종 검증
-   - UD-11·17·25·29 결정 근거 작성
-4. **후속 트랙**
-   - UD-26은 Phase 4에서 5~10명 사용자 승인 피로 테스트로 측정
-   - AC-1 정식 검증은 Phase 1의 문서 100개 실행으로 측정
+1. Phase 1 core: 인증·원본·도서관·Import·변경 승인·검색 골격을 구현하되 모순 결과는 사용자 검토 제안으로만 저장한다.
+2. 원본 17건을 별도 보충하거나 제외 사유를 유지하고, relation/모순 평가 분모를 다시 계산한다.
+3. 원본 Claim과 생성 Claim의 실제 대응 manifest가 마련되기 전까지 UD-29 자동 동일성 판정과 AC-5 production mapping을 선언하지 않는다.
+4. UD-25 citation·검색을 포함한 integration p95를 재측정한다.
+5. production provider/model·유료 호출 범위는 사용자 결정 전 확정하지 않는다. `qwen3:4b`는 검증 지연으로 후속 최적화 트랙이다.
 
 ## 차단 요인
 
-### Phase 0 실행 차단
-
-- **사용자 승인 필요:** LLM provider/model 선택, 유료 API 사용 범위, 토큰·비용 예산
-- **입력 경로 확인 필요:** 외부 원본을 복제하지 않는 Ingest 방식과 민감정보 검사 절차
-- **AC-5 재현 blocker:** 평가 case의 원본 page/claim 및 Ingest 생성 `claim_id` 대응 manifest 부재
-- **AC-3 실행 blocker:** U-1 검증 사용자 5~10명과 실제 제안 관계 유용성 평가 미실행
-
-### 미확정 계약 정본 (`docs/ZeroWiki-요구사항-정의서.md` 12절)
-
-- 사용자 결정: UD-03, UD-10, UD-19, UD-20, UD-22
-- Phase 0 벤치마크: UD-11, UD-17, UD-25, UD-29
-- Phase 4 별도 트랙: UD-26
+- 제품 게이트: 모순 6-class accuracy 0.192로 0.800 기준 미달, 자동 판정·자동 적용 차단.
+- 입력: NoteWiki inventory 파일 17건 부재, 관계 라벨 11행은 평가 불가.
+- 매핑: 현재 generated claim ID는 평가 조인용이며 실제 원본 page/claim 대응을 증명하지 않는다.
+- AC-3 사용자 유용성(U-1 5~10명)과 production 검색/citation integration은 미실행.
+- production LLM provider/model 및 비용 예산은 미확정. Phase 0은 로컬 Ollama, 유료 비용 `$0`만 사용했다.
 
 ## 소유 산출물
 
 | 경로 | 상태 |
 | --- | --- |
-| `.claude/team/backend/PHASE-0-벤치마크-계획.md` | 2026-08-10 인수 실측 반영. 평가 데이터 완료, 실행 전 blocker 명시 |
-| `evaluation/pages-inventory.csv` | 사용자 인수 데이터. 180행 검증 완료, 라벨 판단·행 미변경 |
-| `evaluation/relation-labels.csv` | 84행. endpoint slug 헤더 정정, 라벨 판단·행 내용 유지 |
-| `evaluation/contradiction-labels.csv` | 26행. stable case_id 추가, 주장·분류·판단 내용 유지 |
-| `evaluation/validate_evaluation.py` | 표준 라이브러리 기반 반복 검증 스크립트 |
-| `evaluation/README.md` | 인수 실측·채점 방법·검증 명령 정합화 |
-| `evaluation/relation-labels-template.csv` | `*_page_slug` 헤더와 slug 예시로 동기화 |
-| `evaluation/contradiction-labels-template.csv` | stable `case_id` 열·예시로 동기화 |
-| `docs/ZeroWiki-ERD-초안.md` | v1.5. 이번 작업 변경 없음 |
-| `docs/검증-백엔드-ERD-API-정합성.md` | 이번 작업 변경 없음 |
+| `backend/scripts/phase0_benchmark.py` | Phase 0 실행 harness 및 self-check PASS |
+| `backend/contracts/library-constitution.schema.json` | 12필드 JSON Schema v1 검증 PASS |
+| `evaluation/results/phase0-benchmark.csv` | 100/100 완료, QA 구조 PASS |
+| `evaluation/results/phase0-manifest.json` | 26 case, schema·generated join PASS |
+| `evaluation/results/phase0-generated-claims.csv` | 26 case generated pair |
+| `evaluation/results/phase0-contradictions.csv` | 26행 출력, QA join PASS; 품질 게이트 FAIL |
+| `evaluation/results/phase0-metrics.json` | token/time, relation 제한, roundtrip, replay, 모순 지표 |
+| `evaluation/results/phase0-embedding-comparison.json` | UD-17 MiniLM/MPNet 비교 및 73 relation 분모 |
+| `docs/Phase-0-벤치마크-결과.md` | 기술 실행 완료·제품 게이트 조건부 FAIL |
+| `docs/ZeroWiki-ERD-초안.md` | UD-13/15/17/29 및 enum/canonical status 반영 |
+| `docs/검증-백엔드-ERD-API-정합성.md` | Phase 0 검증 결과·게이트·계약 제한 반영 |
 
 ## 참고
 
-- CSV 라벨의 판단 내용과 행은 이번 인수 검증에서 수정하지 않았다.
-- 외부 NoteWiki 원본 내용이나 비밀을 evaluation에 복제하지 않았다.
-- 관계 CSV는 `source_page_slug`·`target_page_slug`로 `pages-inventory.csv.page_slug`를 참조한다.
+- `WORKLOG.md`는 시간순 append-only 기록이며 과거 판단을 삭제하지 않는다.
+- `__pycache__`/`.pyc`는 실행 후 backend 범위에서 정리한다.
+- 외부 NoteWiki 원문과 비밀·LLM 응답 본문은 저장소에 복제하지 않는다.

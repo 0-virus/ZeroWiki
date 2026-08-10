@@ -1,6 +1,7 @@
 # 프론트엔드 화면·API 갭 검증
 
 작성일: 2026-07-27  
+최종 갱신: 2026-08-11
 상태: 프론트엔드 관점 교차 검증  
 기준 문서:
 - `ZeroWiki-MVP-서비스-기획서.md`
@@ -27,7 +28,7 @@
 | AI 사서 입력 | `POST /libraries/{libraryId}/conversations` | (입력만) | - | 대화 생성 |
 | 전체 검색 | `GET /libraries/{libraryId}/search?q=...` | `resultType`, `title`, `snippet`, `pageId`, `sourceId` | 1 | 검색 결과 (페이지, 원본, 주장) |
 | 최근 Ingest 알림 | `GET /libraries/{libraryId}/activities?type=INGEST` | `id`, `type`, `title`, `metadata.documentCount` | 1 | |
-| 위험 변경 | `GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=HIGH` | `id`, `title`, `riskLevel`, `counts.pendingItems` | 1 | |
+| 위험 변경 | `GET /libraries/{libraryId}/change-sets?status=READY_FOR_REVIEW&riskLevel=MAJOR` | `id`, `title`, `riskLevel`, `counts.minor`, `counts.major` | 1 | |
 | 정기 Lint 알림 | `GET /notifications?type=LINT_COMPLETED` | `id`, `title`, `resourceId`, `createdAt` | 1 | |
 | 포크 업데이트 알림 | `GET /libraries/{libraryId}/forks?hasUpdates=true` | `id`, `title`, `sourcePageTitle` | 1 | |
 
@@ -363,7 +364,7 @@
   - Ingest (진행도 있음): **2초**
   - AI 답변 (생성 중): **1초**
   - Lint·Export: **5초**
-- 최대 생성 시간은 UD-25(벤치마크)에 종속
+- reference local budget은 scan p95 15초, synthesis/answer-generation p95 20초로 기록됐다. 검색·citation을 포함한 answer endpoint는 Phase 1 integration에서 재검증한다.
 - 결정 주체: 기술(리더), 근거: frontend 권고(2026-07-29)
 
 **구현**:
@@ -578,6 +579,48 @@
 
 **근거**: 요구사항 정의서 12.1절 UD-02 (확정, 2026-07-30), API 명세 2.1절 (인증 정책)
 
+### 2-C. Phase 0 벤치마크 계약의 frontend 영향
+
+Phase 0 기술 검증 실행은 완료됐지만 제품 게이트는 조건부 FAIL이다. 인증·원본 보관·도서관·Import·변경 승인·검색 골격은 Phase 1 착수가 허용됐고, 아래 결정은 frontend가 소비할 기준이다.
+
+| UD | 현재 정본 문안 | frontend 영향 | 지금 가능한 범위 |
+| --- | --- | --- | --- |
+| `UD-11` | Phase 1은 중요한 주장만 생성. 100문서에서 관측 문장 7,501개 대비 중요 주장 100개 (`docs/Phase-0-벤치마크-결과.md` 7절) | 주장·근거 목록 길이, 변경 검토 항목 수, 승인 피로가 줄어듦 | 서버가 주는 Claim 배열·페이지네이션을 그대로 렌더링. 항목 수·밀도 하드코딩 금지 |
+| `UD-17` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384차원 (`docs/Phase-0-벤치마크-결과.md` 4·7절) | 검색 점수 분포·지연·결과 품질에 영향. 관측 threshold는 negative 7건뿐이라 production threshold로 고정하지 않음 | 검색 결과의 `resultType`, `title`, `snippet`, `score`, `origin`만 소비. 모델명·차원·고정 threshold UI 노출 금지 |
+| `UD-25` | reference local budget: scan p95 15초, synthesis/answer-generation p95 20초. 검색·citation 포함 answer endpoint는 Phase 1 integration에서 재검증 (`docs/Phase-0-벤치마크-결과.md` 3·7절) | 진행률·timeout·응답 대기 안내에 영향. production SLA로 일반화할 수 없음 | `Retry-After` 우선, 작업별 기본 polling 사용(API 명세 2.7절·18절). 고정 ETA·production SLA 하드코딩 금지 |
+| `UD-29` | 자동 identity key를 만들지 않음. AI가 동일성 mapping을 제안하고 사용자가 기존 변경 승인 흐름에서 확정 (`docs/Phase-0-벤치마크-결과.md` 7절) | Claim 상태 연속성·diff 행 수·검토량에 영향 | mapping 제안·diff·사용자 확정 상태를 서버 결과로 표시. 클라이언트에서 자동 Claim matching·무승인 연결 금지 |
+
+모순 자동 판정·자동 적용은 Phase 0 품질 게이트를 통과하지 못했으므로 frontend UI에서 제공하지 않는다. 최종 모순 분류 정확도는 19.2%, sampled FPR은 100%였고, 독립 평가에서 accuracy 80% 이상을 통과할 때까지 사용자 검토 제안으로만 취급한다(`docs/Phase-0-벤치마크-결과.md` 1·5절). `qwen3:1.7b`는 기준선일 뿐 production provider 확정이 아니다.
+
+### 2-D. 리더 확정 계약 및 API 정본 반영 완료
+
+#### 위험도 enum
+
+**현재 API 문안** (`docs/ZeroWiki-API-명세-초안.md` 8.1절):
+
+- 목록 필터: `riskLevel=MAJOR`
+- 변경 세트 응답: `riskLevel: "MAJOR"`, `counts: { total, minor, major }`
+- 일반 일괄 승인 요청: `selection.riskLevels: ["MINOR"]`
+
+**현재 frontend 문안** (`frontend/src/types/changes.ts`):
+
+- `ChangeItem.riskLevel`: `MINOR | MAJOR`
+- `ChangeSet.riskLevel`: `MINOR | MAJOR`
+- `ChangeSet.counts`: `total, safe, danger`
+- UI 필터: `ALL | SAFE | DANGER`
+
+**리더 결정 및 API 정본 반영 완료:** Phase 1 wire contract는 `MINOR | MAJOR`이고, UI 표시 label은 `SAFE | DANGER`로 유지한다. API 8.1절의 필터·응답·일반 일괄 승인 예시도 이 wire enum에 맞춰 반영됐다.
+
+**근거:** 기획서 23절 Phase 1은 일반 변경 일괄 승인·위험 변경 개별 승인을 요구하고, 현재 API 8.1절이 `MINOR | MAJOR` wire 예시를 제공한다. frontend는 wire 값을 수신하고 UI에서는 `SAFE | DANGER` label로 표시한다.
+
+#### Ingest 질문 대기 상태명
+
+**현재 문안:** API 명세 2.7·6.1절과 ERD 6절은 `QUESTION_REVIEW`를 사용하며, frontend 검증 흐름도 같은 상태명을 사용한다.
+
+**리더 결정 및 API 정본 반영 완료:** 요구사항 정의서 FR-ING-20 및 ERD/API 2.7·6.1절의 `QUESTION_REVIEW`를 canonical 상태로 사용한다. `nextAction`은 `ANSWER_QUESTIONS`로 유지한다.
+
+**근거:** `docs/ZeroWiki-요구사항-정의서.md` 5.5절 FR-ING-20, `docs/ZeroWiki-ERD-초안.md` 6절, `docs/ZeroWiki-API-명세-초안.md` 2.7절·6.1절. API 정본과 frontend 흐름의 상태 문자열이 일치한다.
+
 ---
 
 ## 3. 비동기 작업 UX 흐름 검증
@@ -593,7 +636,7 @@ QUEUED → SCANNING
   → PLAN_REVIEW (nextAction: APPROVE_PLAN) 
     [사용자 승인]
   → PROCESSING 
-    → QUESTION_WAITING (nextAction: ANSWER_QUESTIONS) 
+    → QUESTION_REVIEW (nextAction: ANSWER_QUESTIONS)
       [사용자 답변]
     → PROCESSING 
   → CHANGE_REVIEW (nextAction: REVIEW_CHANGES) 
@@ -610,7 +653,7 @@ QUEUED → SCANNING
 | PLAN_REVIEW | APPROVE_PLAN | 계획 검토 화면으로 이동 필요 | Ingest 상세(`GET .../ingest-jobs/{jobId}`)에서 `plan` 필드 포함되는가? → YES (API 명세 6.1절) |
 | PLAN_REVIEW + [승인] | - | 승인 후 PROCESSING으로 상태 변이 기다리는 동안 UI 피드백 | `202 Accepted` 응답만 주고 비동기 상태 변이 → polling 필요 |
 | PROCESSING | null | 진행도 표시, "문서별 처리 중..." | 진행도 `progress.completed / progress.total` 포함? → YES |
-| QUESTION_WAITING | ANSWER_QUESTIONS | 질문 목록 화면으로 이동 필요 | `GET .../ingest-jobs/{jobId}/questions` → YES |
+| QUESTION_REVIEW | ANSWER_QUESTIONS | 질문 목록 화면으로 이동 필요 | `GET .../ingest-jobs/{jobId}/questions` → YES |
 | [답변 제출] | - | 답변 후 PROCESSING 재개 대기 | polling으로 상태 감시 |
 | CHANGE_REVIEW | REVIEW_CHANGES | 변경 검토 화면으로 이동 필요 | `changeSetId` 포함? API 명세 6.1절: "처리가 끝나면... changeSetId를 반환" → 추론: `change_set_id` 응답 필드 필수 확인 (갭 #13) |
 | COMPLETED | - | "완료" 표시, 도서관 버전 발행됨 | 최종 상태에서 `libraryVersion` 정보 필요? (갭 #14) |
@@ -631,7 +674,7 @@ QUEUED → SCANNING
 - 간격 10초: PROCESSING 단계에서 진행도 표시가 둔함 → UX 저하
 - **권고**: Ingest의 단계별로 다른 간격 사용
   - SCANNING, PROCESSING (진행도 있음): 2~3초
-  - PLAN_REVIEW, QUESTION_WAITING (사용자 입력 대기): 1초 (또는 즉시 재조회)
+  - PLAN_REVIEW, QUESTION_REVIEW (사용자 입력 대기): 1초 (또는 즉시 재조회)
 
 ---
 

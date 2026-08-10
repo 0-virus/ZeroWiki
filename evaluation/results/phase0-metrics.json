@@ -1,0 +1,47 @@
+{
+  "run_id": "phase0-20260811-qwen3-1_7b-r2",
+  "model": {
+    "scan": "qwen3:1.7b",
+    "synthesis": "qwen3:1.7b",
+    "provider": "ollama-local"
+  },
+  "documents": {
+    "attempted": 100,
+    "completed": 100,
+    "completion_rate": 1.0,
+    "mean_input_tokens": 2069.46,
+    "mean_output_tokens": 179.98,
+    "mean_scan_seconds": 9.56743576,
+    "p95_scan_seconds": 14.000132,
+    "mean_process_seconds": 12.98856556,
+    "p95_process_seconds": 19.318941,
+    "observed_sentence_count": 7501,
+    "important_claim_count": 100
+  },
+  "contradictions": {
+    "cases": 26,
+    "classification_accuracy": 0.19230769230769232,
+    "conflict_recall": 1.0,
+    "sampled_false_positive_rate": 1.0
+  },
+  "markdown_roundtrip": {
+    "files_checked": 100,
+    "mismatches": [],
+    "passed": true
+  },
+  "event_replay": {
+    "change_sets": 1000,
+    "iterations": 25,
+    "median_seconds": 6.19000056758523e-05,
+    "p95_seconds": 6.969994865357876e-05,
+    "checksum": "c17d454a54c51b91f63fa6d48ef0375b0d518e73dc1d0079c34beeb8dc508d4e",
+    "snapshot_trigger_seconds": 1.0,
+    "snapshot_required": false
+  },
+  "monetary_api_cost_usd": 0,
+  "limitations": [
+    "로컬 Ollama 기준이며 전력·하드웨어 감가 비용은 제외했다.",
+    "관계 라벨의 누락 endpoint 11건은 별도 embedding 비교에서 제외했다.",
+    "generated claim ID는 평가 조인용이며 UD-29 자동 동일성 판정 구현이 아니다."
+  ]
+}

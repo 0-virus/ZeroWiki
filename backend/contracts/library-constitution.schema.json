@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zerowiki.local/schemas/library-constitution-v1.json",
+  "title": "ZeroWiki Library Constitution v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "purpose",
+    "audience",
+    "knowledgeLevel",
+    "sourcePolicy",
+    "taxonomyPolicy",
+    "linkPolicy",
+    "stalenessPolicy",
+    "riskPolicy",
+    "privacyPolicy",
+    "rejectedPatterns",
+    "naturalLanguageRules",
+    "changeReason"
+  ],
+  "properties": {
+    "purpose": { "type": "string", "minLength": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "knowledgeLevel": {
+      "type": "string",
+      "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    },
+    "sourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "minimumEvidenceForVerifiedFact"],
+      "properties": {
+        "priority": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "minimumEvidenceForVerifiedFact": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "taxonomyPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preferredPageTypes"],
+      "properties": {
+        "preferredPageTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["CONCEPT", "FLOW", "SYNTHESIS", "QUESTION", "SOURCE"]
+          }
+        }
+      }
+    },
+    "linkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumConfidence", "avoidWeakSimilarity"],
+      "properties": {
+        "minimumConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "avoidWeakSimilarity": { "type": "boolean" }
+      }
+    },
+    "stalenessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultReviewDays"],
+      "properties": {
+        "defaultReviewDays": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "riskPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factUpdate", "deleteContent"],
+      "properties": {
+        "factUpdate": { "type": "string", "enum": ["MINOR", "MAJOR"] },
+        "deleteContent": { "type": "string", "enum": ["MINOR", "MAJOR"] }
+      }
+    },
+    "privacyPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockSecrets"],
+      "properties": { "blockSecrets": { "type": "boolean" } }
+    },
+    "rejectedPatterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "reason"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "naturalLanguageRules": { "type": "string", "minLength": 1 },
+    "changeReason": { "type": "string", "minLength": 1 }
+  }
+}

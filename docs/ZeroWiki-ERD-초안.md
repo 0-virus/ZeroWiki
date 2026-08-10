@@ -472,7 +472,7 @@ erDiagram
 | `origin_id` | uuid | 원인이 된 작업/메시지 식별자 |
 | `title` | text | 변경 제목 |
 | `summary` | text | 변경 이유와 영향 |
-| `risk_level` | varchar(20) | `SAFE`, `REVIEW`, `HIGH` |
+| `risk_level` | varchar(20) | wire enum `MINOR`, `MAJOR`; UI 표시 `SAFE`, `DANGER` |
 | `status` | varchar(30) | `DRAFT`, `READY_FOR_REVIEW`, `PARTIALLY_APPROVED`, `APPROVED`, `REJECTED`, `APPLIED`, `SUPERSEDED` |
 | `revision` | bigint | 낙관적 잠금용 버전. 검토·적용 시 증가 (API 2.6절, 검증 3.1절) |
 | `base_library_version_id` | uuid | 변경 계산 기준 버전 |
@@ -491,7 +491,7 @@ erDiagram
 | `target_type` | varchar(30) | `PAGE`, `CLAIM`, `EVIDENCE`, `RELATION`, `CONTRADICTION`, `CONSTITUTION` |
 | `target_id` | uuid | 새 객체면 NULL |
 | `operation` | varchar(20) | `CREATE`, `UPDATE`, `DELETE`, `MERGE`, `SPLIT` |
-| `risk_level` | varchar(20) | `SAFE`, `REVIEW`, `HIGH` |
+| `risk_level` | varchar(20) | wire enum `MINOR`, `MAJOR`; UI 표시 `SAFE`, `DANGER` |
 | `reason` | text | 제안 이유 |
 | `before_snapshot` | jsonb | 변경 전 |
 | `after_snapshot` | jsonb | 변경 후 |
@@ -836,19 +836,19 @@ FK는 기본적으로 `RESTRICT`를 사용한다. 계정 완전 삭제 작업에
 
 | # | 항목 | UD 참조 | 출처 | 결정 주체 |
 | --- | --- | --- | --- | --- |
-| 1 | Claim을 모든 문장에서 생성할지, 중요한 주장에만 생성할지 | UD-11 | FR-KNW-11, 기획서 25절 4번 | 벤치마크 |
+| 1 | Claim을 모든 문장에서 생성할지, 중요한 주장에만 생성할지 | **UD-11(Phase 0 기준선)** | FR-KNW-11, 기획서 25절 4번 | **조건부 결정 (2026-08-11): 중요한 주장만 생성. 100문서에서 관측 문장 7,501개 대비 100개.** |
 | 2 | 페이지 버전마다 Claim을 복제할지, 변경되지 않은 Claim을 재사용할지 | **UD-12(확정)** | FR-CHG-09 | **확정 (2026-07-30, 기술): 재사용. claims에서 page_version_id 제거, claim_statuses 신설. UD-29 정해질 때까지 자동 매칭 미구현** |
-| 3 | 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지 | **UD-13(확정)** | NFR-DAT-06 | **확정 (2026-07-30, 기술): 초기 이벤트 재생. Phase 0에서 도서관당 500+ change_sets 기준 재생 시간 1초 초과 시 Phase 2 스냅샷 필수** |
+| 3 | 도서관 버전의 과거 상태 조회를 이벤트 재생으로 처리할지 스냅샷을 둘지 | **UD-13(확정)** | NFR-DAT-06 | **확정 (2026-08-11, Phase 0): 1,000 change_sets × 25회 replay p95 0.0000697초로 1초 미만. 초기 이벤트 재생, Phase 2 snapshot 보류.** |
 | 4 | 원본 발췌문 저장이 저작권·개인정보 정책상 허용되는 최대 범위 | **UD-14(확정)** | NFR-DAT-07, FR-PUB-02 | **확정 (2026-07-30, 사용자): 400자** |
-| 5 | 구조화 헌법의 JSON Schema | **UD-15(확정)** | FR-LIB-11, 요구사항 정의서 5.2절 | **확정 (2026-07-30, 기술)** |
+| 5 | 구조화 헌법의 JSON Schema | **UD-15(확정)** | FR-LIB-11, 요구사항 정의서 5.2절 | **확정 (2026-08-11, Phase 0): `backend/contracts/library-constitution.schema.json` v1, required/properties 12필드, 추가 필드 금지.** |
 | 6 | 관계 유형의 초기 고정 목록과 사용자 정의 허용 시점 | **UD-16(확정)** | FR-KNW-12 | **확정 (2026-07-30, 기술): 고정 7종 CHECK 제약. Phase 2에서 사용자 정의 추가** |
-| 7 | pgvector 임베딩 모델과 차원 | UD-17 | FR-SCH-06, 검증 4.3절 | 벤치마크 |
+| 7 | pgvector 임베딩 모델과 차원 | **UD-17(Phase 0 기준선)** | FR-SCH-06, 검증 4.3절 | **조건부 결정 (2026-08-11): `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384d. 평가 가능 relation 73건에서 MPNet 대비 비용·차원 trade-off로 선택; 독립 검색 실패 시 재검토.** |
 | 8 | Notion Import의 외부 ID 및 재가져오기 중복 판정 정책 | **UD-18(확정)** | FR-INP-03 | **확정 (2026-07-30, 기술): 인덱스 (owner_id, content_hash, notion_id). 사용자 내부만 판정** |
 | 9 | 처리량의 사용자 표시 단위와 실제 토큰 원장의 환산 규칙 | UD-19 | FR-BIL-07 | 사용자 |
 | 10 | 감사 로그의 보존 기간과 관리자 접근 정책 | UD-20 | NFR-SEC-10 | 사용자 |
 | 11 | 월간 Lint 실행 시각·타임존·대상 선정 | **UD-21(확정)** | FR-LNT-02 | **확정 (2026-07-30, 기술): 가입일 기준 분산. 29·30·31일 가입자는 말일로 당김** |
 | 12 | 알림 보존 기간·읽음 처리 정책 | **UD-23(확정)** | FR-NTF-04 | **확정 (2026-07-30, 기술): 차등 보존 30/14/7일. 삭제 유예는 유예 기간까지. archived_at 필드 추가** |
-| 13 | Claim 버전별 상태 대응 규칙 (claim_key 생성) | **UD-29(신규)** | FR-CHG-09 | **벤치마크**: 의미 정규화 불가(해시의 한계). AI 제안 + 사용자 승인으로 처리 추천 |
+| 13 | Claim 버전별 상태 대응 규칙 (claim_key 생성) | **UD-29(Phase 0 제한)** | FR-CHG-09 | **확정 제한 (2026-08-11): 자동 동일성·자동 `claim_key` 매칭 금지. AI 제안만 변경 승인 흐름에 넣고 사용자가 확정.** |
 
 ---
 
@@ -862,3 +862,5 @@ FK는 기본적으로 `RESTRICT`를 사용한다. 계정 완전 삭제 작업에
 | 1.3 | 2026-07-30 | 기술 결정 6건 확정 반영(UD-08·09·13·15·16·18). UD-16 page_relations.relation_type 7종 CHECK 제약으로 확정. UD-18 source_versions 복합 인덱스 추가: (owner_id, content_hash, source_metadata->>'notion_id') — Notion 중복 판정. UD-13 Phase 0 성능 측정 조건 명시. 3건(UD-12·21·23) 보류 | backend |
 | 1.4 | 2026-07-30 | **대규모 구조 변경:** UD-12·21·23 확정, UD-29 신설. 1) `claims` 재설계(재사용 구조): page_version_id FK 제거, knowledge_status 등 이동. 2) `claim_statuses` 신규: 버전별 Claim 상태(UNIQUE claim_id·page_version_id). 3) `notifications`: archived_at 추가(UD-23), 인덱스(user_id, archived_at). 4) UD-21 가입일 분산 + 월말 처리. 5) UD-29(신규, 벤치마크): claim_key는 의미 정규화 불가, AI 제안+사용자 승인 권고. 주의: 구조 변경으로 정합성 규칙 재검토 필요(특히 contradictions·evidences) | backend |
 | 1.5 | 2026-07-30 | **테넌시 앵커 추가:** `claims.page_id` FK 신규(NOT NULL). 1) Claim 소유자 접근을 4홉(claim_statuses→page_versions→pages→libraries)에서 1홉(claims.page_id→pages.library_id)으로 단축. 2) 다른 도서관의 버전에서 Claim을 참조하는 것을 구조로 차단 (정보 노출 방지). 3) 정합성 규칙 8·9 보강: evidences·contradictions의 Claim이 현재 도서관에 속함을 명시. 4) 규칙 10 신규: claim_statuses.page_version_id는 claims.page_id와 동일 페이지의 버전이어야 함. 5) claim_statuses 인덱스 `(claim_id, page_version_id)` 추가 — 버전 범위 검증 최적화 | backend |
+| 1.6 | 2026-08-11 | **변경 위험 wire enum 정정:** `change_sets.risk_level`·`change_items.risk_level`을 `MINOR`·`MAJOR`로 통일하고 UI 표시 `SAFE`·`DANGER`와 분리. 질문 대기 상태는 `QUESTION_REVIEW`를 canonical로 유지 | backend |
+| 1.7 | 2026-08-11 | **Phase 0 실행 결과 반영:** UD-13 이벤트 replay 유지(1,000 change sets p95 1초 미만), UD-15 12필드 JSON Schema v1, UD-17 MiniLM 384d 기준선, UD-29 자동 Claim 동일성 판정 금지. 모순 6-class accuracy 0.192로 제품 게이트는 조건부 FAIL이며 Phase 1 코어만 허용 | backend |
