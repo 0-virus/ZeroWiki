@@ -101,6 +101,64 @@ manifest, generated claim CSV, benchmark output, contradiction output 경로를 
 오탐은 sampled FPR로 반드시 출력하며, recall만 충족하고 정확도·FPR이 붕괴한 실행은
 Phase 0 품질 gate를 통과시키지 않는다. 산출물 부재는 FAIL이 아니라 BLOCKED로 기록한다.
 
+#### A-4 dense holdout contract (opt-in)
+
+`qa/verify_phase0_benchmark.py --dense-predictions <csv> --gold-labels <csv>`
+is the dense, one-row-per-case path. The prediction CSV header is exactly:
+`run_id,prompt_variant,case_id,status,prediction,confidence,expected_input_tokens,expected_output_tokens,expected_cost_usd,expected_latency_seconds,input_tokens,output_tokens,actual_cost_usd,latency_seconds`.
+The optional holdout gold header is exactly
+`case_id,classification,판단_이유`; the existing `--labels` full gold header
+remains supported for manifest and sparse validation.
+Every gold `case_id` must occur exactly once with one shared `run_id` and one
+of `COMPLETED` or `FAILED`. A `COMPLETED` row requires one of the six labels
+(`TRUE_CONFLICT`, `TIME_CHANGE`, `CONDITION_DIFF`, `VIEWPOINT_DIFF`,
+`POSSIBLE_CONFLICT`, `NO_CONFLICT`) plus finite nonnegative confidence,
+token, cost, and latency fields. A `FAILED` row must leave those prediction
+and accounting fields blank; it is unscored and must never be treated as
+`NO_CONFLICT`.
+
+The dense output reports completion, conflict recall, sampled FPR, six-class
+accuracy, detected-conflict subtype accuracy, joint subtype accuracy, a 6x6
+confusion matrix, macro-F1, and the Wilson 95% upper bound for FPR. The
+holdout gate (when `--holdout-labels`/`--gold-labels` is supplied) is completion
+100%, recall >= 0.80, accuracy >= 0.80, sampled FPR <= 0.10, and Wilson upper
+bound <= 0.20. Dense validation against the existing `--labels` development
+set applies completion/recall/accuracy/sampled-FPR gates and reports Wilson
+without enforcing it. The existing sparse
+`--contradiction-output` path remains unchanged and does not opt into this
+dense gate.
+
+The current 26-case development gold set has only three `NO_CONFLICT` negatives; even
+0/3 false positives has a Wilson 95% upper bound of about 0.561. Therefore
+the Wilson gate is intentionally report-only for this development profile. A
+larger negative holdout is required before applying the Wilson hard gate; QA
+does not waive this small-sample limitation implicitly.
+
+#### A-4 dense dev 재검증 결과 (2026-08-11)
+
+기존 26-case `--labels` profile로 두 rubric dense 산출물을 재검증했다.
+두 실행 모두 `completion=26/26`, `sampled_fpr=0.000`,
+`wilson95_fpr_upper=0.561`(관측치 only)이었으나 recall·6-class accuracy
+gate를 충족하지 못해 validator exit 1을 반환했다.
+
+| variant | recall | accuracy | detected subtype | joint subtype | macro-F1 | 판정 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| rubric-v2 r2 | 0.739 | 0.615 | 0.765 | 0.565 | 0.553 | FAIL |
+| rubric-context-v2 r1 | 0.783 | 0.692 | 0.833 | 0.652 | 0.683 | FAIL |
+
+holdout review `qa/contradiction-holdout-review.csv`는 사용자에게 보여주는 한국어 review CSV이며, 현재 분포는 `TRUE_CONFLICT=8/TIME_CHANGE=8/CONDITION_DIFF=8/VIEWPOINT_DIFF=8/POSSIBLE_CONFLICT=8/NO_CONFLICT=30`으로 목표와 일치한다. `NOT_PROVIDED`는 `정보 없음`, 분류 enum은 각각 `직접 모순/시간 변화/조건 차이/관점 차이/판단 보류/모순 없음`, `source_verified=TRUE`는 `원문_확인=확인`으로 표시한다.
+사용자용 헤더는 `사례_ID,주장_A,주장_B,시간_또는_버전,환경_또는_조건,주제,분류,비모순_사유,판단_이유,원문_확인,사용자_결정`이다. case ID·기술 고유명사는 유지하고 사용자 결정 칸은 70행 모두 `승인`이다.
+입력 정본과의 parity는 한국어 sentinel `정보 없음`을 `NOT_PROVIDED`로 역매핑해 claim/context/subject를 비교한다. 검증 결과 70/70 unique, parity 0, review/gold label·reason join 0, source_ref 140개(고유 60, missing 0), NFKC 내부·기존 CT pair 중복 0, 한국어 판단 이유 70건, 검토 플래그 0이다.
+이 파일은 사용자용 산출물이며 backend harness 입력에 사용하지 않는다. 이번 사용자 메시지의 `전체 승인` 후 별도 machine gold `qa/contradiction-holdout-gold.csv`를 `case_id,classification,판단_이유` exact 3열로 생성·검증·동결했다. holdout API·validator는 별도 실행 전까지 호출하지 않는다.
+
+#### A-4 user-facing review와 machine gold 분리 계약
+
+| 산출물 | 헤더/표시값 | 사용 범위 |
+| --- | --- | --- |
+| 사용자용 review | 위 exact 한국어 11열, `정보 없음`·한국어 분류명·`확인` | 사용자 검토·승인 전용 |
+| machine gold | `case_id,classification,판단_이유`, six enum | 현재 동결됨; holdout harness/validator 전용 |
+| 변환 규칙 | `직접 모순`→`TRUE_CONFLICT`, `시간 변화`→`TIME_CHANGE`, `조건 차이`→`CONDITION_DIFF`, `관점 차이`→`VIEWPOINT_DIFF`, `판단 보류`→`POSSIBLE_CONFLICT`, `모순 없음`→`NO_CONFLICT` | 사용자 승인 후 적용·동결 완료 |
+
 ### 3.2 사용자 평가 테스트 (5~10명 검증 사용자)
 
 | # | 검증 기준 | 측정 방식 | 통과 조건 | 평가 방식 |
@@ -314,3 +372,61 @@ Phase 0 품질 gate를 통과시키지 않는다. 산출물 부재는 FAIL이 �
 5. **리더 최종 보고** — 
    - UD 분류표 재계산 완료: 사용자 결정 10건(UD-01, 02, 03, 06, 07, 10, 14, 19, 20, 22) + 기술 10건 + 벤치마크 4건 + 확정 4건
    - 확정 항목: UD-04, 05(리더 기술, 2026-07-29) / UD-24, 27(사용자, 2026-07-29)
+
+---
+
+## 9. 2026-08-11 rubric-context-v3 QA 갱신
+
+backend가 생성한 `evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/`
+결과를 API 재호출 없이 기존 `--labels` dev 계약으로 독립 검증했다. 모든 26건이
+`COMPLETED`였고, 구조·mapping·label 검증과 QA/backend self-check,
+`evaluation/validate_evaluation.py`가 모두 exit 0이었다.
+
+| 항목 | 실제 결과 | 판정 |
+| --- | ---: | --- |
+| completion | 26/26 = 1.000 | PASS |
+| conflict recall | 22/23 = 0.957 | PASS (>= 0.80) |
+| sampled FPR | 0/3 = 0.000 | PASS (<= 0.10) |
+| 6-class accuracy | 24/26 = 0.923 | PASS (>= 0.80) |
+| detected-conflict subtype accuracy | 21/22 = 0.955 | 보고 |
+| joint subtype accuracy | 21/23 = 0.913 | 보고 |
+| macro-F1 | 0.902 | 보고 |
+| Wilson 95% FPR upper | 0.561 | dev report-only |
+| validator exit | 0 | PASS |
+
+오분류는 `CT-017` (`VIEWPOINT_DIFF` → `POSSIBLE_CONFLICT`)과 `CT-021`
+(`POSSIBLE_CONFLICT` → `NO_CONFLICT`)이다. confusion matrix는 다음과 같다
+(열 순서: `TRUE_CONFLICT,TIME_CHANGE,CONDITION_DIFF,VIEWPOINT_DIFF,
+POSSIBLE_CONFLICT,NO_CONFLICT`).
+
+```text
+TRUE_CONFLICT       5,0,0,0,0,0
+TIME_CHANGE         0,5,0,0,0,0
+CONDITION_DIFF      0,0,5,0,0,0
+VIEWPOINT_DIFF      0,0,0,4,1,0
+POSSIBLE_CONFLICT   0,0,0,0,2,1
+NO_CONFLICT         0,0,0,0,0,3
+```
+
+재현 명령:
+
+```powershell
+python qa/verify_phase0_benchmark.py `
+  --manifest evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-manifest.json `
+  --generated-claims evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-generated-claims.csv `
+  --benchmark-output evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-benchmark.csv `
+  --dense-predictions evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/openai-predictions.csv `
+  --labels evaluation/contradiction-labels.csv `
+  --expected-documents 26
+python qa/verify_phase0_benchmark.py --self-check
+python backend/scripts/phase0_benchmark.py --self-check
+python evaluation/validate_evaluation.py
+```
+
+실제 종료 코드는 각각 `0, 0, 0, 0`이다. dense 경로에서는
+`--contradiction-output`을 함께 주지 않는다. dev의 Wilson upper는 3개 음성
+표본 때문에 보고만 하며, Wilson `<= 0.20` hard gate는 승인된 holdout에만
+적용한다. 사용자 `전체 승인` 기록과 별도 machine gold 생성·검증·동결은 완료했지만,
+holdout API·validator는 이번 작업에서 실행하지 않았다. holdout 검증 전 production
+승격은 하지 않는다. 현재 review의 목표 분포·source·parity·언어 검증과 review/gold
+join은 PASS이며, `user_decision`은 전부 `승인`이다.

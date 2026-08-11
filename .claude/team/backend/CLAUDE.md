@@ -87,6 +87,9 @@ docs/검증-백엔드-ERD-API-정합성.md
 - 미확정 계약에 의존하는 코드에는 `// ASSUMPTION(계약 #N): ...` 주석을 남긴다.
 - 상태 머신을 구현할 때 기획서 20절의 작업 상태 8종(대기·스캔·계획 승인 대기·처리·질문 대기·변경 승인 대기·완료·실패)을 기준으로 삼는다.
 - API 응답 스키마를 정할 때 `docs/검증-프론트엔드-화면-API-갭.md` 2절의 갭 12건을 먼저 확인한다. frontend와 계약이 어긋나면 `SendMessage`로 조정한다.
+- Phase 0 OpenAI 평가 입력은 `evaluation/contradiction-contexts.csv`, `evaluation/contradiction-contexts-v3.csv`, `evaluation/contradiction-holdout-input.csv`의 exact UTF-8 CSV 계약을 따른다. context의 `source_ref`는 추적 메타데이터이며 모델 prompt에는 넣지 않고, holdout 입력에는 gold classification·`판단_이유`를 저장하지 않는다.
+- `backend/scripts/phase0_benchmark.py`의 `rubric-v2`·`rubric-context-v2`·`rubric-context-v3` prompt는 기존 six-label Structured Outputs schema와 sparse `phase0-contradictions.csv`를 유지한다. 케이스별 전체 예측·실패 상태·confidence·token/cost/latency는 model-specific `openai-predictions.csv`에 추가하며, 실패를 `NO_CONFLICT`로 대체하지 않는다. v3는 claim A/B의 time·condition을 별도 JSON으로 매핑하고 명시 context 차이를 `NO_CONFLICT`보다 우선한다.
+- holdout 실행은 `--benchmark-input`의 `HOLDOUT_HEADER`와 QA가 별도 작성한 `--gold-labels`의 `case_id,classification,판단_이유`를 stable `HT-NNN`으로 join한다. gold와 case ID는 manifest·평가용이고 prompt에는 넣지 않으며, 기본 `--labels` 26-case 경로는 그대로 유지한다.
 
 ## 7. 학습 노트
 

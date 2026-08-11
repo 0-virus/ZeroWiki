@@ -1,0 +1,71 @@
+case_id,classification,판단_이유
+HT-001,TIME_CHANGE,servlet-spec.md는 Servlet 스펙 관리 주체가 Oracle(Sun)에서 Jakarta EE로 넘어간 시점을 직접 설명한다.
+HT-002,NO_CONFLICT,outbox-pattern.md의 DB 내부 원자적 기록과 eventual-consistency.md의 외부 시스템 재시도·수렴은 같은 분산 흐름의 보완 관계다.
+HT-003,TIME_CHANGE,"promise.md는 ES6, async-await.md는 ES2017의 문법 등장을 명시해 버전 흐름을 뒷받침한다."
+HT-004,TIME_CHANGE,servlet.md는 Spring Boot 2.x의 javax.servlet.*에서 3.x의 jakarta.servlet.*로 바뀐 패키지를 명시한다.
+HT-005,TIME_CHANGE,spring-framework.md의 버전 표가 5.0(2017)과 6.0(2022)의 기능·최소 Java 버전을 분리한다.
+HT-006,NO_CONFLICT,database-migration.md의 버전 이력과 flyway.md의 실행 도구는 같은 스키마 관리 흐름의 서로 다른 층위다.
+HT-007,TRUE_CONFLICT,Filter와 Spring Security Filter Chain의 배치 설명이 서로 달라 동작 위치가 직접 충돌한다.
+HT-008,TRUE_CONFLICT,SOP의 기본 차단과 CORS의 서버 허용 예외를 모두 고려하면 두 주장은 서로 반대되는 동작을 말한다.
+HT-009,TRUE_CONFLICT,restful-api.md와 http-status-codes.md는 GET을 조회 메서드로 설명하므로 리소스를 반드시 변경한다는 주장은 충돌한다.
+HT-010,NO_CONFLICT,etag.md의 재검증 식별자와 http-cache.md의 Cache-Control 정책은 함께 사용하는 보완 기능이다.
+HT-011,TRUE_CONFLICT,forward-vs-redirect.md에서 Forward는 서버 내부 이동이고 Redirect는 브라우저 재요청이므로 두 주장이 역할을 뒤집는다.
+HT-012,NO_CONFLICT,Forward의 서버 내부 전달과 Redirect의 브라우저 재요청은 서로 다른 흐름을 설명하며 함께 성립한다.
+HT-013,TRUE_CONFLICT,connection-pool.md는 연결을 미리 만들어 빌려주고 반납받으므로 요청마다 새 연결을 만든다는 주장은 충돌한다.
+HT-014,NO_CONFLICT,thread-pool.md와 connection-pool.md는 서로 다른 자원에 같은 재사용 패턴을 적용하므로 상호 보완한다.
+HT-015,NO_CONFLICT,database-index.md의 인덱스 없는 조회와 인덱스가 탐색 범위를 줄이는 설명은 서로 다른 상태를 보완한다.
+HT-016,NO_CONFLICT,explain.md는 실행 계획과 인덱스 선택을 보여준다고 설명하므로 두 문장은 같은 진단 역할을 보완한다.
+HT-017,TRUE_CONFLICT,database-index.md는 낮은 선택도나 조건에 따라 인덱스가 무효화될 수 있다고 하므로 모든 조회를 항상 빠르게 한다는 주장은 충돌한다.
+HT-018,TRUE_CONFLICT,covering-index.md는 필요한 컬럼이 빠지면 테이블 접근이 남는다고 하므로 모든 쿼리에서 제거된다는 주장은 충돌한다.
+HT-019,TRUE_CONFLICT,optimistic-pessimistic-lock.md에서 낙관적 락은 저장 시 버전을 확인하고 비관적 락은 먼저 잠그므로 설명이 충돌한다.
+HT-020,CONDITION_DIFF,hibernate-ddl-auto.md는 개발의 update와 운영의 validate를 각각 다른 환경의 스키마 처리로 규정한다.
+HT-021,TIME_CHANGE,eventual-consistency.md는 10:00:00 내부 DB와 Outbox 커밋 뒤 10:00:15 재전송 성공으로 외부 시스템에 반영되는 시간 순서를 명시한다.
+HT-022,NO_CONFLICT,transaction.md의 DB 원자성과 outbox-pattern.md의 같은 로컬 트랜잭션 기록은 서로 호환되는 설명이다.
+HT-023,TIME_CHANGE,"idempotency.md는 최초 결제 처리와 응답 유실 뒤 같은 Idempotency-Key 재시도가 이어지는 흐름을 설명하며, 재시도도 원래 처리 결과를 중복시키지 않는다."
+HT-024,NO_CONFLICT,idempotency.md는 Idempotency-Key가 응답 유실 후 재시도를 안전하게 만든다고 설명하므로 두 문장은 보완 관계다.
+HT-025,TIME_CHANGE,jwt.md는 로그인 직후 Access Token과 Refresh Token을 발급하고 Access Token 만료 뒤 Refresh Token으로 재발급하는 인증 순서를 명시한다.
+HT-026,CONDITION_DIFF,connection-pool.md는 직접 JDBC의 max_connections와 풀의 maximumPoolSize가 close 누수에서 다른 한도를 만든다고 설명한다.
+HT-027,TIME_CHANGE,spring-boot.md는 기존 Spring과 Tomcat의 WAR·webapps 배포에서 Spring Boot의 내장 Tomcat JAR와 java -jar 실행으로 이어지는 전환을 명시한다.
+HT-028,NO_CONFLICT,"forward-proxy.md가 클라이언트를, reverse-proxy.md가 백엔드를 숨기는 설명은 서로 다른 경계를 보완한다."
+HT-029,CONDITION_DIFF,horizontal-vs-vertical-scaling.md와 load-balancer.md는 단일 서버 확장과 여러 서버 분산을 운영 조건별 대안으로 설명한다.
+HT-030,NO_CONFLICT,Nginx의 웹 서버·Reverse Proxy·Load Balancer 역할은 배포 경계에서 함께 사용할 수 있다.
+HT-031,CONDITION_DIFF,mybatis.md의 SQL 직접 통제와 jpa.md의 객체·벤더 독립 자동 생성은 영속성 선택의 우선 가치가 다르다.
+HT-032,NO_CONFLICT,jpa.md의 ORM 명세와 mybatis.md의 SQL Mapper는 서로 다른 영속성 추상화이며 직접 모순하지 않는다.
+HT-033,CONDITION_DIFF,"vector-database.md는 Chroma를 소규모 로컬 PoC, pgvector를 기존 PostgreSQL 통합에 적합한 선택으로 구분한다."
+HT-034,NO_CONFLICT,querydsl.md의 타입 안전 빌더와 jpql.md의 엔티티 쿼리 언어는 계층상 보완 관계다.
+HT-035,CONDITION_DIFF,"cache-control.md는 private를 개인 브라우저, public을 proxy 캐시 서버까지 허용하는 저장 범위로 구분한다."
+HT-036,NO_CONFLICT,string-pool.md의 리터럴 공유는 mutable-immutable.md가 설명하는 String 불변성의 안전성에 기대므로 상호 보완한다.
+HT-037,CONDITION_DIFF,thread-safety.md는 count++ 같은 복합 연산에는 synchronized나 원자 클래스가 필요하고 단일 상태 플래그의 가시성에는 volatile을 사용할 수 있다고 구분한다.
+HT-038,CONDITION_DIFF,thread-pool.md는 Thread Pool의 Worker 재사용과 ExecutorService.submit()이 반환하는 Future의 결과·예외 회수를 서로 다른 목표로 설명한다.
+HT-039,VIEWPOINT_DIFF,jpa.md의 Entity·벤더 독립성과 mybatis.md의 직접 SQL 통제는 유지보수 관점의 서로 다른 선택이다.
+HT-040,NO_CONFLICT,serialization.md의 객체→텍스트 변환과 텍스트→객체 복원은 직렬화의 두 방향으로 함께 성립한다.
+HT-041,VIEWPOINT_DIFF,mutable-immutable.md는 멀티스레드 공유 안전성과 반복 수정 비용을 각각 불변·가변 객체의 선택 기준으로 제시한다.
+HT-042,VIEWPOINT_DIFF,spring-boot.md의 starter·자동 설정과 spring-framework.md의 명시적 Bean 구성이 빠른 기본값과 제어라는 서로 다른 우선순위다.
+HT-043,VIEWPOINT_DIFF,"mvc-pattern.md와 three-tier-architecture.md는 MVC를 화면 책임 분리, 3-tier를 시스템 전체 계층 분리로 설명해 같은 설계 논의의 범위와 강조점이 다름을 뒷받침한다."
+HT-044,NO_CONFLICT,docker-image.md의 불변 패키지와 docker-container.md의 실행 인스턴스는 서로 다른 산출물을 설명하며 보완한다.
+HT-045,VIEWPOINT_DIFF,jpql.md는 Criteria API의 타입 안전성과 QueryDSL의 가독성·실무성을 서로 다른 동적 쿼리 선택 기준으로 설명한다.
+HT-046,NO_CONFLICT,http-status-codes.md의 응답 신호와 restful-api.md의 HTTP 기반 API 설계는 함께 적용되는 역할이다.
+HT-047,VIEWPOINT_DIFF,proxy.md는 익명화·접근 제어와 캐싱·트래픽 최적화를 프록시의 서로 다른 강조점으로 설명한다.
+HT-048,NO_CONFLICT,rag.md의 문서 검색·주입과 vector-database.md의 유사 벡터 검색은 연속적인 파이프라인 단계다.
+HT-049,VIEWPOINT_DIFF,"optimistic-pessimistic-lock.md는 같은 동시성 전략 비교에서 한 리뷰어가 처리량 중심 낙관적 락을, 다른 리뷰어가 충돌 차단·안정성 중심 비관적 락을 높게 평가하는 관점 차이를 뒷받침한다."
+HT-050,NO_CONFLICT,embedding.md의 벡터 생성과 vector-database.md의 저장·검색은 같은 검색 파이프라인의 보완 단계다.
+HT-051,VIEWPOINT_DIFF,conditional-request.md와 etag.md는 수정 시각 검증과 버전 해시 검증을 정밀도 선호에 따른 선택으로 설명한다.
+HT-052,NO_CONFLICT,dependency-injection.md의 외부 의존성 주입은 inversion-of-control.md의 제어 역전 범위 안에 있어 호환된다.
+HT-053,POSSIBLE_CONFLICT,spring-boot.md는 starter 누락과 application.properties 조건으로 자동 설정이 꺼지는 두 가설을 로그 없이 확정할 수 없게 한다.
+HT-054,NO_CONFLICT,spring-boot.md의 애플리케이션 자동 설정과 maven.md의 빌드·의존성 관리는 서로 다른 역할이다.
+HT-055,POSSIBLE_CONFLICT,transaction.md의 checked 예외 기본 커밋과 aop.md의 self-invocation 프록시 우회는 로그 없이는 롤백 실패 원인을 확정할 수 없다.
+HT-056,NO_CONFLICT,mutable-immutable.md는 가변 객체의 변경 가능성과 불변 객체의 변경 불가를 구분하므로 두 정의는 함께 대비된다.
+HT-057,POSSIBLE_CONFLICT,connection-pool.md는 close 누수와 DB 연결 한도 초과를 모두 timeout 원인으로 설명하므로 로그·DB 상태가 필요하다.
+HT-058,NO_CONFLICT,same-origin-policy.md의 기본 제한과 cors.md의 서버 허용 예외는 서로 다른 조건을 설명하며 보완한다.
+HT-059,POSSIBLE_CONFLICT,http-cache.md의 오래된 CORS 헤더 재사용과 cors.md의 허용 origin 불일치는 응답·설정 자료 없이는 원인을 확정할 수 없다.
+HT-060,NO_CONFLICT,http-cache.md의 신선도 정책과 etag.md의 버전 재검증은 함께 동작하는 캐시 제어 축이다.
+HT-061,POSSIBLE_CONFLICT,flyway.md의 checksum 변경과 MySQL URL 접속 설정 누락은 기동 로그 없이는 어느 원인인지 확정할 수 없다.
+HT-062,NO_CONFLICT,"http-status-codes.md에서 404는 리소스 부재, 500은 서버 오류이므로 서로 다른 오류 상태를 설명한다."
+HT-063,POSSIBLE_CONFLICT,n-plus-1-problem.md의 반복 관계 SQL과 connection-pool.md의 Connection 대기는 SQL·결과 건수 로그 없이는 구분할 수 없다.
+HT-064,NO_CONFLICT,database-migration.md의 스키마 이력과 outbox-pattern.md의 외부 이벤트 전달은 서로 다른 문제를 해결하며 호환된다.
+HT-065,POSSIBLE_CONFLICT,rag.md는 retrieval 실패와 검색 결과의 LLM 종합 실패를 모두 답변 오류 원인으로 설명하므로 검색·생성 로그가 필요하다.
+HT-066,NO_CONFLICT,persistence-context.md의 1차 캐시·작업대와 entity-manager.md의 관리 주체 설명은 같은 상태 관리 메커니즘을 보완한다.
+HT-067,POSSIBLE_CONFLICT,jdbc.md는 rs.next()의 행 처리와 Connection close 책임을 각각 설명하므로 로그와 자원 상태 없이 조회 실패 원인을 하나로 확정할 수 없다.
+HT-068,NO_CONFLICT,connection-pool.md의 연결 재사용과 jdbc.md의 표준 Connection API는 계층이 달라 상호 보완한다.
+HT-069,NO_CONFLICT,http-status-codes.md의 404 리소스 없음과 docker-image.md의 컨테이너 실행용 불변 이미지 설명은 서로 다른 시스템 주제이므로 충돌하지 않는다.
+HT-070,NO_CONFLICT,load-balancer.md의 요청 분산과 reverse-proxy.md의 외부 요청 전달은 같은 배포 경계에서 함께 사용할 수 있다.

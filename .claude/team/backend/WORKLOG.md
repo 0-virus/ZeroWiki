@@ -1122,3 +1122,91 @@ python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
 - QA가 `relative_path('/absolute.md')`가 Windows에서 즉시 거부되지 않는 HIGH finding을 보고했다.
 - 리더가 `Path.is_absolute()`뿐 아니라 `drive`·`root`를 trust boundary에서 거부하도록 수정했다.
 - `../escape.md`, `/absolute.md`, `C:\absolute.md` 회귀 self-check를 추가했고 harness self-check PASS를 확인했다.
+
+---
+
+## 2026-08-11 — GPT-5.6 Sol 26건 contradiction benchmark
+
+- 무엇을 했는가: 기존 stdlib Phase 0 harness에 OpenAI Responses API `text.format.json_schema` Structured Outputs 경로를 추가하고, `.env`의 `OPENAI_API_KEY`를 값 노출 없이 메모리에서 읽어 26개 모순 케이스를 케이스당 1회 실행했다. 응답 원문·키는 저장하지 않았다.
+- 산출물 경로: `backend/scripts/phase0_benchmark.py`, `evaluation/results/phase0-gpt-5_6-sol-r1/`, `docs/Phase-0-벤치마크-결과.md`, `.claude/team/backend/STATE.md`
+- 결과: 26/26 호출 완료; actual input/output 6,016/2,553 token, 계산 비용 `$0.10667`, latency 평균/p95 3.214/6.531초; accuracy `0.615`, conflict recall `0.783`, sampled FPR `0.000`. qwen3:1.7b 기준선(accuracy `0.192`, recall `1.000`, FPR `1.000`)보다 정확도·FPR은 개선됐지만 품질 gate(accuracy/recall `0.800`)는 실패했다.
+- 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → PASS; `python -B evaluation/validate_evaluation.py` → 오류 0건; `python -B qa/verify_phase0_benchmark.py --manifest evaluation/results/phase0-gpt-5_6-sol-r1/phase0-manifest.json --generated-claims evaluation/results/phase0-gpt-5_6-sol-r1/phase0-generated-claims.csv --benchmark-output evaluation/results/phase0-gpt-5_6-sol-r1/phase0-benchmark.csv --contradiction-output evaluation/results/phase0-gpt-5_6-sol-r1/phase0-contradictions.csv --expected-documents 26` → 구조·mapping·완료율 PASS, `RESULT FAIL failures=2`.
+- 미해결 사항: GPT 실행은 26건 contradiction-only 비교라 100문서 ingest 재검증이 아니며, production provider/model 확정·자동 모순 판정 승격은 보류한다. generated claim ID는 여전히 평가 조인용이고 실제 원본 Claim identity mapping이 아니다.
+
+---
+
+## 2026-08-11 — OpenAI prompt variant·neutral context·holdout 입력 계약 구현 기록
+
+- 무엇을 했는가: 기존 stdlib harness에 `current`·`rubric-v2`·`rubric-context-v2` prompt variant, neutral context JSON 입력, dense `openai-predictions.csv`, `FAILED`/`NOT_ATTEMPTED`와 완료된 `NO_CONFLICT` 구분, `--max-cost-usd` cap, gold/classification/판단_이유/case_id prompt 누출 self-check를 추가했다. 기존 sparse `phase0-contradictions.csv` 계약은 유지했다.
+- 산출물 경로: `backend/scripts/phase0_benchmark.py`, `evaluation/contradiction-contexts.csv`, `evaluation/contradiction-holdout-input.csv`, `evaluation/README.md`, `.claude/team/backend/CLAUDE.md`, `.claude/team/backend/STATE.md`, `docs/Phase-0-벤치마크-결과.md`
+- 실행·비용: 이번 구현 검증에서는 OpenAI API를 호출하지 않아 신규 유료 호출 0회다. 기존 `phase0-20260811-gpt-5_6-sol-r1` 26회 결과는 별도 model-specific 산출물로 보존한다.
+- 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; `python -B evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`; context 26행·holdout 70행 UTF-8/BOM/header schema → `CSV_SCHEMA=PASS`; 대상 파일 `git diff --check` → `DIFF_CHECK=PASS`.
+- 미해결 사항: holdout 70행은 gold·`판단_이유` 없는 입력 생성과 schema 검증만 완료했으며 별도 gold 라벨링·API 실행은 미완료다. QA의 새 dense prediction 통합 검증과 prompt variant 품질 gate는 QA 인수 대기다.
+
+---
+
+## 2026-08-11 — holdout 실행 branch·synthetic rubric 보완
+
+- 무엇을 했는가: `rubric-v2`와 `rubric-context-v2` 공통 rubric에 기존 평가 문장과 겹치지 않는 six-label synthetic example을 추가하고, 선택적 `--benchmark-input`/`--gold-labels` 경로에서 HOLDOUT 입력과 `case_id,classification,판단_이유` gold를 join해 기존 dense/sparse prediction 경로를 재사용하도록 보완했다. 기본 `--labels` 26-case 실행과 prompt의 gold·reason·case_id 비누출 계약은 유지했다.
+- 산출물 경로: `backend/scripts/phase0_benchmark.py`, `evaluation/README.md`, `.claude/team/backend/CLAUDE.md`, `.claude/team/backend/STATE.md`
+- 실행·비용: API 호출 0회이며 holdout gold 파일은 생성하지 않았다.
+- 미해결 사항: QA가 별도 gold를 만든 뒤 holdout 실행·QA validator 통합 검증을 수행해야 한다.
+
+---
+
+## 2026-08-11 — prompt variant 실행 결과·holdout stop condition
+
+- 무엇을 했는가: API 재호출 없이 기존 model-specific 결과 3건을 확인·기록했다. `rubric-v2-r1`은 24/26 완료·2건 `FAILED`·`$0.117765`의 진단 run으로 품질 판정에서 제외했고, `rubric-v2-r2`는 26/26·`$0.13556`·accuracy `0.615`·recall `0.739`·sampled FPR `0`·macro-F1 `0.553`, `rubric-context-v2-r1`은 26/26·27 API attempts(재시도 1회 성공)·`$0.154055`·accuracy `0.692`·recall `0.783`·sampled FPR `0`·macro-F1 `0.683`으로 모두 품질 gate FAIL이다.
+- 산출물 경로: `evaluation/results/phase0-gpt-5_6-sol-rubric-v2-r1/`, `evaluation/results/phase0-gpt-5_6-sol-rubric-v2-r2/`, `evaluation/results/phase0-gpt-5_6-sol-rubric-context-v2-r1/`, `docs/Phase-0-벤치마크-결과.md`, `.claude/team/backend/STATE.md`
+- 비용·stop condition: 세 실행 합계 `$0.40738`, `$0.80` cap 잔여 `$0.39262`. context 입력은 TIME 5/5를 개선했지만 CONDITION 0/5(모두 `NO_CONFLICT`)였고 accuracy gate 21/26·recall gate 19/23을 충족하지 못해 계획대로 holdout API 호출은 0회다.
+- 재현·검증: 세 run별 `python -B backend/scripts/phase0_benchmark.py --execute-openai-contradictions` 명령과 두 정규 QA validator 명령을 결과 문서 9-5에 기록했다. `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; `python -B evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`; retry 계약은 case당 최대 2 attempts, transient/incomplete·출력 없음·JSON parse 1회 재시도, 일반 4xx no-retry, unknown usage metrics 보존이다.
+- 미해결 사항: production 자동 판정 승격은 보류하며 QA의 세 variant dense prediction 통합 검증과 stop condition 재개 승인 전 holdout gold/API 실행은 하지 않는다.
+
+---
+
+## 2026-08-11 — claim-specific context v3 구현
+
+- 무엇을 했는가: `rubric-context-v2`의 shared environment/condition이 `NO_CONFLICT` 우선 규칙에 묻힌 root cause를 보완하기 위해 `rubric-context-v3`와 variant 전용 loader를 추가했다. v3 prompt는 claim A/B 각각의 time/version·environment/condition과 shared subject를 JSON으로 받고, 명시 context 차이를 `NO_CONFLICT`보다 우선해 차이를 가장 잘 설명하는 축을 선택한다.
+- 산출물 경로: `backend/scripts/phase0_benchmark.py`, `evaluation/contradiction-contexts-v3.csv`, `evaluation/README.md`, `.claude/team/backend/CLAUDE.md`, `.claude/team/backend/STATE.md`, `docs/Phase-0-벤치마크-결과.md`
+- 입력·보안: v3 CSV는 26개 CT case와 source ref를 UTF-8 exact header로 보존하고 CT-011 A=`로컬 개발 환경`, B=`운영 데이터베이스`를 분리했다. source ref·gold·reason·case_id는 prompt에 넣지 않으며 v2 variant·기존 결과 디렉터리·dense/sparse schema는 보존했다.
+- 실행·검증: API 호출 0회. `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; `python -B evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`; v3 CSV header/26행·CT-011 mapping·UTF-8 검사 및 대상 `git diff --check`를 수행한다.
+- 미해결 사항: 계획 stop condition에 따라 v3 유료 실행과 holdout API 호출은 보류하며, QA의 v3 dense prediction 통합 검증 후 재개 여부를 결정한다.
+
+---
+
+## 2026-08-11 — claim-specific context v3 실행·QA PASS
+
+- 무엇을 했는가: 기존 v3 harness 산출물 `phase0-20260811-gpt-5_6-sol-rubric-context-v3-r1`을 재확인하고 결과 문서·상태·평가 README를 실제 metrics와 동기화했다. v3는 26/26 completed, 26 API calls/no retries, accuracy `24/26=0.9230769`, conflict recall `22/23=0.9565217`, sampled FPR `0/3=0`, macro-F1 `0.902`로 dev gate PASS였다.
+- 산출물 경로: `evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/`, `docs/Phase-0-벤치마크-결과.md`, `evaluation/README.md`, `.claude/team/backend/STATE.md`
+- 비용·latency: v3 actual cost `$0.14906`, latency total/p95 `64.443268s/5.344194s`; 기존 신규 반복 `$0.40738`과 합산한 누적은 `$0.55644`, `$0.80` cap 잔여는 `$0.24356`이다.
+- 오분류·검증: `CT-017`은 gold `VIEWPOINT_DIFF`를 `POSSIBLE_CONFLICT`로, `CT-021`은 gold `POSSIBLE_CONFLICT`를 `NO_CONFLICT`로 예측했다. `python -B qa/verify_phase0_benchmark.py ... --dense-predictions ...` → exit 0, `RESULT PASS failures=0`; 기존 self-check/evaluation validator도 PASS다. 이번 기록 갱신에서 API 추가 호출은 0회다.
+- 미해결 사항: 70건 holdout API 호출과 gold 라벨 파일 생성은 하지 않았고, dev gate PASS를 production 자동 판정 승격으로 해석하지 않는다. production provider/model 및 원본 Claim mapping은 미확정이다.
+
+---
+
+## 2026-08-11 — holdout 최종 입력 재구성·정본 상태 동기화
+
+- 무엇을 했는가: `evaluation/contradiction-holdout-input.csv` 70행을 실제 NoteWiki 원문 근거로 최종 재구성했다. 초기 QA 초안 `TRUE34/TIME4/CONDITION2/VIEW0/POSSIBLE1/NO29`와 HT-065 blocker를 해소하는 목표 review 분포는 5개 conflict label 각 8건과 `NO_CONFLICT` 30건이다. claim·context·subject는 기술 고유명사를 제외하고 한국어로 유지했다.
+- 산출물 경로: `evaluation/contradiction-holdout-input.csv`, `evaluation/README.md`, `.claude/team/backend/STATE.md`
+- 계약·보안: 입력에는 gold/classification/`판단_이유`를 저장하지 않았고 `user_decision`은 blank다. 사용자용 review 헤더·값은 한국어로 유지하며 machine input의 exact header/stable ID 계약과 분리한다. 사용자 review 승인 후에만 machine gold enum으로 역매핑하며, gold 파일·holdout API·production 실행은 하지 않았다. QA review 파일은 수정하지 않았다.
+- 검증: 실제 NoteWiki source ref 140개 존재, exact header·70행·`HT-001`~`HT-070`, NFKC·연속 공백 축약·case-fold·A/B 순서 무시 holdout 내부 중복 0, 기존 CT pair 중복 0; `python -B evaluation/validate_evaluation.py` → 오류 0건; 대상 `git diff --check` → exit 0. harness의 exact HT set·NFKC 내부 중복 loader/self-check는 PASS를 유지한다.
+- 미해결 사항: 사용자 review 승인 및 별도 gold 생성 전에는 holdout 점수·production 자동 판정 승격을 선언하지 않는다.
+
+---
+
+## 2026-08-11 — Phase 1 착수 가능성·계약 차단 감사
+
+- 무엇을 했는가: 헌법·루트 지침·backend 지침과 정본 API·ERD·요구사항·기획서를 대조하고 저장소를 읽기 전용으로 실측했다. `backend/`에는 `contracts/`와 `scripts/`만 있으며 `pom.xml`, `build.gradle*`, `settings.gradle*`, `gradlew*`, `src/main/java`가 없어 Spring Boot API·Ingest Worker build scaffold가 아직 없다. 기능 구현·의존성 설치·API 호출은 하지 않았다.
+- 산출물 경로: `.claude/team/backend/STATE.md`; 근거 문서 `docs/ZeroWiki-API-명세-초안.md` 2~9·17~18절, `docs/ZeroWiki-ERD-초안.md` 4~8절, `docs/ZeroWiki-요구사항-정의서.md` 5~7·12절, `docs/ZeroWiki-MVP-서비스-기획서.md` 23절
+- 확정 계약 판정: 인증 Bearer/회전 토큰과 요청 시 도서관 권한, 사용자 소유권·PRIVATE 기본·명시적 단방향 참조, 불변 원본 버전·계정 내부 중복 후보, 업로드 한도·MIME/압축/secret 검사, 10종 Ingest 상태·계획 승인 선행, 항상 ChangeSet 생성·revision 잠금·`MINOR|MAJOR` risk wire enum·이벤트 재생·현재 도서관 우선 검색이 Phase 1 골격에 사용 가능하다. `UD-03`은 library limit/quota enforcement, `UD-19`는 billable unit·token ledger·quota 동작, `UD-20`은 audit retention/admin access를 차단하며 `UD-10`은 Phase 2 Notion/OAuth·결제, `UD-22`는 Phase 3 신고 처리만 차단한다.
+- 착수 판정·권고: 계약·scaffold 준비는 가능하지만 실행 가능한 Phase 1 feature implementation은 scaffold 부재로 불가하다. scaffold와 계약 승인이 준비되면 첫 최소 단위로 `인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회`를 권고하며, 미확정 UD 경로는 포함하지 않는다.
+- holdout 상태·미해결 사항: 전체 사용자 승인과 QA machine gold freeze를 진행 중으로 기록했다. 승인·freeze·원본 Claim mapping·production 결정 전 holdout API와 gold 생성은 0회/미실행이며 production 모순 자동 판정·자동 적용 승격은 계속 차단한다.
+- 검증: `Get-ChildItem backend`/파일 인벤토리와 전체 build scaffold 탐색 → `NO_SPRING_BUILD_OR_SRC_MAIN_JAVA_FILES`; 편집 후 STATE/WORKLOG UTF-8 재독 및 새 항목 trailing whitespace 검사 예정. 타 역할 파일은 수정하지 않았다.
+
+---
+
+## 2026-08-11 — Phase 1 감사 산출물 재독·검증 완료
+
+- 무엇을 했는가: 감사 후 backend STATE/WORKLOG를 UTF-8로 다시 읽고 self-check·evaluation schema validator·diff 검사를 실행했다.
+- 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → exit 0, `self-check: PASS`; `python -B evaluation/validate_evaluation.py` → exit 0, `검증 완료: 오류 0건`; `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- .claude/team/backend/STATE.md .claude/team/backend/WORKLOG.md` → exit 0(개행 변환 warning만); STATE `utf8_bom=False replacement_chars=False trailing_lines=0`, 신규 WORKLOG 항목 `new_entry_trailing_lines=0`.
+- 미해결 사항: Spring Boot scaffold 부재, UD-03/19/20의 부분 차단, holdout 전체 사용자 승인·QA machine gold freeze 및 production 모순 자동 판정 차단 상태는 유지한다.

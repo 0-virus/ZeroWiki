@@ -3,11 +3,11 @@
 > **덮어쓰기 스냅샷.** 매 턴 종료 전에 이 파일 전체를 최신 상태로 갱신한다(헌법 제4조 1항).
 > 시간순 기록은 `WORKLOG.md`에 append 한다.
 
-마지막 갱신: 2026-08-11 (Phase 0 벤치마크 결과·Phase 1 착수 범위 반영)
+마지막 갱신: 2026-08-11 22:50:37 +09:00 (Phase 1 frontend readiness 실측)
 
 ## 현재 단계
 
-**Phase 0 기술 검증 실행 완료·제품 게이트 조건부 FAIL; Phase 1 core 착수 허용**. 도서관 홈·변경 검토의 시각 토큰과 목업 컴포넌트는 존재하지만 실 API 연동은 없다. 현재 `frontend/src/app`에는 `/`와 `/review-changes` 라우트만 있고 `frontend/node_modules`가 없어 frontend 개발 서버·빌드·타입체크를 실행할 수 없다. 인증·원본 보관·도서관·Import·변경 승인·검색 골격은 착수할 수 있지만, 모순 자동 판정·자동 적용 UI는 품질 게이트 통과 전까지 차단하고 사용자 검토 제안으로만 취급한다. Phase 0 결정과 근거는 `docs/Phase-0-벤치마크-결과.md` 및 `docs/검증-프론트엔드-화면-API-갭.md` 2-C에 기록했다.
+**Phase 0 기술 검증 실행 완료·제품 게이트 조건부 FAIL; Phase 1 첫 vertical slice 착수 가능**. `frontend/node_modules`가 존재하고 의존성 목록 확인·production build·typecheck가 모두 통과했다. 현재 `frontend/src/app`에는 `/`와 `/review-changes` 라우트가 있으며 두 라우트 모두 dev 서버에서 목업 화면이 렌더링된다. 실 API 연동은 없고 `backend/`에는 API 서버가 아닌 Phase 0 benchmark script와 constitution schema만 있다. 인증·원본 보관·도서관·Import·변경 승인·검색 골격은 착수할 수 있지만, 모순 자동 판정·자동 적용 UI는 holdout 실행 전까지 차단하고 사용자 검토 제안으로만 취급한다. Phase 0 결정과 근거는 `docs/Phase-0-벤치마크-결과.md` 및 `docs/검증-프론트엔드-화면-API-갭.md` 2-C에 기록했다.
 
 ## Phase 0 결정 반영
 
@@ -16,6 +16,7 @@
 - `UD-25`: reference local budget은 scan p95 15초, synthesis/answer-generation p95 20초. 검색·citation을 포함한 answer endpoint는 Phase 1 integration에서 재검증하며 production SLA·고정 ETA로 일반화하지 않는다.
 - `UD-29`: 자동 identity key를 만들지 않는다. AI mapping 제안은 기존 변경 검토에서 사용자가 확정한다.
 - 모순 품질: 6-class accuracy 19.2%, sampled FPR 100%이므로 자동 판정·자동 적용 UI를 제공하지 않는다. 독립 평가 accuracy 80% 이상 통과 전까지 사용자 검토 제안만 허용한다.
+- `rubric-context-v3` 개발 gate는 PASS다. holdout 전체 승인과 machine gold freeze는 진행 중이며, holdout 실행 전까지 production 자동 판정·자동 적용은 차단한다.
 
 ## 진행 중 작업
 
@@ -69,14 +70,16 @@
    - `src/components/review-changes/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
    - `src/components/library-home/index.tsx`: import HeaderBar, return <><HeaderBar /><div>...</div></>
 
-5. ✅ **시각 토큰 정적 검증** (2026-07-31):
+5. ✅ **시각 토큰 정적 검증·Phase 1 frontend readiness 재확인** (2026-07-31, 2026-08-11):
    - grep #2196f3|#4caf50|#f44336|#ff9800|#e0e0e0 등: **0건** ✅
    - grep -apple-system|Segoe UI 등: **0건** ✅
    - grep box-shadow: **0건** ✅
    - grep border-radius [0-9]: **0건** (모두 4px) ✅
-   - `npm.cmd run build`: **실행 시 실패** — `frontend/node_modules` 부재로 `next`를 찾지 못함
-   - `npm.cmd exec -- tsc --noEmit`: **실행 시 실패** — `next`, `react`, `diff` 모듈 부재
-   - 개발 서버: **실행 확인 불가** — frontend 의존성 및 backend 실 API 서버 부재 (`backend/`에는 Phase 0 benchmark script만 존재)
+   - `npm.cmd ls --depth=0`: **통과** — `next@14.2.35`, `react@18.3.1`, `typescript@5.9.3` 등 설치 확인
+   - `npm.cmd run build`: **통과(종료 코드 0)** — Next 14.2.35 compile·type validity·static page generation 5/5; `/`, `/_not-found`, `/review-changes` 생성
+   - `npx.cmd tsc --noEmit`: **통과(종료 코드 0)** — 출력 없음
+   - dev 서버·브라우저: **라우트 렌더링 확인** — `/`의 도서관 6개 섹션과 `/review-changes`의 변경 세트·액션 UI가 DOM에 표시됨. `HeaderBar` nav의 동일 `href` key에 대한 React duplicate-key 경고는 남아 있음
+   - API/mock: frontend `fetch`·axios 호출은 없고 `mockLibraryHomeResponse`, `mockChangeSet`, `mockChangeItemDiffData`를 직접 소비함. `backend/`는 `phase0_benchmark.py`·constitution schema만 보유
 
 6. ✅ **Ingest 진행 문서 상태명 정합화** (2026-08-11)
    - `frontend/screens/ingest-progress.md`의 active `QUESTION_WAITING` 표기를 모두 확정 계약 `QUESTION_REVIEW`로 변경
@@ -91,14 +94,14 @@
 **2순위: API·frontend 계약 잔존 참조 확인**
 - API 8.1절 `MINOR | MAJOR`·API 6.1절 `QUESTION_REVIEW`와 frontend 타입·polling 흐름의 실제 연동 시 일치 여부 검증
 
-**3순위: 의존성 설치 후 재검증**
-- `npm.cmd ci`, `npm.cmd run build`, `npm.cmd exec -- tsc --noEmit`, 라우트·렌더링 확인
+**3순위: API 연동 후 재검증**
+- 의존성·build·typecheck·두 라우트 렌더링은 완료. API 계약 연결 시 `npm.cmd run build`, `npx.cmd tsc --noEmit`, 라우트·브라우저 동작을 재검증
 
 ## 차단 요인
 
-- `frontend/node_modules` 부재로 build/typecheck/dev 실행 불가
-- backend 실 API 구현 부재로 현재 화면은 목업만 사용 (`backend/`에는 Phase 0 benchmark script만 존재)
-- 모순 자동 판정·자동 적용은 accuracy 80% 이상 독립 평가 전까지 차단됨(현재 6-class accuracy 19.2%, sampled FPR 100%). 이는 사용자 검토 제안 UI와 Phase 1 core 착수를 막지 않음
+- backend 실 API 구현 부재로 현재 화면은 목업만 사용 (`backend/`에는 Phase 0 benchmark script와 constitution schema만 존재)
+- `HeaderBar`의 반복 `href: '/'`에 동일 `key`를 부여해 dev console duplicate-key 경고가 발생한다. 렌더링 자체와 Phase 1 첫 slice 착수는 막지 않지만 API 연동 전 수정 필요
+- 모순 자동 판정·자동 적용은 holdout 전체 승인·machine gold freeze 후 holdout 실행 및 production gate 통과 전까지 차단된다. 이는 사용자 검토 제안 UI와 Phase 1 core 착수를 막지 않음
 
 ## 소유 산출물
 
@@ -113,7 +116,7 @@
 | `frontend/src/components/library-home/index.tsx` | **갱신** (HeaderBar import + 통합) | 2026-07-31 |
 | `frontend/screens/ingest-progress.md` | **갱신** (active `QUESTION_REVIEW` 상태명 정합화) | 2026-08-11 |
 | `docs/검증-프론트엔드-화면-API-갭.md` | **갱신** (Phase 0 결정·착수 범위·모순 UI 차단·API 계약 반영 기록) | 2026-08-11 |
-| `.claude/team/frontend/STATE.md` | **현재 스냅샷** (Phase 0 benchmark 결과·Phase 1 착수 범위 반영) | 2026-08-11 |
+| `.claude/team/frontend/STATE.md` | **현재 스냅샷** (의존성·build/typecheck·라우트 렌더링 실측 및 Phase 1 착수 경계 반영) | 2026-08-11 |
 | `.claude/team/frontend/WORKLOG.md` | **2026-08-11 항목 append** (Phase 0 결정·모순 UI 차단·Phase 1 범위) | 2026-08-11 |
 
 ## 루트 CLAUDE.md 업데이트 필요

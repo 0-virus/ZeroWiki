@@ -36,6 +36,21 @@ CONTRADICTION_TYPES = {
     "POSSIBLE_CONFLICT",
 }
 NO_CONFLICT = "NO_CONFLICT"
+CLASSIFICATION_LABELS = (
+    "TRUE_CONFLICT",
+    "TIME_CHANGE",
+    "CONDITION_DIFF",
+    "VIEWPOINT_DIFF",
+    "POSSIBLE_CONFLICT",
+    "NO_CONFLICT",
+)
+DENSE_STATUSES = {"COMPLETED", "FAILED"}
+DENSE_MIN_COMPLETION_RATE = 1.0
+DENSE_MIN_RECALL = 0.80
+DENSE_MIN_ACCURACY = 0.80
+DENSE_MAX_FPR = 0.10
+DENSE_MAX_WILSON_FPR_UPPER = 0.20
+WILSON_Z_95 = 1.959963984540054
 GOLD_HEADERS = [
     "case_id",
     "claim_A_statement",
@@ -43,6 +58,7 @@ GOLD_HEADERS = [
     "classification",
     "판단_이유",
 ]
+HOLDOUT_GOLD_HEADERS = ["case_id", "classification", "판단_이유"]
 GENERATED_HEADERS = ["case_id", "claim_a_generated_id", "claim_b_generated_id"]
 BENCHMARK_HEADERS = [
     "run_id",
@@ -59,6 +75,22 @@ CONTRADICTION_OUTPUT_HEADERS = [
     "claim_2_id",
     "classification",
     "confidence",
+]
+DENSE_PREDICTION_HEADERS = [
+    "run_id",
+    "prompt_variant",
+    "case_id",
+    "status",
+    "prediction",
+    "confidence",
+    "expected_input_tokens",
+    "expected_output_tokens",
+    "expected_cost_usd",
+    "expected_latency_seconds",
+    "input_tokens",
+    "output_tokens",
+    "actual_cost_usd",
+    "latency_seconds",
 ]
 
 
@@ -95,6 +127,29 @@ def nonnegative(value: str, field: str, result: CheckResult, allow_blank: bool =
         return None
     result.check(math.isfinite(parsed) and parsed >= 0, f"{field}: 유한한 0 이상 값")
     return parsed
+
+
+def nonnegative_integer(value: str, field: str, result: CheckResult, allow_blank: bool = False) -> int | None:
+    parsed = nonnegative(value, field, result, allow_blank)
+    if parsed is None:
+        return None
+    result.check(parsed.is_integer(), f"{field}: 정수 값")
+    return int(parsed) if parsed.is_integer() else None
+
+
+def wilson_upper_bound(successes: int, trials: int, z: float = WILSON_Z_95) -> float | None:
+    if trials <= 0:
+        return None
+    successes = min(max(successes, 0), trials)
+    rate = successes / trials
+    denominator = 1 + (z * z / trials)
+    center = rate + (z * z / (2 * trials))
+    margin = z * math.sqrt((rate * (1 - rate) / trials) + (z * z / (4 * trials * trials)))
+    return (center + margin) / denominator
+
+
+def format_metric(value: float | None) -> str:
+    return f"{value:.3f}" if value is not None else "N/A"
 
 
 def validate_manifest(
@@ -314,6 +369,205 @@ def validate_contradiction_output(
     )
 
 
+def validate_dense_predictions(
+    rows: list[dict[str, str]],
+    gold_rows: list[dict[str, str]],
+    expected_run_id: str | None,
+    expected_case_count: int | None,
+    result: CheckResult,
+    enforce_wilson_gate: bool = False,
+) -> dict[str, Any]:
+    """Validate the opt-in dense one-row-per-case prediction contract."""
+    gold_case_ids = [row.get("case_id", "").strip() for row in gold_rows]
+    expected_case_ids = set(gold_case_ids)
+    result.check(bool(gold_rows), "dense gold labels: 행 존재")
+    result.check(
+        len(gold_case_ids) == len(expected_case_ids),
+        "dense gold labels: case_id 유일성",
+    )
+    result.check(
+        all(CASE_ID.fullmatch(case_id) for case_id in expected_case_ids),
+        "dense gold labels: case_id 형식",
+    )
+    if expected_case_count is not None:
+        result.check(
+            len(expected_case_ids) == expected_case_count,
+            f"dense gold labels: case 수 {len(expected_case_ids)} == expected {expected_case_count}",
+        )
+
+    run_ids = {row.get("run_id", "").strip() for row in rows}
+    case_ids = [row.get("case_id", "").strip() for row in rows]
+    result.check(len(run_ids) == 1 and all(run_ids), "dense predictions: 단일 run_id")
+    if expected_run_id:
+        result.check(run_ids == {expected_run_id}, "dense predictions: benchmark run_id 일치")
+    result.check(len(case_ids) == len(set(case_ids)), "dense predictions: case_id 유일성")
+    result.check(
+        len(case_ids) == len(expected_case_ids),
+        f"dense predictions: 행 수 {len(case_ids)} == expected cases {len(expected_case_ids)}",
+    )
+    result.check(
+        set(case_ids) == expected_case_ids,
+        "dense predictions: expected case_id 전체 대응",
+    )
+
+    predictions: dict[str, str | None] = {}
+    statuses: dict[str, str] = {}
+    for row in rows:
+        case_id = row.get("case_id", "").strip()
+        status = row.get("status", "").strip()
+        prediction = row.get("prediction", "").strip()
+        result.check(CASE_ID.fullmatch(case_id) is not None, f"dense {case_id}: case_id 형식")
+        result.check(case_id in expected_case_ids, f"dense {case_id}: gold case_id 대응")
+        result.check(status in DENSE_STATUSES, f"dense {case_id}: status enum")
+        result.check(bool(row.get("prompt_variant", "").strip()), f"dense {case_id}: prompt_variant 필수값")
+        nonnegative_integer(
+            row.get("expected_input_tokens", ""),
+            f"dense {case_id} expected_input_tokens",
+            result,
+        )
+        nonnegative_integer(
+            row.get("expected_output_tokens", ""),
+            f"dense {case_id} expected_output_tokens",
+            result,
+        )
+        nonnegative(row.get("expected_cost_usd", ""), f"dense {case_id} expected_cost_usd", result)
+        nonnegative(
+            row.get("expected_latency_seconds", ""),
+            f"dense {case_id} expected_latency_seconds",
+            result,
+        )
+        if case_id in statuses:
+            continue
+        statuses[case_id] = status
+        if status == "COMPLETED":
+            result.check(
+                prediction in CLASSIFICATION_LABELS,
+                f"dense {case_id}: prediction enum",
+            )
+            confidence = nonnegative(row.get("confidence", ""), f"dense {case_id} confidence", result)
+            if confidence is not None:
+                result.check(confidence <= 1, f"dense {case_id}: confidence <= 1")
+            nonnegative_integer(row.get("input_tokens", ""), f"dense {case_id} input_tokens", result)
+            nonnegative_integer(row.get("output_tokens", ""), f"dense {case_id} output_tokens", result)
+            nonnegative(row.get("actual_cost_usd", ""), f"dense {case_id} actual_cost_usd", result)
+            nonnegative(row.get("latency_seconds", ""), f"dense {case_id} latency_seconds", result)
+            predictions[case_id] = prediction if prediction in CLASSIFICATION_LABELS else None
+        elif status == "FAILED":
+            result.check(
+                not prediction,
+                f"dense {case_id}: FAILED prediction은 비어 있어야 함",
+            )
+            for field in ("confidence", "input_tokens", "output_tokens", "actual_cost_usd", "latency_seconds"):
+                result.check(
+                    not row.get(field, "").strip(),
+                    f"dense {case_id}: FAILED {field}는 비어 있어야 함",
+                )
+            # A failed call is unscored, never an implicit NO_CONFLICT prediction.
+            predictions[case_id] = None
+
+    expected_count = len(expected_case_ids)
+    completed = sum(status == "COMPLETED" for status in statuses.values())
+    failed = sum(status == "FAILED" for status in statuses.values())
+    completion_rate = completed / expected_count if expected_count else 0.0
+    conflicts = [row for row in gold_rows if row.get("classification") != NO_CONFLICT]
+    negatives = [row for row in gold_rows if row.get("classification") == NO_CONFLICT]
+    detected_conflicts = 0
+    false_positives = 0
+    correct = 0
+    subtype_correct = 0
+    matrix = {gold: {predicted: 0 for predicted in CLASSIFICATION_LABELS} for gold in CLASSIFICATION_LABELS}
+    for row in gold_rows:
+        case_id = row.get("case_id", "").strip()
+        gold = row.get("classification", "").strip()
+        predicted = predictions.get(case_id)
+        if predicted in CLASSIFICATION_LABELS:
+            matrix.setdefault(gold, {label: 0 for label in CLASSIFICATION_LABELS})
+            if gold in matrix:
+                matrix[gold][predicted] += 1
+            if predicted == gold:
+                correct += 1
+        if gold != NO_CONFLICT:
+            if predicted in CONTRADICTION_TYPES:
+                detected_conflicts += 1
+                if predicted == gold:
+                    subtype_correct += 1
+        elif predicted in CONTRADICTION_TYPES:
+            false_positives += 1
+
+    recall = detected_conflicts / len(conflicts) if conflicts else 0.0
+    sampled_fpr = false_positives / len(negatives) if negatives else None
+    accuracy = correct / len(gold_rows) if gold_rows else 0.0
+    detected_subtype_accuracy = subtype_correct / detected_conflicts if detected_conflicts else None
+    joint_subtype_accuracy = subtype_correct / len(conflicts) if conflicts else 0.0
+    wilson_fpr_upper = wilson_upper_bound(false_positives, len(negatives))
+
+    f1_scores: list[float] = []
+    for label in CLASSIFICATION_LABELS:
+        true_positive = matrix.get(label, {}).get(label, 0)
+        predicted_total = sum(matrix.get(gold, {}).get(label, 0) for gold in CLASSIFICATION_LABELS)
+        gold_total = sum(matrix.get(label, {}).values())
+        precision = true_positive / predicted_total if predicted_total else 0.0
+        class_recall = true_positive / gold_total if gold_total else 0.0
+        f1_scores.append(
+            2 * precision * class_recall / (precision + class_recall)
+            if precision + class_recall
+            else 0.0
+        )
+    macro_f1 = sum(f1_scores) / len(f1_scores)
+
+    print(
+        f"DENSE_METRICS expected={expected_count} completed={completed} failed={failed} "
+        f"completion_rate={completion_rate:.3f} conflict={len(conflicts)} "
+        f"detected={detected_conflicts} recall={recall:.3f} "
+        f"sampled_fpr={format_metric(sampled_fpr)} "
+        f"wilson95_fpr_upper={format_metric(wilson_fpr_upper)} "
+        f"accuracy={accuracy:.3f} "
+        f"detected_conflict_subtype_accuracy={format_metric(detected_subtype_accuracy)} "
+        f"joint_subtype_accuracy={joint_subtype_accuracy:.3f} macro_f1={macro_f1:.3f}"
+    )
+    print(f"DENSE_CONFUSION labels={','.join(CLASSIFICATION_LABELS)}")
+    for gold in CLASSIFICATION_LABELS:
+        values = ",".join(str(matrix.get(gold, {}).get(predicted, 0)) for predicted in CLASSIFICATION_LABELS)
+        print(f"DENSE_CONFUSION_ROW gold={gold} values={values}")
+
+    result.check(
+        completion_rate >= DENSE_MIN_COMPLETION_RATE,
+        f"dense completion {completion_rate:.3f} >= {DENSE_MIN_COMPLETION_RATE:.3f}",
+    )
+    result.check(recall >= DENSE_MIN_RECALL, f"dense conflict recall {recall:.3f} >= {DENSE_MIN_RECALL:.3f}")
+    result.check(
+        accuracy >= DENSE_MIN_ACCURACY,
+        f"dense 6-class accuracy {accuracy:.3f} >= {DENSE_MIN_ACCURACY:.3f}",
+    )
+    result.check(
+        sampled_fpr is not None and sampled_fpr <= DENSE_MAX_FPR,
+        f"dense sampled FPR {format_metric(sampled_fpr)} <= {DENSE_MAX_FPR:.3f}",
+    )
+    if enforce_wilson_gate:
+        result.check(
+            wilson_fpr_upper is not None and wilson_fpr_upper <= DENSE_MAX_WILSON_FPR_UPPER,
+            f"dense Wilson 95% FPR upper {format_metric(wilson_fpr_upper)} <= {DENSE_MAX_WILSON_FPR_UPPER:.3f}",
+        )
+    else:
+        result.passes.append(
+            f"dense Wilson 95% FPR upper {format_metric(wilson_fpr_upper)} (reported; dev gate not enforced)"
+        )
+    return {
+        "expected": expected_count,
+        "completed": completed,
+        "failed": failed,
+        "completion_rate": completion_rate,
+        "recall": recall,
+        "sampled_fpr": sampled_fpr,
+        "wilson95_fpr_upper": wilson_fpr_upper,
+        "accuracy": accuracy,
+        "detected_conflict_subtype_accuracy": detected_subtype_accuracy,
+        "joint_subtype_accuracy": joint_subtype_accuracy,
+        "macro_f1": macro_f1,
+        "confusion": matrix,
+    }
+
+
 def self_check() -> int:
     assert valid_newlines(b"a,b\n1,2\n")
     assert valid_newlines(b"a,b\r\n1,2\r\n")
@@ -374,7 +628,100 @@ def self_check() -> int:
         quality,
     )
     assert any("classification accuracy" in failure for failure in quality.failures)
-    print("SELF-CHECK PASS manifest, mapping, newline, recall-only false PASS rejection")
+
+    dense_gold = [
+        {"case_id": f"CT-{case_number:03d}", "classification": label}
+        for case_number, label in enumerate(CLASSIFICATION_LABELS[:-1], start=1)
+    ] + [
+        {"case_id": f"CT-{case_number:03d}", "classification": NO_CONFLICT}
+        for case_number in range(6, 26)
+    ]
+    dense_rows = [
+        {
+            "run_id": "dense-self-check",
+            "prompt_variant": "self-check",
+            "case_id": row["case_id"],
+            "status": "COMPLETED",
+            "prediction": row["classification"],
+            "confidence": "1",
+            "expected_input_tokens": "1",
+            "expected_output_tokens": "2",
+            "expected_cost_usd": "0.1",
+            "expected_latency_seconds": "0.01",
+            "input_tokens": "1",
+            "output_tokens": "2",
+            "actual_cost_usd": "0.1",
+            "latency_seconds": "0.01",
+        }
+        for row in dense_gold
+    ]
+    dev_gold = dense_gold[:8]
+    dev_quality = CheckResult()
+    dev_metrics = validate_dense_predictions(
+        dense_rows[:8], dev_gold, "dense-self-check", 8, dev_quality
+    )
+    assert not dev_quality.failures
+    assert dev_metrics["wilson95_fpr_upper"] > DENSE_MAX_WILSON_FPR_UPPER
+    dense_quality = CheckResult()
+    dense_metrics = validate_dense_predictions(
+        dense_rows, dense_gold, "dense-self-check", 25, dense_quality, enforce_wilson_gate=True
+    )
+    assert not dense_quality.failures
+    assert dense_metrics["completion_rate"] == 1.0
+    assert dense_metrics["recall"] == 1.0
+    assert dense_metrics["sampled_fpr"] == 0.0
+    assert dense_metrics["wilson95_fpr_upper"] <= DENSE_MAX_WILSON_FPR_UPPER
+    assert dense_metrics["macro_f1"] == 1.0
+    assert dense_metrics["confusion"]["TRUE_CONFLICT"]["TRUE_CONFLICT"] == 1
+
+    missing_quality = CheckResult()
+    missing_metrics = validate_dense_predictions(
+        dense_rows[:-1], dense_gold, "dense-self-check", 25, missing_quality
+    )
+    assert any("expected case_id" in failure for failure in missing_quality.failures)
+    assert missing_metrics["completion_rate"] < 1.0
+
+    failed_rows = [row.copy() for row in dense_rows]
+    failed_rows[0].update(
+        {
+            "status": "FAILED",
+            "prediction": "",
+            "confidence": "",
+            "expected_input_tokens": "1",
+            "expected_output_tokens": "2",
+            "expected_cost_usd": "0.1",
+            "expected_latency_seconds": "0.01",
+            "input_tokens": "",
+            "output_tokens": "",
+            "actual_cost_usd": "",
+            "latency_seconds": "",
+        }
+    )
+    failed_quality = CheckResult()
+    failed_metrics = validate_dense_predictions(
+        failed_rows, dense_gold, "dense-self-check", 25, failed_quality
+    )
+    assert not any("FAILED prediction" in failure for failure in failed_quality.failures)
+    assert failed_metrics["failed"] == 1
+    assert failed_metrics["recall"] < 1.0
+    assert failed_metrics["confusion"]["TRUE_CONFLICT"][NO_CONFLICT] == 0
+
+    fpr_rows = [row.copy() for row in dense_rows]
+    fpr_rows[5]["prediction"] = "TRUE_CONFLICT"
+    fpr_quality = CheckResult()
+    fpr_metrics = validate_dense_predictions(
+        fpr_rows, dense_gold, "dense-self-check", 25, fpr_quality, enforce_wilson_gate=True
+    )
+    assert fpr_metrics["sampled_fpr"] == 0.05
+    assert fpr_metrics["confusion"][NO_CONFLICT]["TRUE_CONFLICT"] == 1
+    assert fpr_metrics["macro_f1"] < 1.0
+    assert fpr_metrics["wilson95_fpr_upper"] > DENSE_MAX_WILSON_FPR_UPPER
+    assert any("Wilson 95% FPR upper" in failure for failure in fpr_quality.failures)
+
+    print(
+        "SELF-CHECK PASS manifest, mapping, newline, sparse recall-only rejection, "
+        "dense dev Wilson reporting/holdout gate, completeness/failure/FPR/confusion/macro-F1"
+    )
     return 0
 
 
@@ -384,7 +731,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generated-claims", type=Path, help="backend generated-claims CSV")
     parser.add_argument("--benchmark-output", type=Path, help="backend per-document benchmark CSV")
     parser.add_argument("--contradiction-output", type=Path, help="optional contradiction output CSV for AC-5")
+    parser.add_argument("--dense-predictions", type=Path, help="optional dense one-row-per-case predictions CSV")
     parser.add_argument("--labels", type=Path, default=Path("evaluation/contradiction-labels.csv"))
+    parser.add_argument(
+        "--holdout-labels",
+        "--gold-labels",
+        dest="holdout_labels",
+        type=Path,
+        help="optional dense holdout gold CSV (case_id,classification,판단_이유)",
+    )
     parser.add_argument("--expected-documents", type=int, help="expected benchmark document rows")
     parser.add_argument("--min-completion-rate", type=float, default=0.95)
     parser.add_argument("--min-contradiction-recall", type=float, default=0.80)
@@ -403,6 +758,11 @@ def main() -> int:
 
     result = CheckResult()
     gold_rows = load_csv(args.labels, GOLD_HEADERS, result)
+    dense_gold_rows = (
+        load_csv(args.holdout_labels, HOLDOUT_GOLD_HEADERS, result)
+        if args.holdout_labels is not None and args.dense_predictions is not None
+        else gold_rows
+    )
     manifest = load_json(args.manifest, result)
     pairs: dict[tuple[str, str], str] = {}
     if manifest is not None:
@@ -411,10 +771,11 @@ def main() -> int:
 
     blocked = False
     benchmark_run_id = None
-    if args.benchmark_output is None or args.expected_documents is None:
+    dense_mode = args.dense_predictions is not None
+    if (args.benchmark_output is None or args.expected_documents is None) and not dense_mode:
         print("BENCHMARK BLOCKED --benchmark-output와 --expected-documents가 필요합니다")
         blocked = True
-    else:
+    elif args.benchmark_output is not None and args.expected_documents is not None:
         benchmark_run_id = validate_benchmark_output(
             load_csv(args.benchmark_output, BENCHMARK_HEADERS, result),
             args.expected_documents,
@@ -422,7 +783,20 @@ def main() -> int:
             result,
         )
 
-    if args.contradiction_output is None:
+    manifest_run_id = manifest.get("run_id") if isinstance(manifest, dict) else None
+    if dense_mode:
+        if args.contradiction_output is not None:
+            result.check(False, "dense/sparse contradiction inputs cannot be combined")
+        expected_run_id = benchmark_run_id or (manifest_run_id if isinstance(manifest_run_id, str) else None)
+        validate_dense_predictions(
+            load_csv(args.dense_predictions, DENSE_PREDICTION_HEADERS, result),
+            dense_gold_rows,
+            expected_run_id,
+            args.expected_documents,
+            result,
+            enforce_wilson_gate=args.holdout_labels is not None,
+        )
+    elif args.contradiction_output is None:
         print("AC5 BLOCKED --contradiction-output이 없어 Ingest-level 판정 불가")
         blocked = True
     else:

@@ -60,11 +60,11 @@ ZeroWiki-SaaS/
 │   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
 │   │   └── design-source/        외부에서 가져온 디자인 시안 원본 (frontend 소유)
 │   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
-├── evaluation/                   Phase 0 정답 라벨 CSV·구조 검증기·실측 결과 (backend 소유)
-└── qa/                           테스트 시나리오·평가 세트 인수 보고서·독립 검증기
+├── evaluation/                   Phase 0 정답 라벨·중립 context·gold 없는 holdout 입력·실측 결과 (backend 소유)
+└── qa/                           테스트 시나리오·인수 보고서·독립 검증기·한국어 holdout review·machine gold
 ```
 
-`backend/`에는 Phase 0 기술 검증용 stdlib harness와 constitution JSON Schema만 있다. Spring Boot API·Ingest Worker는 아직 없다. `qa/`에는 평가 CSV와 Phase 0 benchmark 산출물을 독립 검증하는 실행기가 있다. 2026-08-11 Phase 0 기술 검증 실행은 완료됐지만 모순 classification accuracy gate가 실패했으므로 Phase 1에서 모순 자동 판정·적용은 차단한다. `frontend/`는 Next.js 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)와 화면 설계 문서를 보유한다. 없는 구현을 있다고 가정하지 않는다.
+`backend/`에는 Phase 0 기술 검증용 stdlib harness와 constitution JSON Schema만 있다. Spring Boot API·Ingest Worker는 아직 없다. `evaluation/`에는 정답 라벨과 모델 입력용 중립 context·gold 없는 holdout 입력·model-specific 결과가 있다. `qa/`에는 이 산출물을 독립 검증하는 실행기, 사용자가 전체 승인한 한국어 holdout review, 동결된 machine gold가 있다. 2026-08-11 `rubric-context-v3` 개발 gate와 holdout 데이터 승인은 통과했지만 holdout API·validator는 미실행이므로 모순 자동 판정·적용은 차단한다. `frontend/`는 Next.js 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)와 화면 설계 문서를 보유하며 build·typecheck는 통과했다. 없는 구현을 있다고 가정하지 않는다.
 
 ## 기준 문서
 

@@ -1,0 +1,88 @@
+{
+  "run_id": "phase0-20260811-gpt-5_6-sol-rubric-v2-r2",
+  "benchmark_kind": "contradiction_only",
+  "prompt_variant": "rubric-v2",
+  "model": {
+    "synthesis": "gpt-5.6-sol",
+    "provider": "openai-responses",
+    "api": "v1/responses",
+    "structured_outputs": "text.format.json_schema.strict"
+  },
+  "calls": {
+    "expected": 26,
+    "attempted": 26,
+    "api_attempts": 26,
+    "retry_attempts": 0,
+    "retry_successes": 0,
+    "known_failed_attempts": 0,
+    "unknown_failed_attempts": 0,
+    "completed": 26,
+    "failed": 0,
+    "not_attempted": 0
+  },
+  "budget": {
+    "max_cost_usd": 0.682235,
+    "expected_cost_usd": 0.26523,
+    "retry_reservation_cost_usd": 0.46491,
+    "reserved_cost_usd": 0.13556,
+    "actual_cost_usd": 0.13556,
+    "unknown_cost_reservation_usd": 0.0,
+    "cost_is_complete": true,
+    "cap_enforced": true
+  },
+  "expected": {
+    "input_tokens": 13110,
+    "output_tokens": 6656,
+    "total_tokens": 19766,
+    "cost_usd": 0.26523,
+    "latency_seconds_per_call": 20.0,
+    "latency_seconds_total": 520.0,
+    "token_method": "stdlib heuristic: ASCII chars/4 + non-ASCII chars/2 (ceiling)",
+    "latency_method": "qwen3:1.7b Phase 0 synthesis p95 reference budget"
+  },
+  "actual": {
+    "input_tokens": 12880,
+    "output_tokens": 2372,
+    "total_tokens": 15252,
+    "cost_usd": 0.13556,
+    "latency_seconds_total": 72.866036,
+    "latency_seconds_mean": 2.80254,
+    "latency_seconds_p95": 4.713107,
+    "latency_scope": "all API attempts, including failed and retried attempts"
+  },
+  "retry": {
+    "max_attempts_per_case": 2,
+    "max_output_tokens_first_attempt": 256,
+    "max_output_tokens_transient_retry": 256,
+    "max_output_tokens_incomplete_retry": 512,
+    "error_codes": {}
+  },
+  "pricing_usd_per_million_tokens": {
+    "input": 5.0,
+    "output": 30.0
+  },
+  "contradictions": {
+    "cases": 26,
+    "completed_cases": 26,
+    "classification_accuracy": 0.6153846153846154,
+    "completed_classification_accuracy": 0.6153846153846154,
+    "conflict_recall": 0.7391304347826086,
+    "sampled_false_positive_rate": 0.0,
+    "completed_conflict_cases": 23,
+    "completed_negative_cases": 3
+  },
+  "comparison": {
+    "baseline_run_id": "phase0-20260811-qwen3-1_7b-r2",
+    "baseline_model": "qwen3:1.7b",
+    "baseline_classification_accuracy": 0.19230769230769232,
+    "baseline_conflict_recall": 1.0,
+    "baseline_sampled_false_positive_rate": 1.0
+  },
+  "limitations": [
+    "입력된 contradiction case만 실행하며 100문서 2단계 ingest는 유료 호출 제한으로 재실행하지 않는다.",
+    "expected input token은 tokenizer 없는 사전 예산 근사치이고 actual은 Responses API usage 값이다.",
+    "실제 비용은 gpt-5.6-sol 문서의 input/output 단가로 계산하며 계정 할인·캐시·세금은 제외한다.",
+    "dense prediction의 FAILED/NOT_ATTEMPTED는 NO_CONFLICT가 아니며 sparse output에는 포함하지 않는다.",
+    "generated claim ID는 평가 조인용이며 UD-29 자동 동일성 판정 구현이 아니다."
+  ]
+}

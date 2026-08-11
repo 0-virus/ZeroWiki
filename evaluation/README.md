@@ -10,6 +10,9 @@
 | `pages-inventory.csv` | 페이지 인벤토리 (page_id ↔ slug ↔ 제목 ↔ 타입 ↔ 경로) | 180 |
 | `relation-labels.csv` | 정답 연결 세트 | 84 (positive 76 / negative 8) |
 | `contradiction-labels.csv` | 정답 모순 세트 | 26 (실제 모순 23 / NO_CONFLICT 3) |
+| `contradiction-contexts.csv` | 정답 케이스에 결합하는 중립 context와 원문 참조 | `case_id`별 1행 |
+| `contradiction-contexts-v3.csv` | claim A/B별 time·condition 매핑 context와 원문 참조 | `case_id`별 1행 |
+| `contradiction-holdout-input.csv` | gold·판단 이유 없이 별도 라벨링하는 holdout 입력 | `HT-NNN` stable ID |
 | `relation-labels-template.csv` | 원본 템플릿 (형식 참조용, 수정 X) | 5 |
 | `contradiction-labels-template.csv` | 원본 템플릿 (형식 참조용, 수정 X) | 5 |
 
@@ -74,6 +77,61 @@ python evaluation/validate_evaluation.py
   - `TRUE_CONFLICT` — 커버리지 100%의 보증 범위(`wiki/concepts/test-coverage.md`)
 - `NO_CONFLICT` 3건은 오탐 측정용이다. 특히 3번째(`Filter`/`Interceptor`)는 두 서술이 서로
   다른 대상을 말하는데 문장 구조가 대비형이라 모순으로 오판하기 쉬운 케이스다.
+
+## OpenAI prompt 입력·holdout
+
+`contradiction-contexts.csv`의 context 열은 `time_or_version`,
+`environment_or_condition`, `subject`로 제한하며, 입력에 근거가 없으면
+`NOT_PROVIDED`를 사용한다. `source_ref`는 원문 추적용 메타데이터이고 모델 prompt에는
+주입하지 않는다. `phase0_benchmark.py --prompt-variant rubric-context-v2`가 이 파일을
+읽어 claim A/B와 중립 JSON으로 결합한다.
+
+`contradiction-contexts-v3.csv`는 같은 subject에 대해 claim A/B의
+`time_or_version`와 `environment_or_condition`을 별도로 매핑한다. `rubric-context-v3`는
+명시적으로 매핑된 TIME·CONDITION 차이를 `NO_CONFLICT`보다 먼저 적용해 차이를 가장 잘
+설명하는 축을 고르고, source ref와 case/gold/reason은 prompt에서 제외한다.
+
+`contradiction-holdout-input.csv`는 `case_id`, 두 claim, 같은 세 context 열, 양쪽
+`source_ref`만 가진다. 정답 classification이나 `판단_이유`를 저장하지 않아 QA가 별도로
+라벨링할 수 있다. 기존 `CT-NNN` claim pair와 exact normalized pair가 겹치지 않는지
+harness `--self-check`가 확인하며, holdout loader는 exact `HT-001`~`HT-070` 집합과
+holdout 내부의 NFKC·연속 공백 축약·case-fold·A/B 순서 무시 중복도 거부한다.
+
+### Holdout 실행 입력 계약
+
+holdout을 실행할 때만 `--benchmark-input evaluation/contradiction-holdout-input.csv`
+와 `--gold-labels <QA가 별도로 만든 CSV>`를 함께 지정한다. gold 파일의 헤더는
+`case_id,classification,판단_이유`이며 두 파일의 stable `HT-NNN` 집합이 일치해야 한다.
+join한 gold와 `case_id`는 manifest·평가에만 사용하고 모델 prompt에는 넣지 않는다.
+기존 `--labels evaluation/contradiction-labels.csv` 경로와 six-label 26-case 기본 모드는
+그대로 유지된다. `rubric-v2`, `rubric-context-v2`, `rubric-context-v3`에는 평가 문장과
+겹치지 않는 synthetic label example이 공통으로 포함되며 context variant는 중립 context
+JSON만 추가한다. v3 실행은 `--openai-contexts evaluation/contradiction-contexts-v3.csv`를
+지정한다.
+
+### Holdout 최종 데이터 스냅샷 (2026-08-11)
+
+`contradiction-holdout-input.csv`는 실제 NoteWiki 원문을 근거로 70행을 재구성했다.
+최종 review 목표는 `TRUE_CONFLICT`, `TIME_CHANGE`, `CONDITION_DIFF`,
+`VIEWPOINT_DIFF`, `POSSIBLE_CONFLICT` 각 8건과 `NO_CONFLICT` 30건이다. 초기 초안의
+`34/4/2/0/1/29` 분포와 HT-065 경계 blocker는 교체 pair로 해소했으며, 140개 source
+reference가 모두 존재하고 NFKC 정규화 중복은 0건이다.
+
+claim·context·subject는 기술 고유명사를 제외하고 한국어로 작성했다. 사용자용 review의
+헤더·값도 한국어로 유지하며, machine input의 exact header/stable ID 계약과 분리한다.
+review 판정은 별도 승인 전까지 machine gold enum으로 역매핑하지 않으며, `user_decision`은
+비어 있다. gold 파일 생성, holdout API 실행, production 적용은 모두 아직 실행하지
+않았다. QA review 파일은 이 작업에서 수정하지 않는다.
+
+### 최근 claim-specific v3 실행
+
+`evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/`에서 26/26건을 26회 호출·retry
+없이 완료했다. accuracy `24/26=0.9230769`, conflict recall `22/23=0.9565217`, sampled
+FPR `0/3=0`, macro-F1 `0.902`, 비용 `$0.14906`, latency total/p95
+`64.443268s/5.344194s`이며 QA validator는 exit 0이다. 오분류는 `CT-017`
+(`VIEWPOINT_DIFF`를 `POSSIBLE_CONFLICT`로 예측)과 `CT-021` (`POSSIBLE_CONFLICT`를
+`NO_CONFLICT`로 예측)이다. 이는 dev gate PASS 결과이며 holdout 미실행·production 승격 미확정을
+변경하지 않는다.
 
 ## 채점 방법
 

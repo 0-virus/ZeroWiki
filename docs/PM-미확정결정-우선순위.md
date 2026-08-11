@@ -32,8 +32,8 @@
 - 사용자 지시(2026-08-11): Phase 0 완료까지 작업을 지속하고 필요한 의사결정을 리더에게 위임했다. 리더는 실제 결과로 UD-11·17·25·29를 확정했다.
 - 제품/계약 정본의 기존 사용자 결정 5건은 UD-03·10·19·20·22로 유지한다.
 - 실제 외부 호출 전 **LLM provider/model**, 유료 API 사용 범위, 토큰·비용 예산은 사용자 결정·승인이 필요하다. 이는 평가 CSV 인수로 확정되는 기술 세부가 아니다.
-- mapping manifest와 100문서 harness는 완료했다. 모순은 accuracy 19.2%·sampled FPR 100%로 product gate 실패다.
-- **다음 한 걸음:** Phase 1 core scaffolding. 모순 자동 판정·적용은 accuracy 80% 독립 gate 전까지 차단한다.
+- mapping manifest와 100문서 harness는 완료했다. 과거 baseline 모순 결과는 accuracy 19.2%·sampled FPR 100%로 실패했으며, 최신 `rubric-context-v3` dev gate는 accuracy 0.923·sampled FPR 0으로 통과했다. holdout API와 production 승격은 아직 실행·확정하지 않았다.
+- **다음 한 걸음:** Spring Boot/Ingest 실행 scaffold 준비 후 Phase 1 core 첫 최소 vertical slice(`인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회`)를 구현한다. 모순 자동 판정·적용은 holdout 및 독립 production gate 전까지 차단한다.
 - AC-3과 UD-26은 Phase 4 사용자 검증 분기다.
 
 ---
@@ -232,6 +232,7 @@
 | 2026-07-30 v3 갱신 | **기술 추가 확정 6건 반영** (UD-08, 09, 13, 15, 16, 18) | 미확정 18건 → **12건** (요구사항 정의서 v1.0). 사용자 결정 5건(UD-03·10·19·20·22)은 유효. 기술 결정 3건(UD-12·21·23)은 현황표만 반영 |
 | 2026-07-30 v4 갱신 | **기술 최종 확정 3건** (UD-12, 21, 23) + **UD-29 신설(벤치마크)** | 미확정 12건 → **10건** (요구사항 정의서 v1.1). 기술 미확정 **0건**. 잔여: 사용자 5 / 벤치마크 5(UD-11, 17, 25, 26, 29 신설). UD-29는 Claim 동일성 판정 메커니즘, 승인 피로(UX)와 연결 |
 | 2026-08-11 v5 갱신 | 사용자 Phase 0 지속 작업·리더 의사결정 위임 사실 기록, UD-03·10·19의 Phase 의존성을 기획서 23절과 정합화 | Phase 0 완료·UD 값 확정은 유보. UD-03은 Phase 1 도서관 한도/Phase 2 과금으로 분리하고 UD-10·19는 Phase 2로 정렬 |
+| 2026-08-11 v6 갱신 | Phase 1 즉시 착수 감사 반영: Spring Boot/Ingest scaffold 선행, 첫 최소 vertical slice와 holdout/production 차단 경계 명시 | Phase·UD 값은 변경하지 않고 구현 착수 조건만 명확화 |
 
 ---
 

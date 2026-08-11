@@ -35,6 +35,14 @@
 
 **산출:** `backend/scripts/phase0_benchmark.py`, `backend/contracts/library-constitution.schema.json`, `evaluation/results/**`, `qa/verify_phase0_benchmark.py`, `docs/Phase-0-벤치마크-결과.md`. 상세 역할 기록은 각 STATE·WORKLOG를 따른다.
 
+### 3. GPT 후속 gate 통과·holdout 전체 승인·Phase 1 착수 판단
+
+**후속 품질 개선:** `rubric-context-v3`가 26/26 완료, 6-class accuracy 24/26(92.3%), conflict recall 22/23(95.7%), sampled FPR 0/3으로 개발 gate를 통과했다. 초기 70건 holdout 초안의 분포 불균형과 HT-065 근거 부족을 source-grounded 교체로 해소하고, conflict 5종 각 8건·`NO_CONFLICT` 30건으로 재구성했다.
+
+**사용자 결정:** 사용자가 한국어 holdout review 70건을 전체 승인했다. QA는 `사용자_결정=승인` 70건과 exact UTF-8 `case_id,classification,판단_이유` machine gold를 동결했다. holdout API·validator는 아직 실행하지 않았으므로 production 모순 자동 판정·적용과 LLM provider/model 확정은 계속 차단한다.
+
+**Phase 1 판단:** 기획서 23절과 API 17절, backend/frontend/qa/pm 실제 상태를 교차 대조했다. frontend build·typecheck는 통과했지만 backend에는 Spring Boot build/source가 없다. 따라서 Phase 1은 즉시 착수 가능하되 첫 작업은 backend scaffold와 `인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회` vertical slice다. UD-03·19·20은 각각 quota·원장·보존 정책 하위 기능만 차단하고 이 최소 slice 자체는 막지 않는다.
+
 ---
 
 ## 2026-08-10

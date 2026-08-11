@@ -1232,3 +1232,31 @@
 
 - Ingest 화면은 설계 문서 정합화만 완료됐으며 실 API 연동·렌더링 검증은 frontend 의존성과 backend API 부재로 차단되어 있다.
 
+## 2026-08-11 — Phase 1 frontend readiness 실측
+
+**한 일**
+
+- 공유 저장소의 실제 frontend 의존성·라우트·mock/API 상태를 재확인했다. `frontend/node_modules`가 존재하며 `/`와 `/review-changes` 두 App Router 경로만 있다.
+- 기능 구현은 하지 않고 Phase 1 첫 vertical slice 착수 가능 여부와 현재 blocker를 STATE 스냅샷에 반영했다.
+- `rubric-context-v3` 개발 gate PASS, holdout 전체 승인·machine gold freeze 진행 중, holdout 실행 전 production 자동 판정·자동 적용 차단 경계를 기록했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**검증**
+
+- `npm.cmd ls --depth=0` → 종료 코드 0; `next@14.2.35`, `react@18.3.1`, `typescript@5.9.3` 등 설치 확인
+- `npm.cmd run build` → 종료 코드 0; `Compiled successfully`, `Generating static pages (5/5)`, `/`, `/_not-found`, `/review-changes` 정적 생성
+- `npx.cmd tsc --noEmit` → 종료 코드 0, 출력 없음
+- dev 서버에서 `/` DOM에 `도서관` 및 6개 섹션, `/review-changes` DOM에 변경 세트·diff·승인/거절/수정요청/보류 액션이 표시됨
+- `rg --files backend` → `backend/contracts/library-constitution.schema.json`, `backend/scripts/phase0_benchmark.py`만 확인
+- `rg -n '(fetch\\(|axios|/api/v1)' frontend/src` → 실제 호출 0건; `mockLibraryHomeResponse`, `mockChangeSet`, `mockChangeItemDiffData` 직접 소비 확인
+
+**미해결 사항**
+
+- backend 실 API 서버가 없어 현재 화면은 mock 기반이며 Phase 1 API 연결이 첫 blocker다.
+- 브라우저 dev console에서 `HeaderBar`의 동일 `href: '/'` key로 React duplicate-key 경고가 발생한다. 렌더링과 첫 vertical slice 착수는 막지 않지만 API 연동 전 수정이 필요하다.
+- 모순 자동 판정·자동 적용은 holdout 승인/gold freeze와 holdout 실행·production gate 전까지 차단한다.
+

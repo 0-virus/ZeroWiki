@@ -1,0 +1,27 @@
+case_id,time_or_version,environment_or_condition,subject,source_ref
+CT-001,NOT_PROVIDED,NOT_PROVIDED,서블릿 요청 처리 파이프라인,wiki/concepts/filter.md;wiki/concepts/interceptor.md
+CT-002,JDK 8 대비 JDK 16,NOT_PROVIDED,Java record,wiki/concepts/java-record.md
+CT-003,NOT_PROVIDED,테스트 실행과 결함 검증,테스트 커버리지,wiki/concepts/test-coverage.md
+CT-004,NOT_PROVIDED,명세와 구현체의 구분,JPA와 Hibernate,wiki/concepts/jpa.md;wiki/concepts/hibernate.md
+CT-005,NOT_PROVIDED,Spring 프록시를 통한 호출 여부,@Transactional,wiki/concepts/transaction.md;wiki/concepts/aop.md
+CT-006,Oracle 또는 Sun 관리 시기에서 Jakarta EE 이관 시기,NOT_PROVIDED,서블릿 스펙,wiki/concepts/servlet-spec.md
+CT-007,Spring Boot 2.x 이후,기본 DataSource 설정,커넥션 풀,wiki/concepts/spring-boot.md;wiki/concepts/hikaricp.md
+CT-008,ES2017 및 현재 JavaScript,비동기 실행 방식,JavaScript 비동기,wiki/concepts/javascript-async.md;wiki/concepts/async-await.md
+CT-009,Java 8 전후,함수형 인터페이스 구현 방식,Java 람다,wiki/concepts/functional-interface.md;wiki/concepts/lambda.md;wiki/concepts/anonymous-class.md
+CT-010,개발 초기와 형상 관리 도입 이후,로컬 개발과 운영 DB,스키마 변경,wiki/concepts/hibernate-ddl-auto.md;wiki/concepts/database-migration.md;wiki/concepts/flyway.md
+CT-011,NOT_PROVIDED,로컬 개발 환경과 운영 환경,ddl-auto update,wiki/concepts/hibernate-ddl-auto.md
+CT-012,NOT_PROVIDED,데이터 분포와 쿼리 계획,데이터베이스 인덱스,wiki/concepts/database-index.md;wiki/concepts/explain.md
+CT-013,NOT_PROVIDED,충돌 발생 빈도와 성능 요구,동시성 제어,wiki/concepts/optimistic-pessimistic-lock.md
+CT-014,NOT_PROVIDED,실행 안전성과 테스트 커버리지,쇼트 서킷,wiki/concepts/short-circuit.md;wiki/concepts/test-coverage.md
+CT-015,NOT_PROVIDED,개발 프록시와 운영 서버 헤더,CORS,wiki/concepts/cors.md;wiki/concepts/reverse-proxy.md
+CT-016,NOT_PROVIDED,개발자 편의와 브라우저 보안,CORS와 SOP,wiki/concepts/cors.md;wiki/concepts/same-origin-policy.md
+CT-017,NOT_PROVIDED,생산성 관점과 성능 관점,ORM,wiki/concepts/orm.md;wiki/concepts/n-plus-1-problem.md
+CT-018,NOT_PROVIDED,수평 확장성과 즉시 무효화,인증 세션과 JWT,wiki/concepts/session-auth.md;wiki/concepts/jwt.md
+CT-019,NOT_PROVIDED,측정 기반 관리와 테스트 품질,커버리지 목표,wiki/concepts/test-coverage.md
+CT-020,NOT_PROVIDED,프레임워크 본질에 대한 관점,Spring,wiki/concepts/spring-framework.md;wiki/concepts/aop.md;wiki/concepts/dependency-injection.md
+CT-021,NOT_PROVIDED,실행 계획 확인 전의 원인 추정,인덱스 성능,wiki/concepts/database-index.md;wiki/concepts/explain.md
+CT-022,NOT_PROVIDED,지연 로딩과 즉시 로딩,ORM N+1,wiki/concepts/n-plus-1-problem.md;wiki/concepts/orm.md
+CT-023,NOT_PROVIDED,운영 장애와 DB 자원 고갈,서비스 중단 원인,wiki/concepts/ddl-lock.md;wiki/concepts/connection-pool.md
+CT-024,NOT_PROVIDED,명세의 정의와 역할,JPA,wiki/concepts/jpa.md
+CT-025,NOT_PROVIDED,이미지와 실행 인스턴스의 구분,Docker,wiki/concepts/docker-image.md;wiki/concepts/docker-container.md
+CT-026,NOT_PROVIDED,서블릿 컨테이너와 Spring MVC 영역,Filter와 Interceptor,wiki/concepts/filter.md;wiki/concepts/interceptor.md

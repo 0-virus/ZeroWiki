@@ -1275,3 +1275,43 @@ grep "LIMIT [0-9]" docs/PM-미확정결정-우선순위.md
 **미해결 사항**
 
 - 모순 품질 gate와 frontend 의존성/backend API 부재는 남아 있다. 커밋하지 않았다.
+
+---
+
+## 2026-08-11 23:02 — Phase 1 즉시 착수 가능성·실제 산출물 재감사
+
+**무엇을 했는가**
+
+- `.claude/CONSTITUTION.md` → `CLAUDE.md` → `.claude/team/pm/CLAUDE.md` → PM `STATE.md`를 순서대로 읽고, backend/frontend/qa `STATE.md`, JOURNAL, 실제 산출물을 다시 대조했다.
+- 기획서 23절, API 명세 17절, 요구사항 정의서 12절의 UD-03·10·19·20·22를 교차 대조해 Phase 1 기본 도서관 코어와 사용자 결정 의존 기능을 분리했다.
+- 최신 v3 dev validator(`RESULT PASS failures=0`), backend/evaluation self-check, frontend build/typecheck를 직접 실행했다.
+- 실제 `backend/`에는 `contracts/`·`scripts/`만 있고 Spring Boot build/source/Worker가 없음을 확인했다. 따라서 feature 구현은 scaffold 준비 후에만 시작할 수 있다고 판정했다.
+- 첫 최소 vertical slice를 `인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회`로 권고하고, API 17절 순서의 의존 사슬을 종합 문서에 기록했다.
+- QA review/gold CSV를 직접 읽어 70행·사용자 승인 70건·목표 분포·BOM 없는 UTF-8 exact header를 확인했다. 사용자 입력의 “freeze 진행/헤더 시정 중” 표현은 현재 실제 파일 및 QA STATE 상 완료 상태와 달라, 종합 문서에 사실 충돌로 남기고 holdout API 미실행은 그대로 유지했다.
+
+**산출물 경로**
+
+- `docs/PM-종합-현황.md`
+- `docs/PM-미확정결정-우선순위.md`
+- `.claude/team/pm/STATE.md`
+- `.claude/team/pm/WORKLOG.md`
+
+**삭제·대체 기록**
+
+- `docs/PM-종합-현황.md`의 낡은 `node_modules 부재`, frontend build/typecheck 미검증, QA 구조 통과·품질 FAIL, “Phase 1 core 구현은 이제 착수 대상” 문구를 실제 현재 상태(정적 검증 PASS, mock-only, holdout/production BLOCKED, backend scaffold 부재)로 대체했다.
+- 같은 문서 6.4절의 `UD-29 권고(미확정)` 분석은 요구사항 정의서 12.2절의 2026-08-11 확정 사실과 충돌하므로 제거하고, AI mapping 제안+사용자 승인 경계로 대체했다. 과거 판단의 존재와 대체 사유는 이 항에 보존한다.
+- `docs/PM-미확정결정-우선순위.md`의 다음 작업 문구만 scaffold 선행·첫 slice로 명확화했으며, 사용자 결정 선택지·권고 값은 변경하지 않았다.
+
+**검증**
+
+- `python qa/verify_phase0_benchmark.py ...rubric-context-v3... --expected-documents 26` → `DENSE_METRICS completed=26/26 recall=0.957 sampled_fpr=0.000 accuracy=0.923 macro_f1=0.902`, `RESULT PASS failures=0`, exit 0.
+- `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`, exit 0.
+- `python -B evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`, exit 0.
+- `frontend`: `npm.cmd run build` 및 `npx.cmd tsc --noEmit` → build static pages 5/5, 두 명령 exit 0.
+- Python stdlib read-only audit → review/gold 70행, 사용자 승인 70건, 목표 분포 일치, exact UTF-8 headers, BOM 없음.
+- backend scaffold inventory → `pom.xml`, Gradle, `gradlew`, `src/main/java` 모두 없음.
+
+**미해결 사항**
+
+- holdout API/validator와 Wilson hard gate는 미실행이며 production 승격·LLM provider/model·유료 API·비용 예산은 사용자 결정 전 미확정이다.
+- Spring Boot/Ingest scaffold가 없어 Phase 1 feature 구현·실 API 연동은 미착수다. API integration p95/citation, 원본 Claim mapping, AC-3·UD-26, inventory 누락/평가 불가 relation도 남아 있다.

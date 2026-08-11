@@ -1,0 +1,27 @@
+case_id,claim_A_time_or_version,claim_B_time_or_version,claim_A_environment_or_condition,claim_B_environment_or_condition,subject,source_ref
+CT-001,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,서블릿 요청 처리 파이프라인,wiki/concepts/filter.md;wiki/concepts/interceptor.md
+CT-002,JDK 16 기준,JDK 16 기준,NOT_PROVIDED,NOT_PROVIDED,Java record,wiki/concepts/java-record.md
+CT-003,NOT_PROVIDED,NOT_PROVIDED,현재 테스트 실행,현재 테스트 실행,테스트 커버리지,wiki/concepts/test-coverage.md
+CT-004,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,JPA와 Hibernate,wiki/concepts/jpa.md;wiki/concepts/hibernate.md
+CT-005,NOT_PROVIDED,NOT_PROVIDED,동일 Spring 서비스 호출 맥락,동일 Spring 서비스 호출 맥락,@Transactional,wiki/concepts/transaction.md;wiki/concepts/aop.md
+CT-006,Oracle 또는 Sun 관리 시기,Jakarta EE 이관 이후,NOT_PROVIDED,NOT_PROVIDED,서블릿 스펙,wiki/concepts/servlet-spec.md
+CT-007,Spring Boot 1.x 계열 이전,Spring Boot 2.x 이후,기본 DataSource 설정,기본 DataSource 설정,커넥션 풀,wiki/concepts/spring-boot.md;wiki/concepts/hikaricp.md
+CT-008,ES2017 이전의 콜백 관행,현재 JavaScript,비동기 실행 방식,비동기 실행 방식,JavaScript 비동기,wiki/concepts/javascript-async.md;wiki/concepts/async-await.md
+CT-009,Java 7 이하,Java 8 이후,함수형 인터페이스 구현 방식,함수형 인터페이스 구현 방식,Java 람다,wiki/concepts/functional-interface.md;wiki/concepts/lambda.md;wiki/concepts/anonymous-class.md
+CT-010,초기 개발 단계,형상 관리 도입 이후 운영 단계,로컬 개발 환경,운영 DB,스키마 변경,wiki/concepts/hibernate-ddl-auto.md;wiki/concepts/database-migration.md;wiki/concepts/flyway.md
+CT-011,NOT_PROVIDED,NOT_PROVIDED,로컬 개발 환경,운영 데이터베이스,ddl-auto update,wiki/concepts/hibernate-ddl-auto.md
+CT-012,NOT_PROVIDED,NOT_PROVIDED,선택도가 높은 단순 조회,낮은 선택도 또는 다른 정렬·필터 쿼리,데이터베이스 인덱스,wiki/concepts/database-index.md;wiki/concepts/explain.md
+CT-013,NOT_PROVIDED,NOT_PROVIDED,충돌 빈도가 높고 안전성이 우선인 상황,충돌 빈도가 낮고 성능이 우선인 상황,동시성 제어,wiki/concepts/optimistic-pessimistic-lock.md
+CT-014,NOT_PROVIDED,NOT_PROVIDED,실행 안전성,테스트 커버리지,쇼트 서킷,wiki/concepts/short-circuit.md;wiki/concepts/test-coverage.md
+CT-015,NOT_PROVIDED,NOT_PROVIDED,운영 서버의 응답 헤더,로컬 개발 프록시,CORS,wiki/concepts/cors.md;wiki/concepts/reverse-proxy.md
+CT-016,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,CORS와 SOP,wiki/concepts/cors.md;wiki/concepts/same-origin-policy.md
+CT-017,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,ORM,wiki/concepts/orm.md;wiki/concepts/n-plus-1-problem.md
+CT-018,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,인증 세션과 JWT,wiki/concepts/session-auth.md;wiki/concepts/jwt.md
+CT-019,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,커버리지 목표,wiki/concepts/test-coverage.md
+CT-020,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,Spring,wiki/concepts/spring-framework.md;wiki/concepts/aop.md;wiki/concepts/dependency-injection.md
+CT-021,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,인덱스 성능,wiki/concepts/database-index.md;wiki/concepts/explain.md
+CT-022,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,ORM N+1,wiki/concepts/n-plus-1-problem.md;wiki/concepts/orm.md
+CT-023,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,서비스 중단 원인,wiki/concepts/ddl-lock.md;wiki/concepts/connection-pool.md
+CT-024,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,JPA,wiki/concepts/jpa.md
+CT-025,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,Docker image와 container,wiki/concepts/docker-image.md;wiki/concepts/docker-container.md
+CT-026,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,NOT_PROVIDED,Filter와 Interceptor,wiki/concepts/filter.md;wiki/concepts/interceptor.md

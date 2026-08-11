@@ -694,3 +694,228 @@
 **미해결**
 
 - contradiction 분류 품질 개선 및 동일 산출물 재실행 필요.
+
+---
+
+## 2026-08-11 09:12 — GPT model-specific benchmark 독립 QA 재검증
+
+**한 일**
+
+1. backend 산출물 `evaluation/results/phase0-gpt-5_6-sol-r1/`를 읽기 전용으로
+   확인하고 기존 `qa/verify_phase0_benchmark.py`를 변경 없이 실행했다.
+2. manifest schema/hash·gold 26 case·generated claim mapping 26행,
+   benchmark 26행 `COMPLETED`를 확인했다.
+3. contradiction output 18행의 generated pair join과 5종 label enum은 모두
+   유효했지만 `CT-011, CT-012, CT-014, CT-015, CT-021, CT-024, CT-025, CT-026`
+   8개 case가 누락된 사실을 별도 계산으로 확인했다.
+4. qwen baseline과 비교한 결과 GPT는 sampled FPR과 분류 정확도는 개선했지만
+   recall·accuracy gate를 통과하지 못했다. `openai-calls.csv`의 key·응답 본문은
+   읽거나 기록하지 않았다.
+
+**산출물**
+
+- `qa/phase0-evaluation-acceptance-report.md` (GPT run 독립 인수 섹션·findings·비교표)
+- `.claude/team/qa/STATE.md` (GPT 최신 판정·차단 요인·재현 명령)
+- `.claude/team/qa/WORKLOG.md` (본 항목 append-only)
+
+**검증 명령과 실제 결과**
+
+- `python qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`, exit 0
+- `python evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`, exit 0
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`, exit 0
+- `python qa/verify_phase0_benchmark.py --manifest evaluation/results/phase0-gpt-5_6-sol-r1/phase0-manifest.json --generated-claims evaluation/results/phase0-gpt-5_6-sol-r1/phase0-generated-claims.csv --benchmark-output evaluation/results/phase0-gpt-5_6-sol-r1/phase0-benchmark.csv --expected-documents 26 --contradiction-output evaluation/results/phase0-gpt-5_6-sol-r1/phase0-contradictions.csv` → `BENCHMARK_METRICS expected=26 completed=26 completion_rate=1.000`, `AC5_METRICS conflict=23 detected=18 recall=0.783 sampled_fpr=0.0 classification_accuracy=0.615`, `RESULT FAIL failures=2`, exit 1
+- qwen baseline 동일 validator → `recall=1.000 sampled_fpr=1.0 classification_accuracy=0.192`, `RESULT FAIL failures=1`, exit 1
+
+**미해결**
+
+- GPT output 8개 누락 case를 해소하고 동일 26-case validator에서 recall·accuracy
+  0.80 이상을 재검증해야 한다. Phase 1 품질 진입은 계속 BLOCKED다.
+
+---
+
+## 2026-08-11 13:08 — dense predictions validator 계약 확장 및 회귀 검증
+
+**한 일**
+
+1. `qa/verify_phase0_benchmark.py`에 기존 sparse 경로를 유지하는 opt-in
+   `--dense-predictions` CSV 검증을 추가했다. 모든 gold case의 정확히 한 행,
+   단일 `run_id`, `COMPLETED`/`FAILED` status, 6-class enum, confidence/token/
+   cost/latency 범위와 실패 행의 blank 필드를 검사한다. FAILED와 누락은
+   `NO_CONFLICT`로 대체하지 않는다.
+2. dense metrics에 completion, conflict recall, sampled FPR, 6-class accuracy,
+   detected-conflict subtype accuracy, joint subtype accuracy, 6x6 confusion,
+   macro-F1, Wilson 95% FPR upper를 추가하고 completion 100%/recall·accuracy
+   >= 0.80/FPR <= 0.10/Wilson upper <= 0.20 gate를 적용했다.
+3. `--self-check`에 누락·FAILED 오인 방지, FPR hard gate, confusion/macro-F1/
+   Wilson 검사를 추가했다. 체크리스트와 STATE에 dense 계약과 후속 holdout 작업을
+   기록했다. 실제 API 호출·holdout label 생성은 하지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/verify_phase0_benchmark.py` → exit 0
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`,
+  synthetic dense `expected=25 completed=25 failed=0 completion_rate=1.000
+  recall=1.000 sampled_fpr=0.000 wilson95_fpr_upper=0.161 accuracy=1.000
+  macro_f1=1.000`, exit 0
+- qwen sparse baseline (`--expected-documents 100`) →
+  `BENCHMARK_METRICS expected=100 completed=100 completion_rate=1.000`,
+  `AC5_METRICS conflict=23 detected=23 recall=1.000 sampled_fpr=1.0
+  classification_accuracy=0.192`, `RESULT FAIL failures=1`, exit 1
+- GPT sparse run (`--expected-documents 26`) →
+  `BENCHMARK_METRICS expected=26 completed=26 completion_rate=1.000`,
+  `AC5_METRICS conflict=23 detected=18 recall=0.783 sampled_fpr=0.0
+  classification_accuracy=0.615`, `RESULT FAIL failures=2`, exit 1
+
+**미해결/인계**
+
+- backend가 label-free 26-case holdout dense CSV를 생성하면 새 CLI로 실제
+  gate를 검증해야 한다. `evaluation/README.md`에는 dense header/metric/gate
+  설명이 아직 없으므로 backend/리더가 해당 문서를 계약 정본에 맞게 보강해야 한다.
+
+---
+
+## 2026-08-11 13:25 — backend dense header 및 holdout gold 호환 보정
+
+**한 일**
+
+- backend `openai-predictions.csv` 정본 header에 맞춰 QA dense validator와
+  self-check synthetic rows를 일치시켰다: `prompt_variant`, `prediction`,
+  expected/actual token·cost·latency 필드를 검증한다.
+- FAILED self-check는 `prediction`과 actual accounting 필드를 공란으로 두고,
+  confusion에 `NO_CONFLICT`를 암묵 삽입하지 않는지 확인한다. FPR test는
+  `prediction`을 변조한다.
+- 기존 `--labels` full gold header를 유지하면서 `--gold-labels`/`--holdout-labels`
+  선택 입력으로 `case_id,classification,판단_이유` 3열 holdout gold를 dense
+  검증에 사용할 수 있게 했다. backend/evaluation 파일은 편집하지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`,
+  dense metrics `completion_rate=1.000 recall=1.000 sampled_fpr=0.000
+  wilson95_fpr_upper=0.161 accuracy=1.000 macro_f1=1.000`, exit 0
+- qwen sparse validator → `recall=1.000 sampled_fpr=1.0
+  classification_accuracy=0.192`, `RESULT FAIL failures=1`, exit 1
+- GPT sparse validator → `recall=0.783 sampled_fpr=0.0
+  classification_accuracy=0.615`, `RESULT FAIL failures=2`, exit 1
+- `python -m py_compile qa/verify_phase0_benchmark.py` → exit 0
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` → exit 0
+
+**미해결/인계**
+
+- 실제 dense predictions와 holdout gold가 도착하면 `--dense-predictions`와
+  `--gold-labels`로 gate를 실행한다. 26-case의 negative 3건 때문에 Wilson
+  upper gate는 표본 확대 또는 명시적 계약 결정 없이는 통과할 수 없다.
+
+---
+
+## 2026-08-11 13:25 — 최종 회귀 확인
+
+- `python qa/verify_phase0_benchmark.py --self-check` → dense metrics 출력 및
+  `SELF-CHECK PASS`, exit 0
+- qwen sparse → `recall=1.000 sampled_fpr=1.0 classification_accuracy=0.192`,
+  `RESULT FAIL failures=1`, exit 1
+- GPT sparse → `recall=0.783 sampled_fpr=0.0 classification_accuracy=0.615`,
+  `RESULT FAIL failures=2`, exit 1
+- `python -m py_compile qa/verify_phase0_benchmark.py` 및
+  `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` → exit 0
+- `--gold-labels`/`--holdout-labels` 3열 gold 선택 입력과 backend dense header를
+  반영했으며, 실제 holdout/API 호출은 하지 않았다.
+
+## 2026-08-11 후속 holdout 독립 라벨링 및 dense gate profile
+
+- 작업: `evaluation/contradiction-holdout-input.csv` 70건의 claim/context를 QA가 독립 판정하고 `qa/contradiction-holdout-review.csv`를 생성했다. backend/evaluation 파일은 편집하지 않았다.
+- 근거: `C:/Users/PC/Desktop/ZeroWiki/NoteWiki`의 source reference 140개(고유 57개)를 실제로 열어 읽었고, 존재·비어 있지 않음을 확인했다. artifact의 copied fields는 입력과 70/70 일치한다.
+- 라벨 분포: `TRUE_CONFLICT=34`, `TIME_CHANGE=4`, `CONDITION_DIFF=2`, `VIEWPOINT_DIFF=0`, `POSSIBLE_CONFLICT=1`, `NO_CONFLICT=29`; NO_CONFLICT negative_reason은 `DIFFERENT_SUBJECT=4`, `COMPLEMENTARY=22`, `SAME_PROPOSITION=3`이다. 목표 분포는 맞추지 않았고 HT-065 판단 이유에 `REVIEW_REQUIRED`를 기록했다.
+- 계약: `user_decision` 70건 공란, 6종 enum 유효, NO_CONFLICT 외 negative_reason 공란, source 누락 없음. gold 파일 생성/API 호출은 하지 않았다.
+- `qa/verify_phase0_benchmark.py`는 dev `--labels`에서 Wilson upper를 보고만 하고 holdout `--holdout-labels/--gold-labels`에서만 Wilson <= 0.20을 hard gate로 적용하도록 최소 수정했다. `python qa/verify_phase0_benchmark.py --self-check` exit 0; dev profile 3 negative의 Wilson upper 0.561은 출력만, holdout profile 20 negative의 0 false positive upper 0.161은 gate 통과, 1 false positive upper 0.236은 gate 실패를 확인했다.
+
+## 2026-08-11 rubric dense 최종 재검증
+
+- API 재호출 없이 다음 두 prediction CSV를 기존 validator로 실행했다: `evaluation/results/phase0-gpt-5_6-sol-rubric-v2-r2/openai-predictions.csv`, `evaluation/results/phase0-gpt-5_6-sol-rubric-context-v2-r1/openai-predictions.csv`.
+- rubric-v2 r2 실제 출력: `completion=26/26`, `recall=0.739`, `sampled_fpr=0.000`, `accuracy=0.615`, `detected_conflict_subtype_accuracy=0.765`, `joint_subtype_accuracy=0.565`, `macro_f1=0.553`, `wilson95_fpr_upper=0.561`, `RESULT FAIL failures=2`, exit 1.
+- rubric-context-v2 r1 실제 출력: `completion=26/26`, `recall=0.783`, `sampled_fpr=0.000`, `accuracy=0.692`, `detected_conflict_subtype_accuracy=0.833`, `joint_subtype_accuracy=0.652`, `macro_f1=0.683`, `wilson95_fpr_upper=0.561`, `RESULT FAIL failures=2`, exit 1.
+- self-check exit 0, 두 dense confusion matrix 출력 확인, `python -m py_compile qa/verify_phase0_benchmark.py` exit 0, `git diff --check` exit 0. 두 dev gate가 모두 FAIL이므로 holdout API 실행과 gold freeze는 차단 상태로 기록했다.
+
+---
+
+## 2026-08-11 rubric-context-v3 최종 독립 QA
+
+**범위**
+
+- API 재호출 없이 `evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/`의
+  manifest, generated claims, benchmark CSV, metrics, dense prediction을 직접 읽었다.
+- 오분류를 gold `evaluation/contradiction-labels.csv`와 case_id로 join해 확인했다.
+  `CT-017`: `VIEWPOINT_DIFF` → `POSSIBLE_CONFLICT`, `CT-021`:
+  `POSSIBLE_CONFLICT` → `NO_CONFLICT`.
+
+**검증 결과**
+
+- v3 dense: 26/26 completed, recall `0.957` (22/23), sampled FPR `0.000` (0/3),
+  6-class accuracy `0.923` (24/26), detected subtype `0.955` (21/22),
+  joint subtype `0.913` (21/23), macro-F1 `0.902`, Wilson upper `0.561`.
+- confusion matrix: TRUE `5,0,0,0,0,0`; TIME `0,5,0,0,0,0`;
+  CONDITION `0,0,5,0,0,0`; VIEW `0,0,0,4,1,0`;
+  POSSIBLE `0,0,0,0,2,1`; NO `0,0,0,0,0,3`.
+- dev gate는 completion/recall/accuracy/FPR 모두 PASS이고 dense validator exit 0이다.
+  Wilson은 3개 negative 표본에서 report-only다.
+
+**재현 명령과 실제 종료 코드**
+
+- `python qa/verify_phase0_benchmark.py --manifest evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-manifest.json --generated-claims evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-generated-claims.csv --benchmark-output evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-benchmark.csv --dense-predictions evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/openai-predictions.csv --labels evaluation/contradiction-labels.csv --expected-documents 26` → `RESULT PASS failures=0`, exit 0.
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS`, exit 0.
+- `python backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`, exit 0.
+- `python evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`, exit 0.
+
+**차단/인계**
+
+- `qa/contradiction-holdout-review.csv`의 목표 분포 불일치와 HT-065
+  `REVIEW_REQUIRED` 때문에 사용자 승인·gold freeze 전 holdout API 실행은 하지 않았다.
+- holdout 검증 전 production 승격은 하지 않는다. 기존 qwen/GPT 및 rubric-v2/
+  rubric-context-v2 결과 기록은 보존했다.
+
+---
+
+## 2026-08-11 STATE/보고서 현재 스냅샷 정합성 수정
+
+- `.claude/team/qa/STATE.md` 상단의 현재 단계·게이트 표·진행 작업·다음 작업·차단
+  요인을 최신 v3 결과에 맞췄다. rubric-context-v3 dev는 PASS이며, holdout review,
+  HT-065 adjudication, frozen gold와 holdout validator를 거쳐야 production 승격할
+  수 있으므로 holdout/production은 BLOCKED로 유지했다.
+- qwen baseline, GPT sparse, rubric-v2/context-v2 dense의 FAIL은 `이전 결과`로
+  명시해 보존하고 현재 v3 판정과 구분했다.
+- `qa/phase0-evaluation-acceptance-report.md` 첫 판정을 v3 dev 품질 PASS /
+  holdout·production BLOCKED로 갱신했다. 과거 실행 섹션의 FAIL 기록은 삭제하지 않았다.
+- stale current 문구를 `rg`로 점검하고, QA 소유 파일만 수정했다.
+
+## 2026-08-11 70-case 한국어 review 초안 후속
+
+- backend 2차 `evaluation/contradiction-holdout-input.csv`를 정본으로 읽고 HT-021, HT-023, HT-025, HT-027, HT-037, HT-038, HT-043, HT-049, HT-067, HT-069의 claim/context/subject/time을 review에 exact 동기화했다.
+- 독립 원문 판정은 TIME 4건, CONDITION 3건(HT-037/038/049), VIEWPOINT 1건(HT-043), POSSIBLE 1건(HT-067), TRUE 1건(HT-069)이다. HT-049는 명시 업무 조건 차이로 CONDITION_DIFF, HT-069는 Reverse Proxy 직접 노출과 뒤쪽 전달의 직접 모순으로 TRUE_CONFLICT를 적용했다.
+- review 구조 검증 결과 70/70 unique, parity 0, source_ref 140개·고유 60개·missing 0, NFKC 내부/CT pair 중복 0, 한국어 판단 이유 70건, 검토 플래그 0, user_decision 비공란 0으로 exit 0이다.
+- 실제 분포는 TRUE 9 / TIME 8 / CONDITION 9 / VIEWPOINT 7 / POSSIBLE 8 / NO 29로 목표 8 / 8 / 8 / 8 / 8 / 30과 불일치한다. 목표에 맞춘 강제 재분류는 하지 않았고 사용자 승인·adjudication 대기 상태로 기록했다.
+- target-only check는 exit 1(`target_match=False`)이며, gold freeze·holdout API·production 승격은 계속 BLOCKED다.
+
+## 2026-08-11 사용자용 한국어 review 계약 전환
+
+- `qa/contradiction-holdout-review.csv`를 사용자용 exact 한국어 헤더
+  `사례_ID,주장_A,주장_B,시간_또는_버전,환경_또는_조건,주제,분류,비모순_사유,판단_이유,원문_확인,사용자_결정`로 전환했다. `NOT_PROVIDED`는 `정보 없음`, 여섯 분류 enum은 `직접 모순/시간 변화/조건 차이/관점 차이/판단 보류/모순 없음`, `source_verified=TRUE`는 `원문_확인=확인`으로 표시하고 case ID·기술 고유명사·사용자 결정 공란을 유지했다.
+- 이 파일은 사용자용 review이며 backend harness 입력이나 machine gold가 아니다. 사용자 승인 후 표시 분류를 역매핑해 별도 machine gold `case_id,classification,판단_이유`를 생성·검증·동결한다. 승인 전 gold freeze·holdout API·production 승격은 하지 않는다.
+- 한국어 header/sentinel 역매핑 검증 exit 0: 70/70 unique, 목표 분포 TRUE/TIME/CONDITION/VIEWPOINT/POSSIBLE 각 8 및 NO 30, parity 0, source_ref 140개·고유 60개·missing 0, NFKC 내부/CT pair 중복 0, 한국어 판단 이유 70건, 검토 플래그 0, 사용자 결정 비공란 0.
+- `.claude/team/qa/STATE.md` 현재 스냅샷과 인수 보고서·체크리스트의 현재형 차단 문구를 사용자 승인 대기 및 machine gold 분리 계약에 맞춰 갱신했다. 과거 v2/이전 review FAIL 기록은 삭제하지 않았다.
+
+## 2026-08-11 사용자 전체 승인·machine gold freeze
+
+- 사용자 메시지의 명시적 `전체 승인`을 승인 출처로 기록하고, `qa/contradiction-holdout-review.csv`의 `사용자_결정` 70행을 모두 `승인`으로 채웠다.
+- 사용자용 review 표시 분류를 역매핑해 QA 소유 `qa/contradiction-holdout-gold.csv`를 생성·동결했다. exact header는 `case_id,classification,판단_이유`이며 user-facing review와 backend harness/gold 계약을 분리했다.
+- 독립 UTF-8 Python 표준 라이브러리 검증 exit 0: review/gold/input 각 70행, IDs ordered join, 승인 70/blank 0, 목표 분포 8/8/8/8/8/30, review/input parity 0, gold label·reason join 0, source 140/60/missing 0, NFKC 내부·CT overlap 0, errors 0.
+- API 호출·응답 처리·holdout validator 실행은 하지 않았고 production 승격도 하지 않았다. frozen gold 이후 holdout gate 검증이 남아 있다.
+
+## 2026-08-11 gold freeze 후 validator self-check
+
+- `python qa/verify_phase0_benchmark.py --self-check` 실행 결과 `SELF-CHECK PASS`, exit 0. 이는 validator 계약 self-check이며 holdout API 호출이나 gold 변경을 수행하지 않았다.
+
+## 2026-08-11 machine gold raw UTF-8 header 교정
+
+- 리더 재검증에서 PowerShell 표시가 아닌 raw bytes/UTF-8 `csv.DictReader`로 `qa/contradiction-holdout-gold.csv`를 확인한 결과 첫 header가 실제 `case_id,classification,??_??`로 손상된 것을 발견했다.
+- `apply_patch`로 첫 줄만 exact `case_id,classification,판단_이유`로 교정했다. 이후 Python fieldnames exact 확인 및 `backend.scripts.phase0_benchmark.load_gold_labels(Path('qa/contradiction-holdout-gold.csv'))` 70행 반환이 exit 0으로 통과했다.
+- API 호출·holdout 실행·gold 데이터 행 변경은 없었고, backend/evaluation 파일도 수정하지 않았다.
