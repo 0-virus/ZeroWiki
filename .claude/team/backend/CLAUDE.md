@@ -81,6 +81,7 @@ docs/검증-백엔드-ERD-API-정합성.md
 
 ## 6. 작업 관례
 
+- backend build 정본은 Gradle wrapper(`backend/gradlew.bat`)다. Java 21 toolchain과 Spring Boot BOM은 `backend/build.gradle`, 프로젝트명은 `backend/settings.gradle`에서 관리하며 다른 build tool을 병행하지 않는다.
 - ERD를 고칠 때는 변경 이유와 근거 절 번호를 문서 내에 함께 남긴다.
 - 스키마 변경은 Flyway 마이그레이션 파일로 표현한다. 기존 마이그레이션 파일은 수정하지 않고 새 버전을 추가한다.
 - **마이그레이션을 실제 DB에 적용하는 것은 되돌리기 어려운 작업**이므로 리더 승인을 받는다(헌법 제3조 4항).

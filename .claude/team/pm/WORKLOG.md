@@ -1315,3 +1315,116 @@ grep "LIMIT [0-9]" docs/PM-미확정결정-우선순위.md
 
 - holdout API/validator와 Wilson hard gate는 미실행이며 production 승격·LLM provider/model·유료 API·비용 예산은 사용자 결정 전 미확정이다.
 - Spring Boot/Ingest scaffold가 없어 Phase 1 feature 구현·실 API 연동은 미착수다. API integration p95/citation, 원본 Claim mapping, AC-3·UD-26, inventory 누락/평가 불가 relation도 남아 있다.
+
+---
+
+## 2026-08-12 09:30 — Phase 1 실행계획 종합
+
+- 무엇을 했는가: `.claude/CONSTITUTION.md` → `.claude/team/pm/CLAUDE.md` → `.claude/team/pm/STATE.md`를 먼저 읽고, backend/frontend/qa 최신 STATE·WORKLOG와 실제 변경 diff를 대조했다. 이어 기획서 23절, 요구사항 정의서 1.4·5.1~5.9·6.1·9·12절, API 명세 17절을 다시 확인해 세 역할 계획을 M0~M7 최소 milestone, 의존 사슬, 역할별 ownership, 각 exit criteria, AC-1·2·4·5 및 보안 gate, 사용자 결정과 실제 blocker 구분으로 종합했다.
+- 산출물 경로: `docs/PM-Phase1-실행-계획.md`, `.claude/team/pm/STATE.md`, `.claude/team/pm/WORKLOG.md`
+- 정합성 판단: 권고는 scaffold 선행 후 `인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회` 첫 slice 하나로 유지했다. API/ERD enum 2건·UD-15 저장 필드, QA S 번호, frontend API 갭은 임의 확정하지 않고 `리더 정합화 필요` 또는 blocker로 기록했다.
+- 실제 상태: `backend/` Spring Boot/API/Worker scaffold와 Phase 1 fixture가 없고, frontend는 mock-only이며, QA holdout API/validator는 미실행이다. QA review/gold 파일은 실제 70행으로 확인했지만 backend/frontend STATE의 freeze 진행 중 문구와 모순하므로 data freeze와 holdout 실행을 분리했다.
+- 삭제·대체: 기존 파일·절·판단을 삭제하거나 대체하지 않았다. PM 소유 신규 계획 문서만 추가하고 타 역할 파일은 편집하지 않았다.
+- 미해결 사항: UD-03·10·19·20·22 사용자 결정, Phase 4 UD-26, production provider/model·유료 호출·비용 승인, 원본 Claim mapping, scaffold·계약 정합화·holdout gate가 남아 있다.
+
+---
+
+## 2026-08-12 10:41 — M0/M1 실제 구현·검증 반영 및 M2 착수 갱신
+
+- 무엇을 했는가: 헌법 → PM `CLAUDE.md` → PM `STATE.md` 순서로 재확인하고, 최신 backend/frontend/qa STATE·WORKLOG와 실제 파일을 대조했다. `docs/PM-Phase1-실행-계획.md`와 PM `STATE.md`의 낡은 `scaffold 없음/feature 미착수/frontend mock-only` 현재 서술을 M0 완료, M1 구현 완료·통합 대기, M2 착수 대기로 갱신했다.
+- 실제 근거: backend `pom.xml`·wrapper·API/worker profile·Java auth/library/common source·V1 migration이 존재한다. `backend/target/surefire-reports`에서 AuthServiceTest 2, JwtAuthenticationFilterTest 2, LibraryServiceTest 5가 모두 failures/errors 0이다. frontend M1 `/login`, `/libraries`, `/libraries/[libraryId]`, native `fetch`가 존재하고, frontend WORKLOG의 build 7/7·typecheck/lint exit 0 및 backend 미기동 오류 화면 검증을 확인했다. `python qa/test_m1_m2_blackbox.py --self-check`는 6 tests OK이며 M2 backend surface는 `BLOCKED_BACKEND_M2`로 1건 skip했다.
+- 정합성·권고: M2 source/upload/import 구현을 다음 착수로 두고, M1 PostgreSQL/Flyway·cookie/CORS·실제 2xx live black-box를 병행 gate로 권고했다. backend 소유 ERD/migration의 enum·`constitution_document` 정합화는 완료 상태로 반영했으며, API 정본은 리더 소유로 유지한다.
+- 검증 환경: PM이 Maven을 workspace/임시 repo에서 재실행했으나 동시 cache·compiler resource 오류가 발생했고, frontend `npm.cmd run build` 재실행은 compile 후 120초 timeout이 났다. 역할 기록의 기존 PASS와 구분해 runtime/integration 재현을 잔여 위험으로 남겼다. frontend `npx.cmd tsc --noEmit`·`npm.cmd run lint`는 PM 재실행 exit 0이다.
+- 삭제·대체 기록: `docs/PM-Phase1-실행-계획.md`의 기존 scaffold 부재·feature 미착수 문구를 실제 M0/M1 상태로 대체했다. 과거 PM WORKLOG 항목과 타 역할 파일은 수정·되돌리지 않았고, 제가 만든 임시 `.m2-repository`만 정확한 workspace 경로 확인 후 제거했다.
+- 미해결 사항: M1 live integration, M2 source/upload/ingest controller·storage fixture, AC-1·2·4·보안 통합 gate, holdout API/validator·Wilson gate, frontend login/refresh `data.accessToken` 계약, 사용자 UD-03·10·19·20·22와 Phase 4 UD-26이 남아 있다.
+
+---
+
+## 2026-08-12 11:08 — M2 착수 surface 및 최신 계약 blocker 반영
+
+- 무엇을 했는가: 공유 작업공간의 최신 실제 파일을 다시 대조해 PM `docs/PM-Phase1-실행-계획.md`와 `.claude/team/pm/STATE.md`의 M2 상태를 `착수·구현 진행/exit BLOCKED`로 갱신했다. M2 source/upload/ingest backend surface·V2 migration·frontend 원본/업로드/Ingest 화면이 존재하므로 기존 현재형 `M2 코드 없음/착수 대기`를 유지하지 않았다.
+- 실제 근거: `backend/src/main/java/com/zerowiki/source|ingest`, `V2__source_upload_ingest.sql`, frontend M2 route 파일을 읽었다. `backend/target/surefire-reports`의 현재 보고는 M2 보조 테스트 포함 총 17건 failures/errors 0이나 Maven 재실행·PostgreSQL 통합 증거는 아니다. 최신 `python qa/test_m1_m2_blackbox.py --self-check`는 7개 중 5 PASS·2 FAIL이다.
+- blocker·권고: 실패 두 건은 `UploadService.plan()`의 상대 local upload path와 API 정본 `/libraries/{libraryId}/ingest-jobs/{jobId}/answers` 대신 `questions/{questionId}/answer`를 제공하는 계약 불일치다. 이를 정합화하면서 M1 PostgreSQL/Flyway·cookie/CORS·2xx live gate를 병행하고, M2 live acceptance·AC-1·2·4·보안 gate 전에는 구현 PASS로 승격하지 않는다.
+- 정합성 주의: backend STATE는 10:10 M0+M1 스냅샷으로 M2 후속을 서술하고 frontend STATE는 backend M2 연동 대기를 서술한다. 실제 backend M2 surface 및 QA blocker를 PM 문서에 반영했으며, backend/frontend/qa 파일은 편집하지 않았다.
+- 검증·삭제 기록: PM 소유 STATE/계획 재독 및 `git diff --check`를 수행했고 exit 0(개행 변환 warning만)이다. 과거 WORKLOG 항목은 수정하지 않았고, 이번에는 PM 계획·STATE 갱신과 이 append만 수행했다.
+---
+
+## 2026-08-12 13:45 — M2 live 고착·M3 knowledge 통합 대기 및 M4~M7 gate 갱신
+
+- PM 필수 읽기 순서와 정본 절을 재확인하고 PM 소유 계획·STATE만 갱신했다.
+- M2 static self-check 10/10 PASS, M3 knowledge static self-check 8/8 PASS. 공유된 live SCANNING 고착은 유지했으며 API 8080 timeout·PostgreSQL 5432 listener 부재로 live 재현은 BLOCKED다.
+- M4 knowledge 통합, M5 change-set/version, M6 search/AI, M7 AC/security/holdout gate를 실행 체크리스트·exit criteria로 구체화했다. M5/M6 route 부재와 frontend mock/미구현은 blocker다.
+- AC-1·2·4·5는 live/holdout 미실행 BLOCKED. review/gold 70행 승인·freeze와 v3 dev 26/26($0.149060; 누적 $0.55644/$0.80 cap)은 데이터/dev 결과이며 holdout API 0회·production 승인 미확정이다.
+- compile·surefire·frontend build/typecheck/lint는 직접 확인했고 full test는 AccessDenied/compiler resource로 실패했다. 과거 WORKLOG와 타 역할 파일은 수정하지 않았고 커밋하지 않았다.
+
+---
+
+## 2026-08-12 15:15 — M1/M2 live·V1~V5·backend 30 tests 및 holdout 비용 gate 갱신
+
+- 헌법 → PM `CLAUDE.md` → PM `STATE.md`를 재확인하고 PM 소유 계획·STATE만 최신 실제 결과로 갱신했다. M1/M2 live 14-test suite는 `OK (skipped=1)`, exit 0이며 필수 live assertion 14/14 PASS다. expired-upload URL fixture 선택 테스트 1건은 환경 변수가 없어 skip으로 분리했다.
+- live Flyway history query에서 V1~V5가 모두 `success=true`였다. 이전 M2 `SCANNING` 고착 서술은 bounded transition·plan approval·PROCESSING 통과에 맞춰 현재 blocker에서 제거했고, M3 full projection/100문서 gate와 M4~M6 live fixture는 후속으로 남겼다.
+- M4 change-review static 3/3, M6 search/assistant static 6/6, backend `surefire:test` 30 tests/0 failures/0 errors/0 skipped PASS를 계획·STATE에 반영했다. 전체 `mvnw test`의 testCompile spring-data-commons jar AccessDenied 오류는 별도 환경 blocker로 보존했다.
+- 정본 Phase-0 9-5절의 v3 actual `$0.149060`/26회, 누적 `$0.55644`, `$0.80` cap 잔여 `$0.24356`을 다시 확인했다. 70건은 동일 단가 기준 약 `$0.40132`, 예상 누적 약 `$0.95776`, shortfall 약 `$0.15776`; 잔여 cap에서는 42회가 최대이고 전량 실행 조건은 ≤`$0.00347943`/call이다.
+- 사용자 `전체 승인`은 review/gold 70행 승인·동결로만 해석하고 cap 초과·provider/model·production 유료 호출 승인으로 확대하지 않았다. 권고는 zero-cost preflight 유지이며, 추가 hard cap 또는 공식 저비용 경로는 사용자·리더 결정 묶음으로 남겼다.
+- 삭제·대체·되돌림·커밋·유료 holdout 호출은 없었다. 과거 WORKLOG와 backend/frontend/qa 파일은 수정하지 않고 이 항목만 append했다.
+
+---
+
+## 2026-08-12 15:25 — backend surefire 최신 재실행 확인
+
+- backend 소유 파일은 편집하지 않고 `backend\.mvnw.cmd -q surefire:test`를 재실행했다. 명령은 exit 0이었고 최신 XML 집계는 15 suites, 36 tests, failures 0, errors 0, skipped 0이다. 기존 보고의 baseline 30-test PASS도 계획·STATE에 보존하고, M6 확장 테스트 포함 최신 36/36 PASS를 추가로 기록했다.
+- 전체 `mvnw -q test`의 testCompile jar 권한 오류는 별도 환경 blocker로 유지한다. 이 검증은 PM 문서·STATE·WORKLOG만 갱신했으며 다른 역할 파일·커밋·유료 holdout 호출은 없었다.
+
+---
+
+## 2026-08-12 17:32 — Batch 비용 gate 및 최신 Phase 1 통합 결과 반영
+
+- 헌법 → PM `CLAUDE.md` → PM `STATE.md` 순서를 재확인하고, `$brief` 읽기 전용 절차로 backend/frontend/qa 최신 상태와 실제 산출물을 대조했다. 정본은 MVP 기획서 23절, 요구사항 정의서 1.4·5.1~5.9·6.1·9·12절, API 명세 17절을 다시 확인했다.
+- 최신 보고 결과를 PM 계획과 STATE에 반영했다: M1/M2 live 필수 14/14 PASS 및 optional expiry fixture 1 skip, backend 15 suites/39 tests failures/errors 0, frontend build 17 routes/typecheck/lint PASS, Phase 1 100-doc live PASS(`done=100`, `published=100`, `topics=6`, `citations=5`), M7 security 8/8 PASS.
+- v3 actual 26건 `$0.149060`, 누적 `$0.55644`, cap `$0.80`, 잔여 `$0.24356`를 재확인했다. 표준 70건 예상은 `$0.40131538`(약 `$0.40132`), 공식 Batch 50% 할인 예측은 `$0.20065769`(약 `$0.20066`), 예상 누적 `$0.75709769`, 잔여 여유 `$0.04290231`(약 `$0.04290`)이다.
+- 공식 [Batch API Reference](https://developers.openai.com/api/reference/resources/batches)와 [GPT-5.6 Sol model page](https://developers.openai.com/api/docs/models/gpt-5.6-sol)를 확인했다. `gpt-5.6-sol`·`/v1/responses`와 기존 provider/model/cap을 유지한 Batch 실행은 기존 승인 범위 안에서 가능하다는 PM 판정으로 계획을 변경했다. 실제 token usage·retry·실패 재제출은 견적과 다를 수 있어 제출 전 preflight와 비용 원장을 요구한다.
+- AC-1·2·4는 최신 100-doc 통합 evidence 기준 PASS, AC-5는 Batch/validator 미제출로 IN_PROGRESS다. 데이터 승인/gold freeze와 dev 26/26은 holdout PASS 또는 production 승인으로 확대하지 않았다. 결과 전 auto-promote/auto-apply는 금지한다.
+- 현재 API/PostgreSQL listener가 없어 이번 턴에 live를 재실행하지 않았다. M4 owner/관계/모순 matrix, M5 revision/error matrix, M6 p95/browser matrix와 Batch output/validator가 잔여 blocker다. backend/frontend/qa 파일과 정본 문서는 편집하지 않았으며, 과거 기록은 수정하지 않고 이 항목만 append했다. 삭제·대체·되돌림·커밋·Batch 호출은 없다.
+
+---
+
+## 2026-08-12 19:33 — AC-5 Batch PASS 및 Phase 1 최종 완료 판정
+
+- 요청에 따라 헌법 → PM `CLAUDE.md` → PM `STATE.md`를 재확인하고, `docs/PM-Phase1-실행-계획.md`와 PM `STATE.md`의 Phase 1 최종 snapshot만 갱신했다. 정본은 기획서 23절, 요구사항 정의서 1.4·5.1~5.9·6.1·9·12절, API 명세 17절 기준을 유지했다.
+- 최종 AC-5 결과를 반영했다: 70/70 완료, recall 0.800, accuracy 0.843, sampled FPR 0, Wilson 95% upper 0.114, macro-F1 0.801, actual cost `$0.2108`. 모든 정본 hard gate를 충족해 AC-5를 PASS로 갱신했다.
+- 비용을 재계산했다. 실행 전 누적 `$0.55644`, 잔여 cap `$0.24356`; 실행 후 `$0.55644 + $0.2108 = $0.76724`, `$0.80 - $0.76724 = $0.03276`이다. provider/model/cap 변경 없이 기존 승인 범위의 Batch로 실행된 것으로 기록했다.
+- M0~M7 exit table, 체크리스트, AC-1·2·4·5 및 보안 gate를 최종 `PASS/완료`로 갱신했다. M1/M2 14/14(+optional skip), 100-doc `done=100/published=100/topics=6/citations=5`, backend 15 suites/39 tests, frontend 17 routes/build/typecheck/lint, M7 8/8 evidence를 보존했다.
+- Phase 1 완료 후 production provider/model 승격, production release, 자동 모순 판정·apply는 별도 사용자/리더 운영 승인으로 남겼다. M3 명칭 모순, listener 부재 재현 risk, full `mvnw test` testCompile 환경 오류도 완료 blocker가 아닌 후속 risk로 분리했다.
+- 요구사항 정의서 5.9·12절에 남은 “holdout API·validator 미실행” 문구와 최신 70/70 PASS 결과의 시간상 충돌은 PM 계획·STATE에 리더 정합화 대상으로 명시했다. 정본 AC-5 threshold는 변경하지 않았다.
+- 과거 WORKLOG 항목은 수정·삭제하지 않았다. PM 소유 계획·STATE·WORKLOG 외 파일은 편집하지 않았고, 타 역할 변경 되돌리기·커밋·추가 Batch 호출은 하지 않았다.
+
+---
+
+## 2026-08-18 20:33 — Phase 1 최종 제품 감사·Gradle build gate 동기화
+
+- 무엇을 했는가: 기획서 23절, 요구사항 정의서 9·12절, API 명세 17절과 backend/frontend/qa 실제 산출물을 재대조했다. M0~M7 및 AC-1·2·4·5는 기존 PASS 판정을 유지하고, production provider/model 승격·자동 모순 판정/apply·production release를 Phase 1 완료와 분리된 별도 운영 승인으로 유지했다.
+- 산출물 경로: `docs/PM-Phase1-실행-계획.md`, `.claude/team/pm/STATE.md`, `.claude/team/pm/WORKLOG.md`.
+- build 전환 근거: backend는 Gradle 9.7.0 wrapper 단일 build로 전환했다. `gradlew.bat -g %LOCALAPPDATA%\ZeroWiki-Gradle-9.7 clean test --no-daemon --non-interactive --console=plain`은 exit 0, XML 15 suites/39 tests, failures/errors/skips 0이며 같은 cache의 `build bootJar`도 exit 0이다. PM 계획·STATE의 현재형 Maven/surefire/testCompile risk를 이 근거로 대체했다.
+- 제품 정합성: frontend build/typecheck/lint는 17 routes로 PASS다. 실제 Phase 1 API 흐름은 `/libraries/**`이고 legacy `/`·`/review-changes`는 mock showcase이므로, 기존 “mock 제거” 표현을 실제 흐름과 showcase 분리로 고쳤다.
+- 계약 정합성: PM 문서가 stale 정본 충돌 위치를 `요구사항 정의서 5.9·12절`로 적은 오류를 `9절·12절 UD-11`로 바로잡았다. 정본 자체는 리더 소유라 편집하지 않았고 AC-5 threshold도 변경하지 않았다.
+- 직접 검증: holdout validator를 재실행해 70/70, recall 0.800, accuracy 0.843, sampled FPR 0, Wilson upper 0.114, macro-F1 0.801, `RESULT PASS failures=0`, exit 0을 확인했다. `phase0-batch-metrics.json`의 actual cost `$0.2108`도 재확인했다.
+- 삭제·대체: PM 계획·STATE의 현재형 Maven 명령과 해소된 AccessDenied risk, 잘못된 절 인용, mock 전면 제거 표현만 최신 사실로 대체했다. 과거 WORKLOG는 수정·삭제하지 않았고 타 역할 파일·정본·커밋·브랜치·push는 건드리지 않았다.
+- 남은 비-Phase1 결정: production provider/model, 자동 모순 판정·apply, production release, 정본 9·12절 최신 실행 반영, backend milestone 명칭 정합화다. Phase 1 blocker는 없다.
+
+---
+
+## 2026-08-18 20:36 — PM 종합 현황의 착수 전 snapshot 교체
+
+- 무엇을 했는가: `docs/PM-*.md` 전체에서 scaffold 없음, Phase 1 미착수, Maven 현재형, holdout 미실행, mock-only 문구를 검색했다. `docs/PM-종합-현황.md`가 2026-08-11 착수 전 상태를 현재형으로 유지해 실제 Phase 1 완료와 정면 충돌하므로 최신 최소 snapshot으로 교체했고, `docs/PM-미확정결정-우선순위.md`의 현재 “다음 한 걸음” 한 줄도 완료 후 승인 경계로 갱신했다.
+- 산출물 경로: `docs/PM-종합-현황.md`, `docs/PM-미확정결정-우선순위.md`, `.claude/team/pm/WORKLOG.md`.
+- 삭제·대체: 종합 현황의 역할별 착수 전 상세, scaffold 선행 권고, holdout 미실행·backend 부재·frontend mock-only 현재형을 최신 역할 근거와 M0~M7/AC snapshot으로 대체했다. 과거 판단·근거는 이 WORKLOG의 2026-07-29~08-12 항목에 보존돼 있으며 새 문서 첫머리에서 그 위치를 명시했다. 변경은 리더의 최신 snapshot 정정 요청에 따른다.
+- 유지한 경계: production provider/model·release와 자동 모순 판정/apply는 별도 승인이고, 요구사항 정본 9·12절의 stale 문구는 리더 정합화 대상으로만 남겼다. 타 역할 파일·정본·커밋·브랜치·push는 건드리지 않았다.
+
+---
+
+## 2026-08-18 20:38 — 요구사항 정의서 v1.5 정합화 완료 반영
+
+- 무엇을 했는가: 리더가 `docs/ZeroWiki-요구사항-정의서.md` 5.6·9·12절의 holdout 현재형을 70/70 PASS로 정정하고 changelog 1.5를 추가한 사실을 직접 재독했다. PM 계획·STATE·종합 현황에서 “리더 정합화 대상”으로 남아 있던 항목을 해소된 것으로 제거했다.
+- 추가 정확화: frontend 실제 change review route는 `/libraries/{libraryId}/change-sets/{changeSetId}`이므로 PM 계획의 `/review-changes` 실제 API 표현을 바로잡고, legacy `/review-changes`를 showcase로 분리했다.
+- 산출물 경로: `docs/PM-Phase1-실행-계획.md`, `docs/PM-종합-현황.md`, `.claude/team/pm/STATE.md`, `.claude/team/pm/WORKLOG.md`.
+- 기록 경계: 직전 WORKLOG의 “정본 정합화 대상”은 당시 사실로 보존하고, 해소 시점을 이 항목에 append했다. 타 역할 파일·정본·커밋·브랜치·push는 건드리지 않았다.

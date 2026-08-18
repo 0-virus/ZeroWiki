@@ -919,3 +919,442 @@
 - 리더 재검증에서 PowerShell 표시가 아닌 raw bytes/UTF-8 `csv.DictReader`로 `qa/contradiction-holdout-gold.csv`를 확인한 결과 첫 header가 실제 `case_id,classification,??_??`로 손상된 것을 발견했다.
 - `apply_patch`로 첫 줄만 exact `case_id,classification,판단_이유`로 교정했다. 이후 Python fieldnames exact 확인 및 `backend.scripts.phase0_benchmark.load_gold_labels(Path('qa/contradiction-holdout-gold.csv'))` 70행 반환이 exit 0으로 통과했다.
 - API 호출·holdout 실행·gold 데이터 행 변경은 없었고, backend/evaluation 파일도 수정하지 않았다.
+
+## 2026-08-12 — Phase 1 QA gate 계획·정본 교차 대조
+
+**한 일**
+
+- `.claude/CONSTITUTION.md` → `.claude/team/qa/CLAUDE.md` → `.claude/team/qa/STATE.md` 순서로 읽고, 루트 `CLAUDE.md`·QA `WORKLOG.md`와 저장소 실제 파일 목록을 교차 확인했다.
+- 기획서 3·18·23절, 요구사항 정의서 1.4·5.1~5.9·6.1·9·11~12절, API 명세 2~9·15~17절, QA 체크리스트 3·5~6절, `qa/test_scenarios.md` A-1~A-5·S-1~S-7을 대조해 Phase 1 gate를 AC-1·2·4·5 자동 검증으로 고정했다. AC-3·6·7은 Phase 4 사용자 평가로 유지했다.
+- AC-1은 `/uploads` → `/uploads/{uploadId}/complete` → `/libraries/{libraryId}/ingest-jobs`, AC-2는 API 4.1의 `home.topics`(PUBLISHED CONCEPT·ACCEPTED 관계 상위 6개), AC-4는 API 9.2 citation과 API 7.2 evidence 재조회, AC-5는 생성 claim↔case mapping manifest와 dense holdout hard gate로 정의했다.
+- `NFR-SEC-01/02/03/04/05/06/08/09`와 API 15절 1·6·8·9·10·11·12·14번을 Phase 1 보안 자동/통합 검증 대상으로 매핑했다. `qa/test_scenarios.md`의 S-1~S-7은 checklist의 위협명과는 맞지만 요구사항 6.1의 S 매핑과 충돌한다. 현재 S-3(SSRF)·S-6(공개 저작권)은 각각 Phase 2·3 범위여서 리더 결정 전 Phase 1 PASS 근거로 사용하지 않는다.
+- 현재 `backend/`에는 `phase0_benchmark.py`와 constitution schema만 있고 Phase 1 API·Worker·fixture/test harness가 없음을 확인했다.
+
+**검증 명령과 실제 결과**
+
+- `python qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`, exit 0.
+- `python evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`, exit 0.
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`, exit 0.
+- `python -m py_compile qa/verify_phase0_benchmark.py` → exit 0.
+- `rg --files backend frontend qa evaluation | Sort-Object` → Phase 1 API/Worker/test harness 파일 없음; Phase 0 harness·frontend mock·QA validator만 존재.
+- `rg -n "POST /|GET /|PATCH /|PUT /|DELETE /" qa/test_scenarios.md` → `/ingest-plans`, `/search`, `/libraries/{id}/topics`, `PATCH /ingest-jobs` 등 API 정본에 없는 경로가 남아 있음.
+
+**산출물 경로**
+
+- `.claude/team/qa/STATE.md` — Phase 1 계획·gate·차단 조건·재현 명령 갱신.
+- `.claude/team/qa/WORKLOG.md` — 본 항목 append.
+
+**미해결**
+
+- 리더가 S 번호 충돌과 Phase 2·3 범위 혼입을 정본 기준으로 결정해야 한다.
+- backend가 Phase 1 API/Worker, fixture, claim mapping manifest를 제공하기 전 AC-1·2·4·보안 통합 테스트는 미실행이다.
+- holdout API·validator가 실행되기 전 AC-5 자동 모순 판정·적용과 production 승격은 BLOCKED다.
+
+## 2026-08-12 — M0/M1 QA API 정합화·인수 준비
+
+**무엇을 했는가**
+
+- `qa/test_scenarios.md`의 활성 경로·메서드를 API 명세 2~9절 기준으로 교정했다. `/ingest-plans`는 `/uploads` → `/uploads/{uploadId}/complete` → `/libraries/{libraryId}/ingest-jobs` 흐름으로, `POST /search`는 대화·메시지 API로, `/libraries/{id}/topics`는 `home.topics`와 `/pages?topic=`로, `PATCH /ingest-jobs`는 `/ingest-jobs/{jobId}/cancel` 등 실제 경로로 대체했다. 버전·publication·export·claims·references 경로도 실제 `libraryId` 계층으로 보정했다.
+- A-17의 UD-12 기대 모델을 `claims.page_version_id` 제거·`claim_statuses` 버전별 상태·`evidences.claim_id` 유지로 교정하고, `GET /libraries/{libraryId}/pages/{pageId}/claims?include=evidences`를 명시했다.
+- 기존 S-1~S-16 ID와 Phase 2·3 시나리오는 삭제·renumber하지 않았다. `docs/검증-QA-계약-확정-체크리스트.md`에 `NFR-SEC-* + API 15절 + Phase 1 포함 여부` 매핑표를 추가하고, 보안 감사 일정은 해당 매핑의 S-1~S-16을 가리키도록 명확화했다. checklist의 과거 `PATCH /ingest-jobs/{id}` 예시도 실제 plan-approval 경로로 대체했다.
+- backend M1 API·Worker·fixture가 없으므로 test code는 만들지 않고, `qa/test_scenarios.md`에 `M1-AUTH-01`, `M1-ISO-01`, `M1-PRIVATE-01`, `M1-CONST-01`, `M1-REF-01`의 auth rotation·owner isolation·private default·constitution immutability·explicit reference direction 인수 케이스와 실행 명령을 준비했다. API 6.1의 구매·재개 endpoint 미정과 refresh replay 오류 enum 미정을 차단 조건으로 남겼다.
+
+**검증 명령과 실제 결과**
+
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`, exit 0.
+- `rg -n '/ingest-plans|POST /search|GET /libraries/\\{id\\}/topics|PATCH /ingest-jobs|POST /publications|POST /exports|GET /public/pages/\\{id\\}' qa/test_scenarios.md docs/검증-QA-계약-확정-체크리스트.md` → `NO_MATCH: stale active API paths`, exit 0.
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- qa/test_scenarios.md docs/검증-QA-계약-확정-체크리스트.md .claude/team/qa/STATE.md .claude/team/qa/WORKLOG.md` → whitespace 오류 없음(라인 종료 변환 경고만), exit 0.
+
+**미해결·삭제/대체 기록**
+
+- 삭제한 QA 시나리오·S 식별자는 없다. 오래된 endpoint 표기는 위의 실제 API 경로로 대체했고, Phase 2 SSRF·Notion·export·알림과 Phase 3 공개 저작권·공개 응답 사례는 범위에서 제외하되 문서에서 보존했다.
+- API 명세 6.1의 `PURCHASE_QUOTA` 후 구매·재개 호출은 endpoint가 명시되지 않아 A-10을 상태 확인·Phase 2 계약 대기로 제한했다. API 명세 3.1의 refresh replay 구체 오류 enum도 임의 확정하지 않았다.
+- backend M1 산출물 제공 전 `python -m unittest discover -s qa -p "test_m1_*.py" -v`는 실행하지 않는다. AC-1·AC-2·AC-4·보안 통합 실행과 AC-5 holdout gate는 계속 BLOCKED다.
+
+## 2026-08-12 — 보안 매핑표 개념 S 명시 및 최종 self-check
+
+- checklist 매핑표에 `요구사항 6.1 개념 S 표기` 열을 추가해, 예를 들어 정본 S-1(격리)↔기존 QA S-5, 정본 S-2(참조)↔기존 QA S-12, 정본 S-6(프롬프트)↔기존 QA S-1처럼 번호 차이를 드러냈다. `NFR-SEC-08` 감사 로그는 기존 QA S-7의 멱등성 케이스에 함께 추적하고 `NFR-SEC-10/UD-20`은 미확정으로 Phase 1에 임의 편입하지 않았다.
+- 기존 QA S-7 예상 결과에 API 15-10 감사 로그(actor·timestamp·target·result)를 추가했다. ID·사례는 삭제·renumber하지 않았다.
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS ...`, exit 0. 금지된 stale 활성 경로 rg 검색(`/ingest-plans`, `POST /search`, `/libraries/{id}/topics`, `PATCH /ingest-jobs`, 기타 구경로) → `NO_MATCH: stale active API paths`, exit 0. QA 변경 파일 `git diff --check` → whitespace 오류 없음(라인 종료 변환 경고만), exit 0.
+
+## 2026-08-12 — M1/M2 stdlib black-box·계약 self-check 준비
+
+**무엇을 했는가**
+
+- `qa/test_m1_m2_blackbox.py`를 새 QA 소유 black-box 실행기로 추가했다. 외부 프레임워크·의존성 없이 `unittest`, `urllib`, `zipfile`만 사용하며 `ZEROWIKI_BASE_URL`, `ZEROWIKI_QA_TIMEOUT`로 재사용한다.
+- M1 live 케이스는 회원가입·로그인·`/me`, Access 900초 계약·Refresh cookie 속성·rotation/replay 거부, PRIVATE 기본·owner isolation, 헌법 버전 불변·`VERSION_CONFLICT`, 동일 사용자 단방향 reference·cross-owner 거부를 검증한다.
+- M2 live 케이스는 `/sources`, presigned `/uploads`, Obsidian ZIP PUT·complete, sourceVersion 연결·`EXISTING_SOURCES` ingest job·계획 승인 전 `PROCESSING` 금지를 검증한다. 파일/ZIP/Import 제한·MIME/압축/path traversal/secret/signed URL 조건은 정적 계약 self-check로 함께 확인한다.
+- `qa/test_scenarios.md`의 M1 실행 대기 문구를 실행 준비·M2 계약 acceptance로 갱신했다. M2 controller 부재, API·PostgreSQL 미실행은 PASS로 승격하지 않고 `BLOCKED_BACKEND_M2`/`BLOCKED_API_UNREACHABLE`로 드러낸다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → static 6개 PASS, `BLOCKED_BACKEND_M2` 1개 skip, exit 0.
+- `python -m unittest discover -s qa -p "test_m1_m2_blackbox.py" -v` → static 6개 PASS, backend M2 surface 1개 skip, live M1/M2 2개 class `BLOCKED_API_UNREACHABLE`, exit 0.
+- API reachability probe `localhost:8080` → `API_UNREACHABLE`; PostgreSQL probe `localhost:5432` → `POSTGRES_UNREACHABLE`.
+- `.\mvnw.cmd -q -DskipTests compile` (workdir: `backend`) → exit 0. backend M1 컴파일은 PASS지만 live API 인수 PASS로 해석하지 않는다.
+
+**미해결·차단**
+
+- backend 소스에 M1 controller만 있고 M2 source/upload/ingest controller가 없다. `qa/test_m1_m2_blackbox.py`의 static contract는 정본 계약을 확인했지만 M2 구현·실행은 BLOCKED다.
+- API와 PostgreSQL을 실행 가능한 격리 fixture로 제공한 뒤 동일 unittest 명령을 다시 실행해야 M1 live 및 M2 acceptance를 판정할 수 있다. 현재 test는 계정·원본·토큰을 생성하지 않았다.
+
+## 2026-08-12 — M2 backend surface 재확인 및 live gate 유지
+
+- backend 산출물을 재조회한 결과 `SourceController`, `UploadController`, `IngestController`와 `/sources`, `/uploads`, `/libraries/{libraryId}/ingest-jobs` route 표면이 확인됐다. QA 실행기는 M2 핵심 route inventory를 정적으로 확인하며 구현 표면을 런타임 PASS로 오인하지 않는다.
+- Refresh cookie acceptance에 정본 UD-02의 30일(2,592,000초) `Max-Age`를 명시적으로 검증하도록 보강했다. 실행기 설정은 `ZEROWIKI_BASE_URL`·`ZEROWIKI_QA_TIMEOUT`만 사용한다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → static 6개 PASS(backend M1/M2 route inventory 포함), skip 0, exit 0.
+- `python -m unittest discover -s qa -p "test_m1_m2_blackbox.py" -v` → static 6개 PASS, live M1/M2 2개 class `BLOCKED_API_UNREACHABLE`(WinError 10061), exit 0.
+- `http://localhost:8080` 및 `localhost:5432` probe → 각각 `API_UNREACHABLE`, `POSTGRES_UNREACHABLE`. 계정·원본·토큰은 생성하지 않았다.
+
+**판정·잔여 위험**
+
+- M1/M2 static contract 및 backend route inventory는 PASS다. M1 인증·도서관·헌법과 M2 Source/Upload/Obsidian/Ingest의 실제 acceptance는 API·PostgreSQL 실행 전까지 BLOCKED다.
+- 기존 WORKLOG의 과거 M2 부재 관찰은 당시 실행 시점 기록으로 보존하며, 이번 항목이 최신 backend surface 관찰과 현재 gate를 덮어쓴다.
+
+## 2026-08-12 — M2 presigned URL 계약 차단 확인
+
+- backend M2 route inventory는 존재하지만 `UploadService.plan()`이 `"/uploads/" + id + "/content"` 상대 경로를 `uploadUrl`로 반환한다. API 5.2의 presigned URL 계약 및 QA acceptance의 절대 signed URL 조건과 불일치하므로 구현 PASS로 처리하지 않는다. backend 파일은 수정하지 않고 QA static/live check에 blocker를 고정했다.
+- `qa/test_m1_m2_blackbox.py`는 complete 응답에서 enclosing source `id`를 source version으로 잘못 선택하지 않도록 `latestVersion.id` 우선 추출을 추가했다. 실제 API가 반환하는 `sources[].latestVersion.id`를 `EXISTING_SOURCES` 요청에 연결한다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → 7개 중 6개 PASS, `test_backend_m2_upload_plan_does_not_expose_local_path` FAIL, exit 1. 실패 근거는 local authenticated path가 presigned URL 대신 노출되는 정적 계약 위반이다.
+- live 재실행 전 API·PostgreSQL probe는 각각 `API_UNREACHABLE`, `POSTGRES_UNREACHABLE`로 확인됐다. 따라서 M1/M2 runtime acceptance는 여전히 BLOCKED다.
+
+## 2026-08-12 — M2 ingest answer route 및 bounded plan approval 보강
+
+- API 6.1의 `POST /libraries/{libraryId}/ingest-jobs/{jobId}/answers`를 M2 정적 endpoint·backend route inventory에 추가했다. backend는 현재 `questions/{questionId}/answer`를 제공하므로 API 계약 불일치가 static FAIL로 드러난다.
+- M2 live 케이스는 `SCANNING`을 bounded poll(`ZEROWIKI_QA_POLL_SECONDS`, `ZEROWIKI_QA_POLL_LIMIT`)하고 `PLAN_REVIEW`에서 `expectedEstimatedTokens`·`expectedPlanRevision`을 포함한 plan approval을 호출해 승인 전 `PROCESSING` 금지와 승인 후 전이를 함께 확인한다.
+- complete 응답의 `sources[].latestVersion.id`를 우선 추출하도록 해 source ID를 source-version ID로 잘못 연결하지 않게 했다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → 7개 중 5개 PASS·2개 FAIL(local upload path, `/answers` route), exit 1. 두 실패는 API 정본과 backend 구현의 구체적 차이다.
+- live acceptance는 API·PostgreSQL 미실행으로 `BLOCKED_API_UNREACHABLE`이며, 계정·원본·토큰은 만들지 않았다.
+
+## 2026-08-12 — 최종 self-check·환경 차단 기록
+
+- 최신 `python qa/test_m1_m2_blackbox.py --self-check`는 7개 중 5개 PASS·2개 FAIL(local upload path·`/answers` route), exit 1이다. `python -m unittest discover -s qa -p "test_m1_m2_blackbox.py" -v`도 동일 2개 FAIL과 M1/M2 live 2개 `BLOCKED_API_UNREACHABLE` skip으로 exit 1이다.
+- `python -m py_compile qa/test_m1_m2_blackbox.py`는 exit 0, `python qa/verify_phase0_benchmark.py --self-check`는 `SELF-CHECK PASS`·exit 0이다.
+- backend compile 재실행은 `C:\.m2\repository` 생성 권한 부족 `LocalRepositoryNotAccessibleException`으로 exit 1이었다. 이전 compile PASS 기록과 달리 최신 실행은 환경 차단으로 기록하며 backend 파일은 수정하지 않았다.
+- 금지 stale 활성 경로 rg는 `NO_MATCH: stale active API paths`·exit 0, QA 변경 파일 `git diff --check`는 whitespace 오류 없이 exit 0(기존 LF→CRLF 경고만), 신규 실행기 trailing-whitespace self-check도 PASS했다.
+
+## 2026-08-12 — M3 page/trace/review acceptance 및 upload 계약 확장
+
+**무엇을 했는가**
+
+- `qa/test_m3_knowledge_blackbox.py`를 추가했다. 표준 라이브러리만 사용하며 API 7.1~7.3·9.2 endpoint/shape, 페이지 목록·상세, Claim-Evidence-sourceVersion 재조회와 Evidence 400자/원문 언어, `ACCEPTED` 관계·`OPEN` 모순 review 차단, AC-1 100문서/95%, AC-2 최소 5 topics/95% classification, AC-4 citation triple·`insufficientEvidence` 입력 계약을 static/live로 검증한다.
+- `qa/test_m1_m2_blackbox.py`의 upload acceptance를 API 5.2 확정 계약(`uploadId`, absolute `uploadUrl`, `method`, `requiredHeaders`, `expiresAt`)으로 갱신했다. required headers 전달, 만료 시각, 다른 사용자 session mismatch PUT/complete 거부, 만료 URL fixture(`ZEROWIKI_QA_EXPIRED_UPLOAD_URL`), signed URL 오류·로그 redaction 조건을 추가했다.
+- `qa/test_scenarios.md`, `qa/README.md`, `docs/검증-QA-계약-확정-체크리스트.md`에 M3 실행 명령·fixture 차단(`BLOCKED_M3_*`)·AC-1/2/4 traceability와 upload local/test 계약을 기록했다. M3 route/fixture 부재를 PASS로 낮추지 않는다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m3_knowledge_blackbox.py` → exit 0.
+- `python qa/test_m3_knowledge_blackbox.py --self-check` → API/requirements/acceptance calculator 7개 PASS, backend M3 route inventory 6건 미구현 FAIL, exit 1. 실패는 `@RequestMapping("/libraries/{libraryId}/pages")`, relations, contradictions, claims/evidences, contradiction resolution route 부재다.
+- `python qa/test_m1_m2_blackbox.py --self-check` → 9개 중 6개 PASS·3개 FAIL(local upload path, DTO `requiredHeaders`, explicit expiry/session comparison). API/endpoint static은 PASS이며 backend 계약 위반은 FAIL로 유지한다.
+- `python -m unittest discover -s qa -p "test_m3_knowledge_blackbox.py" -v` → static M3 route inventory FAIL, live class는 `BLOCKED_API_UNREACHABLE` (localhost:8080 WinError 10061); exit 1.
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS`, exit 0. stale API 경로 검색 및 QA diff whitespace 검사는 후속 최종 검증에서 재실행한다.
+
+**미해결·차단**
+
+- backend M3 controller/DTO/서비스가 없어 실제 page·claim/evidence·relation/contradiction acceptance를 실행하지 않았다. 100문서 ingest, generated topics, source version, answer citation fixture도 필요하다.
+- backend `UploadPlanResponse`는 아직 `requiredHeaders`가 없고 upload session expiry를 저장·검사하지 않으며, `UploadService.plan()`은 상대 local path를 반환한다. backend 소유이므로 QA는 FAIL 근거만 유지하고 수정하지 않는다.
+
+- 후속 정합화: local upload path 정적 정규식을 `session.getId()` 등 실제 변수형에도 매칭하도록 보강했다. 재실행 결과 M1/M2 self-check는 9개 중 6개 PASS·3개 FAIL(local path, `requiredHeaders`, explicit expiry/session comparison)으로 실제 backend 결함을 놓치지 않는다.
+
+## 2026-08-12 — M2 presigned bearer/session 검증 정정
+
+- exact presigned `uploadUrl`은 bearer capability이므로 다른 앱 Authorization token을 붙인 PUT을 ownership 실패로 판정하지 않도록 `mismatch_put`을 서명 query 변조 또는 다른 `uploadId` path로 변경했다. 다른 사용자 token의 authenticated `complete`와 만료 URL PUT은 계속 실패 gate다.
+- Refresh cookie의 `Secure` 요구는 `ZEROWIKI_QA_EXPECT_SECURE_COOKIE` 환경변수로 분리했다. 기본값 `true`는 production gate를 유지하고, local HTTP functional 실행은 `false`로 명시할 수 있다.
+
+## 2026-08-12 — M1/M2 worker 분리 진단·M3 fixture bootstrap·M4 §8 black-box
+
+**무엇을 했는가**
+
+- `qa/test_m1_m2_blackbox.py`에 API/Worker profile 분리 정적 검증을 유지하고, live bounded poll이 `SCANNING`에 고착될 때 `BLOCKED_WORKER_NOT_RUNNING`을 명시하도록 확정했다. API는 servlet profile, Worker는 `web-application-type: none`이며 동일 PostgreSQL을 사용해야 한다. local HTTP에서만 `ZEROWIKI_QA_EXPECT_SECURE_COOKIE=false`를 사용하고 production 기본값은 `true`로 유지한다.
+- 실제 API가 실행됐던 이전 probe에서 job 수락 후 `SCANNING`이 bounded poll 내 `PLAN_REVIEW`로 전이되지 않은 것을 worker 미기동/DB 불일치 blocker로 기록했다. 이번 재프로브는 `localhost:8080`·`localhost:5432` listener 및 Java process가 없어 `BLOCKED_API_UNREACHABLE`로 종료됐다.
+- `qa/test_m3_knowledge_blackbox.py`는 private library를 class 단위로 재사용하고, page가 없으면 정본에 존재하는 M2 upload/complete/ingest API로 실제 source fixture를 생성·승인 시도한다. page 생성 endpoint를 추측하지 않으며 page projection이 없으면 `BLOCKED_M3_PAGE_FIXTURE`로 남긴다. 기존 owner boundary, apply 전 page version immutability, Claim-Evidence-sourceVersion 재조회 검증을 유지했다.
+- `qa/test_m4_change_review_blackbox.py`를 추가했다. API 8.1~8.2의 change-set list/detail/items/reviews/apply/recalculate와 library versions 계약을 static/live로 검증하고, foreign owner boundary, stale revision `409 VERSION_CONFLICT`, apply 전 불변성, `APPLIED` 후 버전 증가를 검사한다. 현재 backend M4 controller 부재는 static FAIL blocker로 보존한다. API 정본에 없는 `PARTIALLY_APPROVED` 요구는 제거했다.
+- `qa/README.md`와 `qa/test_scenarios.md`에 API/Worker 두 터미널 재검증 절차, Secure cookie env 분리, M3 실제 fixture 한계, M4 실행 명령·차단 기준을 추가했다. stale 경로는 보존된 과거 설명 외 활성 테스트 경로에 두지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m3_knowledge_blackbox.py qa/test_m4_change_review_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → 10/10 PASS, exit 0.
+- `python qa/test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS, exit 0.
+- `python qa/test_m4_change_review_blackbox.py --self-check` → API endpoint/terms PASS, backend M4 route inventory 5개 FAIL, exit 1. 이는 backend 미구현을 숨기지 않는 의도적 blocker다.
+- `$env:ZEROWIKI_QA_EXPECT_SECURE_COOKIE='false'; $env:ZEROWIKI_QA_POLL_LIMIT='10'; python -m unittest discover -s qa -p 'test_m1_m2_blackbox.py' -v` → static 10개 PASS, live M1/M2 2개 class `BLOCKED_API_UNREACHABLE` skip, exit 0.
+- `python -m unittest discover -s qa -p 'test_m3_knowledge_blackbox.py' -v` → static 8개 PASS, live `BLOCKED_API_UNREACHABLE` skip, exit 0.
+- `python -m unittest discover -s qa -p 'test_m4_change_review_blackbox.py' -v` → API unreachable skip + backend M4 route inventory FAIL, exit 1.
+- `python qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS`, exit 0.
+- `rg -n --glob 'qa/**' --glob 'docs/검증-QA-계약-확정-체크리스트.md' '/ingest-plans|POST /search|/libraries/\\{id\\}/topics|PATCH /ingest-jobs' .` → `NO_MATCH: stale active API paths`, exit 0.
+- `git -c safe.directory='C:/Users/PC/Desktop/ZeroWiki-SaaS' diff --check -- qa .claude/team/qa` → whitespace 오류 없음, exit 0(기존 LF→CRLF 경고만).
+
+**미해결·차단**
+
+- API·PostgreSQL·Worker를 실행 가능한 격리 환경에서 같은 DB로 기동한 뒤 M1/M2 live를 재실행해야 `SCANNING` 진단을 해소하고 Phase 1 ingest gate를 판정할 수 있다.
+- backend 정본 API에 page 생성/seed endpoint가 없고 현재 ingest 구현은 page projection을 만들지 않으므로, M3 page/claim/evidence/relation/topic/answer live fixture는 backend seed/projection 제공 전 차단된다.
+- backend API §8 change-set/version controller route 5개가 없어 M4 review/apply/version gate는 static FAIL·live BLOCKED다. backend 소유 파일은 수정하지 않았다.
+
+## 2026-08-12 — M4 controller annotation 조합 정합화
+
+**무엇을 했는가**
+
+- backend가 `ChangeSetController`를 추가한 뒤 기존 QA exact-string 검사가 class-level `@RequestMapping("/libraries/{libraryId}")`와 method-level `@GetMapping`/`@PostMapping` 조합을 인식하지 못해 false FAIL을 냈다.
+- `qa/test_m4_change_review_blackbox.py`가 해당 controller의 공통 prefix와 9개 method suffix를 조합해 검사하도록 수정했다. API §8 정본에 없는 `PARTIALLY_APPROVED` 요구는 이미 제거한 상태를 유지했다.
+- M4 static route inventory는 backend 구현을 읽은 결과 PASS로 갱신했고, live gate는 API·page/version fixture가 없으므로 계속 BLOCKED로 유지했다.
+
+**검증 명령과 실제 결과**
+
+- `python qa/test_m4_change_review_blackbox.py --self-check` → 3/3 PASS, exit 0.
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m3_knowledge_blackbox.py qa/test_m4_change_review_blackbox.py` → exit 0.
+- `git -c safe.directory='C:/Users/PC/Desktop/ZeroWiki-SaaS' diff --check -- qa .claude/team/qa` → whitespace 오류 없음, exit 0(기존 LF→CRLF 경고만).
+
+**미해결·차단**
+
+- M4 live review/apply/version은 API와 page/version fixture가 실행된 뒤 재검증한다. backend controller 파일은 소유권상 수정하지 않았다.
+
+## 2026-08-12 — M4 live 입력 정합화 보강
+
+- M4 page fixture 조회를 API 계약과 동일한 `type=CONCEPT&status=PUBLISHED` 필터로 제한했다.
+- 새 library의 `currentVersion`이 `null`일 수 있는 실제 backend 응답을 반영해 `expectedLibraryVersion=0`을 초기값으로 사용하고, 환경 주입 버전은 선택적으로 덮어쓰도록 했다. 버전 목록·apply 이후 증가 검증은 유지한다.
+- `python -m py_compile qa/test_m4_change_review_blackbox.py` → exit 0, `python qa/test_m4_change_review_blackbox.py --self-check` → 3/3 PASS, `git diff --check -- qa .claude/team/qa` → exit 0.
+
+## 2026-08-12 — M6 검색·AI 사서 계약 및 실행 준비
+
+**무엇을 했는가**
+
+- `qa/test_m6_search_ai_blackbox.py`를 표준 라이브러리만으로 추가했다. API §9.1~9.2의 9개 route, `KEYWORD`·`SEMANTIC`·`HYBRID`, `CURRENT`·`REFERENCED` explicit expansion, 400자 snippet, owner/reference boundary, conversation/message `QUEUED`→`COMPLETED` polling, citation triple/source-version 재조회, `insufficientEvidence`, save-proposal/feedback route와 `UD-25` latency 기록을 static/live로 준비했다.
+- backend controller가 class-level prefix와 method-level annotation을 조합할 수 있는 현실을 반영해 M6 route matcher를 full path 또는 controller prefix+suffix로 구현했다. 현재 backend에는 해당 9개 Search/Conversation route가 없어 static inventory FAIL을 정확히 유지한다. backend 파일은 수정하지 않았다.
+- API §9.2에는 feedback request body가 없으므로 임의 enum을 계약으로 만들지 않았다. live는 기본 body 없는 endpoint probe를 하고 승인된 body가 있을 때만 `ZEROWIKI_QA_FEEDBACK_BODY` JSON을 주입한다. `UD-25` answer p95 20초는 `M6_LATENCY_SECONDS`로 sample을 기록하고, 단일 sample은 p95 PASS로 승격하지 않는다.
+- `qa/README.md`와 `qa/test_scenarios.md`에 M6 추적성, 실행 명령, 9개 기대 route, fixture/provider/API 차단 조건, feedback body 미정 사항을 추가했다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m3_knowledge_blackbox.py qa/test_m4_change_review_blackbox.py qa/test_m6_search_ai_blackbox.py` → exit 0.
+- `python qa/test_m6_search_ai_blackbox.py --self-check` → API route/terms/helper 5개 PASS, backend M6 route inventory 9개 FAIL, exit 1. 실패 목록은 `GET /libraries/{libraryId}/search`, `POST /libraries/{libraryId}/search-expansions`, conversation 3개, message 2개, save-proposal, feedback이다.
+- `python -m unittest discover -s qa -p "test_m6_search_ai_blackbox.py" -v` → static 5개 PASS + backend inventory 1개 FAIL, live class `BLOCKED_API_UNREACHABLE` skip(`localhost:8080`, WinError 10061), 종료 코드 1.
+- `rg -n --glob 'qa/**' '/ingest-plans|POST /search|/libraries/\{id\}/topics|PATCH /ingest-jobs' .` → M6 변경 범위에서 stale 활성 경로 없음(`NO_MATCH`); 의도적 과거 설명은 보존했다.
+- `git -c safe.directory='C:/Users/PC/Desktop/ZeroWiki-SaaS' diff --check -- qa .claude/team/qa` → whitespace 오류 없음, exit 0(기존 LF→CRLF 경고만).
+
+**미해결·차단**
+
+- backend M6 route 9개와 검색 index·AI provider가 없어 static FAIL/live 실행 차단이다. 구현 후 동일 self-check와 live 명령을 재실행해야 한다.
+- API/PostgreSQL가 현재 실행되지 않아 current/reference 검색 fixture, page·claim·sourceVersion citation, save/feedback 실제 응답과 latency를 판정하지 못했다.
+- API §9.2 feedback body가 미정이다. 승인된 계약이 정본에 추가되기 전에는 QA가 임의 요청 schema나 enum을 PASS로 고정하지 않는다.
+
+## 2026-08-12 — M6 검색 결과 envelope self-check 보강
+
+- `_validate_search_results()`가 API §9.1 응답의 `score`, `pageId` 또는 `sourceId`, `origin.libraryName`까지 live에서 요구하도록 보강했다. 400자·scope·library boundary와 citation shape synthetic self-check는 계속 PASS한다.
+- `python -m py_compile qa/test_m6_search_ai_blackbox.py` → exit 0, `python qa/test_m6_search_ai_blackbox.py --self-check` → 계약/helper 5개 PASS·backend route 9개 FAIL, exit 1. 실패 사유와 기대 route는 변하지 않았다.
+
+## 2026-08-12 — M7 Phase 1 보안·a11y gate 정합화
+
+**무엇을 했는가**
+
+- `qa/test_m7_security_blackbox.py`를 추가해 기존 `S-1~S-16`을 renumber하지 않고
+  `NFR-SEC-01/02/03/04/05/06/08/09`, API 2.5·15절, Phase 범위를 교차 검사한다.
+  현재 backend route를 owner/library descendant, explicit `library_references`,
+  source secret rejection, prompt command non-execution surface, change apply/audit,
+  error/log redaction으로 정적 inventory하고, frontend representative page의
+  `main`/`header`/`nav`, label↔control, native keyboard interaction,
+  `:focus-visible`, alert/status error state를 stdlib 정적으로 검사한다.
+- 기존 suite 중복을 만들지 않기 위해 M2 `test_source_secret_rejection_and_prompt_text_is_data`
+  에 synthetic `api_key` fixture의 저장 전 `422 SECRET_DETECTED`·redaction과
+  prompt-shaped data acceptance를 추가하고, M6
+  `test_ai_question_idempotency_key_reuses_the_same_result`에 same-key duplicate
+  AI question probe를 추가했다. M7 live는 owner descendant route probe만 추가했다.
+- `qa/test_scenarios.md`에 S-1~S-16 식별자·요구사항/NFR·API 근거·Phase 1 포함/제외
+  표를 append했다. SSRF·공개 저작권·Notion·알림·기존 Export 시나리오는 보존하되
+  Phase 1 PASS로 해석하지 않는다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m6_search_ai_blackbox.py qa/test_m7_security_blackbox.py` → exit 0.
+- `python qa/test_m1_m2_blackbox.py --self-check` → 10/10 PASS, exit 0.
+- `python qa/test_m6_search_ai_blackbox.py --self-check` → 6/6 PASS(현재 backend Search/Conversation route inventory 포함), exit 0.
+- `python qa/test_m7_security_blackbox.py --self-check` → 7개 중 6 PASS, 1 FAIL, exit 1. 유일한 FAIL은 `idempotency_records` migration은 있으나 backend Java에 `Idempotency-Key` 처리·same-result/replay·`IDEMPOTENCY_KEY_REUSED`·`IDEMPOTENCY_KEY_IN_PROGRESS` 경로가 없는 의도적 blocker다.
+- `$env:ZEROWIKI_BASE_URL='http://localhost:8080'; $env:ZEROWIKI_QA_EXPECT_SECURE_COOKIE='false'; python -m unittest test_m7_security_blackbox.M7LiveBlackBoxTest.test_owner_boundary_covers_current_library_descendant_routes -v` → API reachable, live FAIL. foreign token의 `GET /libraries/{libraryId}/search`와 `/conversations`가 기대 403/404 대신 500 `INTERNAL_ERROR`를 반환했다(requestId 예: `req_f1b4a741-c99f-43bb-ba02-71e3dff09739`, `req_a7f91146-535e-4587-bf41-c7ed568239f5`). response body에는 library ID/owner title이 없었으나 500 자체로 NFR-SEC-01/02 gate FAIL이다.
+- `qa/README.md`, `.claude/team/qa/STATE.md`를 M7 현재 판정·명령·blocker로 갱신했다. backend/frontend 소유 파일은 편집하지 않았다.
+
+**미해결·차단**
+
+- backend가 API 2.5 idempotency middleware/service를 supported route에 연결하기 전에는 M7 static gate와 M6 live duplicate probe를 PASS로 낮출 수 없다.
+- backend는 foreign owner의 M6 search/conversation 500 원인을 requestId 로그와 대조해 403/404 boundary로 고쳐야 한다. 원인 확인·수정은 backend 소유이므로 QA는 route와 재현만 보고한다.
+- M2 secret/prompt live와 M6 idempotency live 전체는 API·worker·fixture 상태를 확인한 후 재실행한다. Phase 1 보안 gate는 idempotency와 owner boundary FAIL이 해소되기 전 BLOCKED다.
+
+## 2026-08-12 — M7 targeted live 재검증
+
+- `$env:ZEROWIKI_BASE_URL='http://localhost:8080'; $env:ZEROWIKI_QA_EXPECT_SECURE_COOKIE='false'; python -m unittest test_m1_m2_blackbox.M2LiveBlackBoxTest.test_source_secret_rejection_and_prompt_text_is_data -v` → **PASS**, exit 0. synthetic `api_key` content는 `422 SECRET_DETECTED`로 차단되고 complete error/source query에 fixture·upload URL이 없었으며, prompt-shaped markdown은 `FILE` source data로 완료되었다.
+- 동일 환경에서 `python -m unittest test_m6_search_ai_blackbox.M6LiveBlackBoxTest.test_ai_question_idempotency_key_reuses_the_same_result -v` → **FAIL**, exit 1. 동일 user/path/body와 `Idempotency-Key`를 붙인 두 AI 질문이 서로 다른 assistant message ID(`c0333af0-adf4-4d8f-83ef-5a95f5d4dfda` vs `fc1135b0-cb3a-4740-b105-95769ea9e9a2`)를 생성했다. 첫 probe의 unsupported `EXPLAIN`은 API 정본/실제 backend enum에 맞춰 `COMPARE`로 수정한 뒤 재현한 결과다.
+- `python -m py_compile qa/test_m1_m2_blackbox.py qa/test_m6_search_ai_blackbox.py qa/test_m7_security_blackbox.py`, M1/M2·M3·M4·M6 self-check 재실행은 각각 py_compile exit 0, M1/M2 10/10, M3 8/8, M4 3/3, M6 6/6 PASS를 확인했다. M7 self-check는 6/7 PASS + API §2.5 idempotency 1 FAIL(exit 1)로 의도된 차단을 유지했다.
+- M7 owner descendant live는 별도 targeted 실행에서 API reachable, foreign search/conversations 500 `INTERNAL_ERROR` FAIL을 재현했다. backend 소유 원인 확인 전 QA는 403/404 expected gate를 완화하지 않는다.
+
+## 2026-08-12 — Phase 1 100-document live acceptance runner
+
+**What changed**
+
+- Added only `qa/test_phase1_acceptance_live.py`, a single opt-in stdlib black-box test. It builds 100 unique Markdown entries in memory, uploads and starts ingest, approves `PLAN_REVIEW`, checks `DONE` items >=95/100, approves/applies every ingest change item, requires job `COMPLETED`, checks published CONCEPT/topic classification, claim/evidence/sourceVersion traceability, all three search modes, a cited assistant answer, the exact feedback body, and save-proposal.
+- Reused the existing `LiveBlackBoxBase`/`ApiClient` and M3/M6 helpers. No new dependency, framework, fixture file, token output, or signed URL persistence was added.
+
+**Verification**
+
+- `python -m py_compile qa/test_phase1_acceptance_live.py` — PASS.
+- In-memory archive self-check — PASS (`ARCHIVE_BYTES=25284`, `MARKDOWN=100`, `UNIQUE_MARKDOWN=100`).
+- `python qa/test_phase1_acceptance_live.py` and `python -m unittest discover -s qa -p "test_phase1_acceptance_live.py" -v` — both exited 0 with explicit `BLOCKED_API_UNREACHABLE` skip; `localhost:8080` had no listener at execution time.
+- `git diff --check -- qa/test_phase1_acceptance_live.py` — PASS.
+
+**Next gate / blocker**
+
+- Run with `ZEROWIKI_QA_RUN_PHASE1_ACCEPTANCE=true`, `ZEROWIKI_QA_POLL_SECONDS=0.02`, and `ZEROWIKI_QA_PHASE1_TIMEOUT=240` once the API and worker share a live database. The post-apply `job.status=COMPLETED` assertion is a hard product gate; a stale jar leaving `CHANGE_REVIEW` must be reported as FAIL.
+
+## 2026-08-12 — Batch holdout QA 준비 및 Phase 1 feedback 계약 보강
+
+**무엇을 했는가**
+
+- `qa/verify_phase0_benchmark.py`의 dense validator를 holdout 실제 식별자 `HT-NNN`까지 허용하도록 보강했다. Wilson hard-gate profile은 정확히 70개 gold case와 70개 prediction row를 요구한다. dev `CT-NNN` 경로와 기존 sparse manifest 조인은 유지했다.
+- self-check에 Batch output 순서 비결정성을 반영해 reversed 70행을 `case_id`로 조인하는 경로를 추가했다. 69행 누락, 70행 중 `FAILED` 1행, sampled FPR 3/30(0.10) 및 Wilson upper 0.256 초과를 각각 gate 실패로 확인한다. 성공 fixture는 70/70, recall 1.000, accuracy 1.000, sampled FPR 0.000, Wilson upper 0.114다.
+- `qa/test_phase1_acceptance_live.py`의 feedback assertion을 API 확정 계약대로 HTTP 200 및 `data.accepted is True`로 좁혔다. 기존 201/202/204 허용은 제거했다.
+- backend 소스는 정적 inventory로 재확인했다. `OPENAI_BATCHES_URL`·가격/크기 상수와 sync용 request body·prompt 누출 self-check는 있으나, Batch `/v1/files` upload·`/v1/batches` create/poll·output file download/JSONL 결과 조인 구현은 아직 없다. 따라서 실제 Batch gate는 실행하지 않았고 backend 파일은 편집하지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python -B qa/verify_phase0_benchmark.py --self-check` → exit 0. 70-case HT fixture의 reversed join, 69-row omission, FAILED completion block, FPR/Wilson block 포함.
+- `python -B backend/scripts/phase0_benchmark.py --self-check` → exit 0. gold/case/reason/source_ref prompt 누출 self-check PASS.
+- `python -m py_compile qa/verify_phase0_benchmark.py qa/test_phase1_acceptance_live.py` → exit 0.
+- `ZEROWIKI_QA_RUN_PHASE1_ACCEPTANCE=true` 환경에서 `python -m unittest discover -s qa -p "test_phase1_acceptance_live.py" -v` → exit 0, `PHASE1_ACCEPTANCE_PASS documents=100 done=100 publishedConcepts=100 topics=6 citations=5`.
+- opt-in 없는 `python qa/test_phase1_acceptance_live.py` → exit 0, 의도적 skip(`OPT_IN_PHASE1_100_DOCS`).
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` → exit 0(기존 LF→CRLF 경고만).
+
+**게이트 판정·잔여 위험**
+
+- AC-5 holdout 필수 기준은 모두 유지한다: 70/70 completion, recall ≥0.80, six-class accuracy ≥0.80, sampled FPR ≤0.10, Wilson 95% upper ≤0.20. dev Wilson은 3개 negative 표본 한계로 report-only다.
+- **HIGH/BLOCKED:** Batch 실행 경로와 실제 70행 output이 없어 holdout API/validator quality gate는 미실행이다. backend output이 준비되면 `case_id` join으로 순서를 무시하고, 누락/FAILED는 100% completion에서 차단해야 한다.
+- **MEDIUM:** 현재 QA validator는 dense CSV 행별 token/cost 및 quality gate를 검증하지만, Batch metrics JSON의 aggregate usage/cost가 CSV 합계와 일치하는지와 provider cap(`OPENAI_BATCH_REMAINING_CAP_USD`)은 Batch 산출물 schema가 생긴 뒤 별도 대조가 필요하다. 비용·토큰 합계가 없거나 unknown usage인 결과는 PASS로 취급하지 않는다.
+
+## 2026-08-12 — HT/70 validator 변경 후 dev 회귀 확인
+
+- `python -B qa/verify_phase0_benchmark.py --manifest evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-manifest.json --generated-claims evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-generated-claims.csv --benchmark-output evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/phase0-benchmark.csv --dense-predictions evaluation/results/phase0-gpt-5_6-sol-rubric-context-v3-r1/openai-predictions.csv --labels evaluation/contradiction-labels.csv --expected-documents 26` → exit 0, `completion=1.000 recall=0.957 sampled_fpr=0.000 accuracy=0.923`, Wilson `0.561` report-only, `RESULT PASS failures=0`.
+
+## 2026-08-12 — HT holdout validator 실제 경로 수정 및 partial Batch 재검증
+
+**무엇을 했는가**
+
+- `qa/verify_phase0_benchmark.py`에 `--holdout-input`을 추가했다. dense+`--holdout-labels` 실행은 8열 `evaluation/contradiction-holdout-input.csv`와 3열 machine gold를 `case_id`로 조인해 `GOLD_HEADERS` 형태의 HT manifest gold를 구성한다. dev 실행은 기존 `--labels` full CSV 경로를 그대로 사용한다.
+- `validate_manifest()`와 `validate_generated_claims()`의 case ID 검사를 CT 전용 `CASE_ID`에서 CT/HT 공용 `DENSE_CASE_ID`로 바꿨다. HT-001..HT-070의 유일성·입력 필수값·enum·reason·manifest/generated 대응을 실제 main 경로에서 검증한다.
+- self-check에 synthetic 70행 HT input+machine gold join → HT manifest → generated claims 검증을 추가했다. 기존 dev self-check와 reversed 70행, 누락 1행, FAILED 1행, 3/30 false-positive Wilson 실패 gate는 보존했다.
+- backend 파일은 편집하지 않았다. `evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/`의 실제 runner 산출물은 20행(19 completed·1 failed)뿐이므로 validator가 manifest/generated는 통과시키고 70행·completion·recall·accuracy gate를 정직하게 FAIL한다.
+
+**검증 명령과 실제 결과**
+
+- `python -m py_compile qa/verify_phase0_benchmark.py qa/test_phase1_acceptance_live.py` → exit 0.
+- `python -B qa/verify_phase0_benchmark.py --self-check` → exit 0, `SELF-CHECK PASS`; HT input/gold join, 70행 reversed join, omission/FAILED/FPR/Wilson 차단 포함.
+- `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`, exit 0.
+- dev 회귀 명령(`phase0-gpt-5_6-sol-rubric-context-v3-r1`, `--labels`, expected 26) → `completion=1.000 recall=0.957 sampled_fpr=0.000 accuracy=0.923`, `RESULT PASS failures=0`, exit 0.
+- 실제 HT 명령(`--holdout-input evaluation/contradiction-holdout-input.csv`, `--holdout-labels qa/contradiction-holdout-gold.csv`, expected 70) → `PASS holdout input/gold`, `PASS manifest: gold case_id 전체 대응`, `PASS generated claims: manifest case_id 전체 대응`; 이어 `completed=19/70, failed=1, completion_rate=0.271, recall=0.250, accuracy=0.243`, `RESULT FAIL failures=7`, exit 1.
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` → exit 0(기존 LF→CRLF 경고만).
+
+**미해결·차단**
+
+- **HIGH:** full 70행 Batch output이 없어 AC-5 holdout hard gate(70/70 completion, recall·accuracy ≥0.80, sampled FPR ≤0.10, Wilson upper ≤0.20)는 BLOCKED다. 20행 partial 결과를 PASS로 완화하지 않았다.
+- **MEDIUM:** `phase0-batch-metrics.json`의 aggregate usage/cost(`completed=19`, `failed=1`, `actual_cost_usd=0.0632025`, `max_cost_usd=0.24356`)와 dense CSV 합계·provider cap의 대조는 full Batch 산출물 계약 후 수행한다.
+
+## 2026-08-12 — Phase 1 HT holdout 70행 최종 QA PASS
+
+**무엇을 했는가**
+
+- 새 runner 산출물 `evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/`를 기존 `qa/verify_phase0_benchmark.py` 명령으로 독립 재검증했다. `--holdout-input` 8열 + `--holdout-labels` machine gold 조인, manifest/generated mapping, dense prediction을 실제 main 경로로 실행했다.
+- 결과는 `70/70`, `failed=0`, recall `0.800`, six-class accuracy `0.843`, sampled FPR `0.000`, Wilson 95% upper `0.114`, `RESULT PASS failures=0`, validator exit 0이다. AC-5 holdout quality gate를 PASS로 갱신했고, M7 보안 FAIL 때문에 전체 Phase 1/production gate는 계속 BLOCKED로 유지한다.
+- `phase0-batch-metrics.json`의 aggregate는 input `53504`, output `5136`, actual cost `$0.2108`, cap `$0.24356`(cap 이내)이다. `openai-predictions.csv`와 `phase0-benchmark.csv` 70개 COMPLETED 행의 deduped 합계는 input `52762`, output `4880`, actual cost `$0.205105`이다.
+- aggregate와 CSV 차이 `$0.005695`(742 input, 256 output tokens)는 초기 `batch-state-000-020.json`과 겹치는 retry `batch-state-006-007.json`의 provider attempt가 aggregate state ledger에는 포함되고 최종 case별 CSV에는 한 번만 남기기 때문이다. state ledger 합계는 metrics JSON과 일치한다. cap은 PASS하되 exact CSV=metrics equality는 reconciliation note로 기록했다. backend 파일은 편집하지 않았다.
+
+**검증 명령과 실제 결과**
+
+- `python -B qa/verify_phase0_benchmark.py --manifest evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-manifest.json --generated-claims evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-generated-claims.csv --benchmark-output evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-benchmark.csv --dense-predictions evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/openai-predictions.csv --holdout-input evaluation/contradiction-holdout-input.csv --holdout-labels qa/contradiction-holdout-gold.csv --expected-documents 70` → `DENSE_METRICS expected=70 completed=70 failed=0 completion_rate=1.000 conflict=40 detected=32 recall=0.800 sampled_fpr=0.000 wilson95_fpr_upper=0.114 accuracy=0.843`, `RESULT PASS failures=0`, exit 0.
+- PowerShell `Import-Csv` 직접 합계 대조 → predictions/benchmark rows 각각 70, `COMPLETED=70`; predictions input/output/cost `52762/4880/$0.205105`; metrics aggregate `53504/5136/$0.2108`; delta `$0.005695`; `UnderCap=True`.
+- `python -B qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS`, exit 0.
+- `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`, exit 0.
+- `python -m py_compile qa/verify_phase0_benchmark.py qa/test_phase1_acceptance_live.py` → exit 0.
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- qa .claude/team/qa` → exit 0(기존 LF→CRLF 경고만).
+
+**게이트 판정·잔여 위험**
+
+- **PASS:** Phase 1 AC-5 dense holdout quality 및 provider cost cap.
+- **MEDIUM reconciliation:** aggregate provider-attempt 비용과 deduped final CSV 비용은 retry overlap 때문에 동일하지 않다. 비용 회계 계약이 logical case cost만 요구하면 CSV 합계, provider 실제 청구액을 요구하면 aggregate를 기준으로 삼아야 하며, 정확한 선택은 backend/리더 계약 확인이 필요하다.
+- **BLOCKED:** 전체 Phase 1 보안 gate와 production 승격은 M7 API §2.5 idempotency FAIL, foreign-owner search/conversations 500 boundary FAIL 등 기존 finding이 해소될 때까지 닫지 않는다.
+
+## 2026-08-18 — Phase 1 최종 독립 QA 및 Gradle 전환 동기화
+
+**무엇을 했는가**
+
+- 최신 backend/frontend 코드와 evaluation 산출물을 기존 QA validator와
+  M1/M2·M3·M4·M6·M7 self-check로 독립 재검증했다.
+- API는 현재 off이므로 M7 live를 재실행하지 않았다. 이전 최종 live
+  8/8 PASS 근거와 이번 M7 static 7/7 PASS를 구분해 기록했다.
+- `qa/README.md`, `qa/test_scenarios.md`, `.claude/team/qa/STATE.md`의
+  idempotency FAIL, foreign-owner 500, API unreachable, holdout BLOCKED 현재형 문구를
+  최신 PASS 스냅샷으로 교체했다. 이전 실패 근거는 이 WORKLOG의
+  기존 항목을 수정·삭제하지 않고 보존했다.
+- QA 활성 문서의 Maven 실행 명령을 Gradle wrapper
+  `.\gradlew.bat bootRun --args="--spring.profiles.active=<api|worker>"`로 동기화했다.
+  평가 CSV의 Maven 개념 문구와 WORKLOG 과거 명령은 역사/데이터이므로
+  변경하지 않았다.
+
+**산출물 경로**
+
+- `qa/README.md`
+- `qa/test_scenarios.md`
+- `.claude/team/qa/STATE.md`
+- `.claude/team/qa/WORKLOG.md`
+
+**검증 명령과 실제 결과**
+
+- `python -B qa/verify_phase0_evaluation.py` → `RESULT PASS failures=0`, exit 0.
+- `python -B evaluation/validate_evaluation.py` → `검증 완료: 오류 0건`, exit 0.
+- `python -B qa/verify_phase0_benchmark.py --self-check` → `SELF-CHECK PASS`, exit 0.
+- HT 70행 실제 validator(`phase1-holdout-gpt-5_6-sol-batch-r1`, holdout input+gold,
+  expected 70) → 70/70, failed 0, recall 0.800, accuracy 0.843, sampled FPR 0,
+  Wilson upper 0.114, macro-F1 0.801, `RESULT PASS failures=0`, exit 0.
+- `python -B qa/test_m1_m2_blackbox.py --self-check` → 10/10 PASS, exit 0.
+- `python -B qa/test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS, exit 0.
+- `python -B qa/test_m4_change_review_blackbox.py --self-check` → 3/3 PASS, exit 0.
+- `python -B qa/test_m6_search_ai_blackbox.py --self-check` → 6/6 PASS, exit 0.
+- `python -B qa/test_m7_security_blackbox.py --self-check` → static 7/7 PASS, exit 0.
+- Batch state JSON 7개 직접 합산 → input 53504, output 5136, cost `$0.2108`;
+  metrics JSON과 일치. final prediction CSV 70행 → 52762/4880/`$0.205105`.
+- backend 소유 실행 `backend\gradlew.bat -g .gradle-user-home clean test
+  --no-daemon --non-interactive --console=plain` → exit 0. QA가
+  `backend/build/test-results/test/TEST-*.xml` 15개를 직접 합산해 39 tests,
+  failures 0, errors 0, skipped 0을 확인했다.
+- backend 소유 실행 `backend\gradlew.bat -g .gradle-user-home bootJar
+  --no-daemon --non-interactive --console=plain` → exit 0. QA가
+  `backend/build/libs/zerowiki-backend-0.1.0-SNAPSHOT.jar` 생성을 확인했다.
+- QA의 wrapper 직접 재실행 2회는 소스 컴파일 후 Gradle cache jar
+  `AccessDeniedException`으로 각각 exit 1. 코드/test 실패가 아닌 Windows cache
+  access lock으로 분리했다.
+
+**미해결 사항**
+
+- Phase 1 제품 blocker는 없다.
+- production provider/model 승격과 모순 자동 적용은 별도 운영 승인
+  대상이며, AC-3·6·7은 Phase 4 후속 범위다.
+- Windows Gradle cache `AccessDeniedException`은 독립 wrapper 재실행성의
+  환경 주의사항으로 남긴다. 성공한 clean test XML과 bootJar 산출물은
+  별도로 확인했다.
+
+**Gradle 성공 경로 보정**
+
+- 위에 `.gradle-user-home`으로 기록한 성공 명령의 cache 경로는 잘못된
+  전사다. 실제 성공 명령은 `-g "$env:LOCALAPPDATA\ZeroWiki-Gradle-9.7"`를
+  사용한 `clean test` 및 `bootJar`이며 둘 다 exit 0이다. append-only 규칙에
+  따라 기존 줄을 수정하지 않고 이 보정을 추가한다.
+- 동일 cache로 QA가 `.\gradlew.bat -g "$env:LOCALAPPDATA\ZeroWiki-Gradle-9.7"
+  test --no-daemon --non-interactive --console=plain`을 재실행해
+  `BUILD SUCCESSFUL in 1m 26s`, 4 actionable tasks executed, exit 0을 독립 확인했다.

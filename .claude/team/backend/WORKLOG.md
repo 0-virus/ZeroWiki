@@ -1210,3 +1210,169 @@ python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
 - 무엇을 했는가: 감사 후 backend STATE/WORKLOG를 UTF-8로 다시 읽고 self-check·evaluation schema validator·diff 검사를 실행했다.
 - 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → exit 0, `self-check: PASS`; `python -B evaluation/validate_evaluation.py` → exit 0, `검증 완료: 오류 0건`; `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- .claude/team/backend/STATE.md .claude/team/backend/WORKLOG.md` → exit 0(개행 변환 warning만); STATE `utf8_bom=False replacement_chars=False trailing_lines=0`, 신규 WORKLOG 항목 `new_entry_trailing_lines=0`.
 - 미해결 사항: Spring Boot scaffold 부재, UD-03/19/20의 부분 차단, holdout 전체 사용자 승인·QA machine gold freeze 및 production 모순 자동 판정 차단 상태는 유지한다.
+
+---
+
+## 2026-08-12 — Phase 1 backend 실행 계획·완료 gate·계약 blocker 정리
+
+- 무엇을 했는가: `docs/ZeroWiki-MVP-서비스-기획서.md` 23절, `docs/ZeroWiki-요구사항-정의서.md` 5.1~5.9·6.1·9·11~12절, `docs/ZeroWiki-API-명세-초안.md` 2~9·15~18절, `docs/ZeroWiki-ERD-초안.md` 1~8절과 현재 backend 상태를 교차 대조해 Phase 1 작업 순서·최소 Spring Boot/API/Worker 구조·필수 보안/인수 테스트·완료 gate를 정리했다. 구현 코드와 제품/API 정본은 수정하지 않았다.
+- 산출물 경로: `.claude/team/backend/STATE.md` (Phase 1 계획 스냅샷); 기준 문서 위 절들(읽기 전용)
+- 계획 판단: 단일 Maven/Spring Boot artifact를 `api`·`worker` profile 별도 프로세스로 실행하고, 인증/테넌시 → 원본/업로드 → Ingest/Worker → 지식 → ChangeSet/버전 → 검색/AI 사서 순서로 진행한다. AC-1·AC-2·AC-4·AC-5와 S-1/S-2/S-3/S-4/S-6/S-7을 Phase 1 완료 gate로 둔다. AC-3/6/7은 Phase 4 사용자 검증이다.
+- 검증: `rg --files backend | Sort-Object` → `backend\contracts\library-constitution.schema.json`, `backend\scripts\phase0_benchmark.py`; build/Java 탐색 → `NO_SPRING_BUILD_OR_WRAPPER_FILES`, `NO_JAVA_FILES`; enum/헌법 schema drift 검색 → API `AI_SYNTHESIS`·`REQUEST_CHANGES`, ERD `AI_INFERENCE`·`REQUEST_REVISION`, 요구사항 UD-15 `constitution_document` 확인.
+- 미해결 사항: Spring Boot scaffold 부재. `UD-03`(library limit/quota), `UD-19`(billable unit/token 환산), `UD-20`(audit retention/admin access)은 사용자 결정 전 차단한다. API·ERD enum 2건과 UD-15 저장 필드 1건은 리더 정본 정합화 전 migration/OpenAPI에 고정하지 않는다. holdout 승인·machine gold freeze·원본 Claim mapping·production provider/model 전 모순 자동 판정/적용은 보류한다.
+
+---
+
+## 2026-08-12 — M0+M1 backend 구현·보안 gate·계약 정합화 완료
+
+- 무엇을 했는가: 단일 Java 21 Maven/Spring Boot artifact와 저장소 wrapper를 추가했다. parent는 공식 metadata 기준 Spring Boot `4.1.0`으로 고정했고, `api`/`worker` profile을 제공하되 이번 slice는 API 동작만 구현했다. `.mvn/wrapper/dists/`와 `target/`은 backend `.gitignore`에 추가했다.
+- 인증 구현: hand-rolled JWT encode/verify를 삭제하고 Spring Security 공식 `spring-boot-starter-oauth2-resource-server`의 Nimbus `JwtEncoder`/`JwtDecoder`를 사용했다. HS256 secret은 UTF-8 32 bytes 이상을 요구하며 일반 profile은 `ZEROWIKI_JWT_SECRET`가 없으면 fail-fast, test profile만 fixture secret을 사용한다. `sub/sessionId/iat/exp`, Access 15분, Refresh 30일 회전과 HttpOnly cookie를 유지했다.
+- 인증 보안 수정: `/auth/sign-up`, `/auth/login`, `/auth/refresh`, `/auth/logout`만 permitAll로 제한하고 `/auth/logout-all`은 인증을 요구한다. bearer filter가 `auth_sessions`에서 sessionId/userId 일치·ACTIVE user·미취소·미만료를 확인하므로 logout 직후 access token도 차단된다. CORS는 `ZEROWIKI_CORS_ALLOWED_ORIGINS`(기본 `http://localhost:3000`), credentials와 제한된 메서드/헤더를 사용한다.
+- API 계약 수정: sign-up은 `201` account `data`만 반환하고 session/cookie를 발급하지 않는다. library 응답은 create의 `currentVersion: null`, zero `counts`, GET의 고정 빈 `home` 구조를 포함한다. onboarding의 `sourceTypes`는 canonical `sourcePolicy.priority`로, `trustedSources`와 `cautionAreas`는 `naturalLanguageRules`에 함께 기록한다. canonical schema v1은 변경하지 않았다.
+- ERD/migration 수정과 삭제·대체 근거: ERD 1.8에서 API 2.8의 `AI_SYNTHESIS`에 맞춰 기존 `AI_INFERENCE`를 대체하고, API 8.1의 `REQUEST_CHANGES`에 맞춰 기존 `REQUEST_REVISION`을 대체했다. UD-15와 `backend/contracts/library-constitution.schema.json` v1의 단일 문서 계약에 맞춰 기존 constitution scalar fields를 삭제하고 `library_constitution_versions.constitution_document jsonb`로 대체했다. V1의 `citext` extension 의존성은 권한 요구를 만들고 JPA/API의 normalized email 정책과 중복되므로 제거하고 `email varchar(320)` + `lower(email)` unique index로 대체했다. immutable constitution trigger와 명시적 one-way reference FK/check를 유지했다.
+- validator/test: canonical 12 top-level fields의 nested enum, integer minimum, number range, unique arrays, boolean/string types, nested additionalProperties=false를 새 dependency 없이 검증하도록 보완했다. Mockito 테스트는 auth rotation 2건, active/revoked bearer session 2건, library/private-owner/constitution/reference/schema 5건이다.
+- 산출물 경로: `backend/pom.xml`, `backend/mvnw.cmd`, `backend/.mvn/wrapper/maven-wrapper.properties`, `backend/.gitignore`, `backend/src/main/java/**`, `backend/src/main/resources/**`, `backend/src/test/java/**`, `docs/ZeroWiki-ERD-초안.md`, `docs/검증-백엔드-ERD-API-정합성.md`, `.claude/team/backend/STATE.md`
+- 검증 명령과 실제 결과: `backend\mvnw.cmd -version` → Apache Maven 3.9.11/Java 21.0.10; `backend\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\mvnw.cmd -q test` → exit 0, `Tests run: 9, Failures: 0, Errors: 0, Skipped: 0` (AuthServiceTest 2, JwtAuthenticationFilterTest 2, LibraryServiceTest 5). PostgreSQL/Flyway integration은 실행 DB가 없어 미실행이며 H2로 계약을 왜곡하지 않았다.
+- 미해결 사항: source/import·Ingest Worker·knowledge·ChangeSet/version·search/assistant와 Phase 1 S/AC 통합 gate는 후속 slice다. `UD-03/19/20` 미확정 계약, 실제 PostgreSQL integration, browser cookie/CORS 검증은 남아 있다.
+
+---
+
+## 2026-08-12 — M3 knowledge backend 최소 slice 구현
+
+- 무엇을 했는가: API 7.1~7.3 route inventory에 맞춰 `PageController`, `ClaimController`, `RelationController`, `ContradictionController`와 `KnowledgeService`를 추가했다. pages list/detail/by-slug, versions, diff snapshot, claims/evidences, relations, contradictions를 owner-scoped로 제공한다.
+- 변경 제안 계약: edit proposal, archive, relation feedback, contradiction resolution은 page/relation/contradiction을 직접 변경하지 않고 `READY_FOR_REVIEW` `change_sets`와 `change_items`를 생성한다. 모순 자동 resolution/apply는 구현하지 않았다.
+- V3 저장소: `V3__knowledge_pages_claims_relations.sql`에 page/version/claim/status/evidence/relation/contradiction/change-set 테이블, library/index/FK/check를 추가했다. evidence는 `source_version_id`, `locator`, `excerpt_language`, `excerpt` 400자 제한을 갖고 source version/source row를 owner로 재확인한다.
+- 불변성·격리: page_versions/source_versions/evidences의 UPDATE·DELETE를 PostgreSQL trigger로 거부한다. relation 양 끝 page, contradiction 양 claim, evidence source가 요청 library/owner에 속하는지 서비스에서 확인한다.
+- 검증: `python qa/test_m3_knowledge_blackbox.py --self-check` → 8 tests PASS; `backend\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\mvnw.cmd -q surefire:test` → 기존 21 tests PASS. 새 `KnowledgeServiceTest`를 추가했으나 실행 API 프로세스의 target/dependency jar 잠금으로 일반 `mvnw test` testCompile은 Windows JDK `AccessDeniedException`에서 중단되었다.
+- 산출물: `backend/src/main/java/com/zerowiki/knowledge/**`, `backend/src/main/resources/db/migration/V3__knowledge_pages_claims_relations.sql`, `backend/src/test/java/com/zerowiki/knowledge/KnowledgeServiceTest.java`, backend `STATE.md`/`WORKLOG.md`.
+- 다음 검증: API 프로세스 재기동 후 PostgreSQL Flyway V3 적용/JPA validate, M3 fixture blackbox, 새 `KnowledgeServiceTest` 포함 `mvnw.cmd -q test`를 재실행한다.
+
+---
+
+## 2026-08-12 — M3 계약 세부 보정
+
+- relation feedback DTO를 API 정본의 `feedbackType`, `comment`, `scope`로, contradiction resolution DTO를 `decision`, `classification`, `resolutionNote`로 맞추고, proposal `change_items.entity_type`을 PAGE/RELATION/CONTRADICTION으로 구분했다.
+- 재검증: 최신 코드에서 `backend\mvnw.cmd -q -DskipTests compile` exit 0, `python qa\test_m3_knowledge_blackbox.py --self-check` 8/8 PASS, trailing-whitespace 검색 결과 0건. 실행 API가 target/dependency jar를 점유한 상태라 새 testCompile 포함 `mvnw test` 재실행은 동일 Windows JDK `AccessDeniedException` blocker로 보류했다.
+
+---
+
+## 2026-08-12 — M3 worker 기동 진단·M4 변경 검토/버전 slice·holdout harness 수정
+
+- 무엇을 했는가: `IngestWorker`가 `@Profile("worker")`에서만 등록되고 `application.yml` 기본 profile이 `api`인 사실을 코드와 profile 설정에서 확인했다. 따라서 API와 worker를 한 프로세스로 합치지 않고 동일 DB/JWT 설정의 별도 JVM으로 기동하는 정확한 명령을 확정했다. `IngestWorkerTest`에서 SCANNING job을 먼저 scan하고 scan이 없을 때 PROCESSING job을 처리하는 우선순위를 고정했다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/ingest/IngestWorker.java`, `backend/src/main/resources/application-api.yml`, `backend/src/main/resources/application-worker.yml`, `backend/src/test/java/com/zerowiki/ingest/IngestWorkerTest.java`
+- 무엇을 했는가: API 명세 `docs/ZeroWiki-API-명세-초안.md` 8.1~8.2를 읽기 전용 정본으로 대조하고, `change_sets`/`change_items` owner boundary 조회, item별 `APPROVE|REJECT|REQUEST_CHANGES|DEFER` review, revision conflict, comment 필수 검증, REQUEST_CHANGES의 동일 item 유지/`REVISION_REQUESTED`, APPROVED 전용 apply, `library_versions` 생성 및 current pointer, versions/diff route를 구현했다. 적용은 승인된 change set을 version event로 발행하며 M3 knowledge 원본을 자동 변경하지 않는다.
+- 산출물 경로: `backend/src/main/resources/db/migration/V4__change_review_library_versions.sql`, `backend/src/main/java/com/zerowiki/knowledge/ChangeSetController.java`, `ChangeSetService.java`, `ChangeSetDtos.java`, `ChangeReviewEntity.java`, `ChangeReviewRepository.java`, `LibraryVersionEntity.java`, `LibraryVersionRepository.java`, `ChangeSetEntity.java`, `ChangeItemEntity.java`, `backend/src/main/java/com/zerowiki/library/LibraryEntity.java`, `backend/src/test/java/com/zerowiki/knowledge/ChangeSetServiceTest.java`
+- 무엇을 했는가: `backend/scripts/phase0_benchmark.py`의 `rubric-context-v3` context 로드를 `and not args.benchmark_input`으로 제한해 holdout joined contexts가 dev contexts로 덮이지 않게 했다. v3 prompt가 generic holdout time/environment를 양 claim에 매핑하고 subject를 보존하는 self-check와 case ID, gold, `판단_이유`, `source_ref` 비노출 assertion을 추가했다.
+- 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; `backend\mvnw.cmd -DskipTests "-Dproject.build.directory=target-verify" "-Dmaven.compiler.fork=false" compile`는 기존 dependency lock에서 compiler resource close 오류가 났으나, `backend\mvnw.cmd -DskipTests "-Dmaven.compiler.fork=false" compile` → `BUILD SUCCESS`/main class 산출 확인; `backend\mvnw.cmd -q surefire:test` → 현재 compiled test 23건 PASS. 일반 testCompile은 실행 중인 Java 프로세스가 dependency jar/target을 잠가 `Cannot close compiler resources`로 중단되었다.
+- 미해결 사항: 실제 PostgreSQL은 localhost:5432가 닫혀 있고 대체 포트는 자격증명·격리 DB 근거가 없어 migration을 적용하지 않았다. API 기존 프로세스가 최신 classpath가 아니므로 종료 후 API/worker를 각각 재기동하고 V1~V4 Flyway/JPA validate, 전체 test 및 M2 live `SCANNING`→`PLAN_REVIEW`를 재검증해야 한다. API 정본 문서는 소유권 때문에 편집하지 않았다.
+
+- 추가 수정: `IngestWorkerTest`의 존재하지 않는 `ImportType.OBSIDIAN`을 실제 enum `OBSIDIAN_ZIP`으로 교체했다. `test-compile` 재실행은 fixture 컴파일 오류를 지나 `byte-buddy-agent` jar close 오류에서 중단되어 parent 환경 재실행이 필요하다.
+
+---
+
+## 2026-08-12 — M4 승인 항목 실제 적용·감사 로그 및 worker 상태 fixture 보정
+
+- 무엇을 했는가: M4 리뷰의 §8.1 요구에 맞춰 `ChangeSetService.apply()`가 `APPROVED` 항목을 실제 대상에 적용하도록 보완했다. PAGE update는 immutable `page_versions` 새 버전과 page current pointer를 만들고, PAGE archive는 page status를 `ARCHIVED`로 바꾼다. RELATION은 `DUPLICATE_CONCEPT`를 archive하고 그 외 feedback을 reject로 반영하며, CONTRADICTION은 decision/classification/resolution note를 반영한다.
+- 승인·거절 처리: `DEFER`와 `REVISION_REQUESTED`가 남아 있으면 apply를 거부하고, `REJECTED` 항목은 제외한다. APPROVED/REJECTED 혼합은 `PARTIALLY_APPROVED`로 발행 가능하도록 `ChangeSetEntity.markApplied()`를 보완했다. 승인 항목마다 `CHANGE_APPLIED` 성공 audit log를 남기며, metadata는 raw markdown을 복제하지 않고 immutable `change_items`를 가리킨다.
+- 산출물: `PageEntity.java`, `PageVersionEntity.java`, `PageRelationEntity.java`, `ContradictionEntity.java`, `ChangeSetEntity.java`, `ChangeSetService.java`, `AuditLogEntity.java`, `AuditLogRepository.java`, `V5__audit_logs.sql`, `ChangeSetServiceTest.java`.
+- 테스트 보정: `IngestWorkerTest.worker_processes_when_no_scan_is_waiting`의 fixture가 실제 상태 머신 `SCANNING → PLAN_REVIEW → PROCESSING`을 따르도록 `moveToPlanReview(...)`를 `approvePlan()` 앞에 추가했다. `ImportType.OBSIDIAN_ZIP` 정정도 유지했다.
+- 검증: 리더 외부 실행은 최신 전체 30 tests에서 해당 fixture 1건의 invalid transition만 재현했다. 수정 후 sandbox에서 `backend\mvnw.cmd -q "-Dtest=IngestWorkerTest" test`를 실행했으나 `spring-data-commons-4.1.0.jar` 접근 거부와 `Cannot close compiler resources`로 testCompile 전에 중단되었다. `python -B backend/scripts/phase0_benchmark.py --self-check`는 `self-check: PASS`다. `git diff --check`는 관련 backend/상태 파일에서 오류가 없었다.
+- 남은 위험: parent 환경에서 수정 후 `mvnw.cmd -q test`를 재실행해 30+ tests PASS를 확인하고, PostgreSQL V5 migration/JPA validate를 수행해야 한다. RELATION feedback의 status 전이는 별도 feedback 테이블이 없는 현재 ERD를 기준으로 한 최소 slice 가정이다.
+
+---
+
+## 2026-08-12 — M3 ingest projection·M6 search/assistant 최소 slice 구현
+
+- 무엇을 했는가: `IngestService.processOne()`의 DONE placeholder를 결정적 knowledge projection으로 교체했다. source version별 PUBLISHED SOURCE/CONCEPT page, immutable imported page version, important `SOURCE_CLAIM`, source-version locator/evidence, ACCEPTED `EXPLAINS` relation을 owner 경계 안에서 생성하고, item 완료 시 INGEST origin `READY_FOR_REVIEW` change set/PAGE CREATE items를 생성한다. `LibraryHomeService`는 UD-28에 맞춰 PUBLISHED CONCEPT의 ACCEPTED relation 양끝 연결 수 상위 6개 topic을 계산한다.
+- 산출물: `backend/src/main/java/com/zerowiki/ingest/IngestService.java`, knowledge entity/repository factory 보완, `backend/src/main/java/com/zerowiki/library/LibraryHomeService.java`, `backend/src/main/java/com/zerowiki/knowledge/ChangeSetService.java`, `backend/src/main/java/com/zerowiki/knowledge/PageVersionEntity.java`, `backend/src/test/java/com/zerowiki/ingest/IngestProjectionTest.java`.
+- 무엇을 했는가: API §9.1~9.2의 9개 route를 `search`와 `assistant` package에 구현했다. KEYWORD/SEMANTIC/HYBRID는 신규 pgvector/provider 없이 동일 keyword fallback이고, search result에 ≤400 snippet·score·CURRENT/REFERENCED origin을 포함한다. expansion과 assistant referenced scope는 owner 및 명시 등록된 단방향 `library_references`를 검증한다. 대화·질문은 USER/QUEUED assistant를 저장한 뒤 deterministic answer를 즉시 완료하며 evidence가 있을 때만 message citation을 저장하고, 부족하면 `insufficientEvidence`와 suggestions를 반환한다. save-proposal은 explicit `ASSISTANT` ChangeSet만 만든다. feedback은 정본 미정이므로 최소 `{rating,comment}`만 저장하고 empty probe는 no-op 204다.
+- 저장소: `backend/src/main/java/com/zerowiki/search/{SearchDtos,SearchService,SearchController}.java`, `backend/src/main/java/com/zerowiki/assistant/{AssistantDtos,AssistantService,AssistantController}.java`, `backend/src/main/resources/db/migration/V6__search_assistant.sql`, assistant entity/repository 8개, `backend/src/test/java/com/zerowiki/search/SearchServiceTest.java`, `backend/src/test/java/com/zerowiki/assistant/AssistantServiceTest.java`.
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `python -B qa\\test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS; `python -B qa\\test_m6_search_ai_blackbox.py --self-check` → 6/6 PASS; `python -B qa\\test_m1_m2_blackbox.py --self-check` → 10/10 PASS. `backend\\mvnw.cmd -q test` 및 `test-compile`은 실행 Java가 dependency jar를 잠가 `Cannot close compiler resources`/`AccessDeniedException`으로 testCompile 전에 중단됐다.
+- 미해결 사항: parent 환경에서 신규 3 unit test 포함 전체 test, PostgreSQL Flyway V1~V6/JPA validate, API/worker live M3/M6 및 AC-1 100-doc gate를 실행해야 한다. ERD의 ingest item `DONE`과 QA helper의 `COMPLETED` 기대가 drift하므로 wire mapping 여부를 parent가 결정해야 한다. SEMANTIC/HYBRID fallback·외부 LLM 미호출은 provider 확정 전 Phase 1 가정이다.
+
+---
+
+## 2026-08-12 — M6 keyword 질의 정규화 최종 보정
+
+- 무엇을 했는가: `SearchService`의 keyword fallback 토큰화가 `Raft와`/`Paxos를` 같은 영문+한국어 조사 결합 질의를 놓치지 않도록 영문 prefix를 정규화했다. owner/reference 경계와 ≤400 snippet 계약은 유지했다.
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0. 기존 M1/M3/M6 static self-check PASS 상태를 유지한다.
+- 미해결 사항: DB-backed PostgreSQL integration/live search·assistant citation은 parent 환경 검증 대기이며, 실제 외부 LLM/pgvector는 provider 확정 전 호출하지 않는다.
+
+---
+
+## 2026-08-12 — M6 PostgreSQL keyword fallback 정합화
+
+- 무엇을 했는가: `PageRepository`, `ClaimRepository`, `SourceRepository`에 PostgreSQL `to_tsvector('simple')`/`plainto_tsquery` native keyword 조회를 추가하고 `SearchService`가 KEYWORD/SEMANTIC/HYBRID 공통 후보 선별에 사용하도록 했다. 네이티브 결과가 없는 unit fixture에서는 기존 deterministic token filtering을 보조 fallback으로 유지한다. 신규 dependency나 pgvector는 추가하지 않았다.
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `SearchServiceTest` native query mock fallback을 명시했다. 전체 testCompile은 기존 Java dependency jar lock blocker로 parent 환경 재실행 대상이다.
+- 미해결 사항: 실제 PostgreSQL FTS 한국어 tokenizer 결과, V1~V6 startup/JPA validate, M6 live citation trace는 아직 검증하지 않았다.
+
+---
+
+## 2026-08-12 — M3 ingest 승인 게이트·M6 NEW_PAGE apply 보정
+
+- 무엇을 했는가: ingest projection이 사용자 승인 전에 내용을 발행하지 않도록 `PageEntity`를 `DRAFT`, `PageRelationEntity`를 `PROPOSED`로 생성하게 바꿨다. INGEST change set은 페이지 `PUBLISHED`·관계 `ACCEPTED` 전이 snapshot을 `UPDATE` item으로 저장하고, `ChangeSetService.apply()`가 승인된 snapshot만 상태 전이하도록 보완했다. 기본 page 목록과 검색은 `PUBLISHED`만 통과한다. Claim/Evidence는 DRAFT page version/source version에 매달린 immutable descendant로 유지했다.
+- 무엇을 했는가: `ChangeSetService.applyRelation()`의 `status=ACCEPTED` 경로와 `PageRelationEntity.proposed()/accept()`를 추가했다. M6 `PAGE CREATE`가 새 page와 initial immutable `PageVersion`을 만든다는 회귀 테스트와, ingest 승인 snapshot이 page/relation을 실제 전이하는 테스트를 추가했다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/ingest/IngestService.java`, `backend/src/main/java/com/zerowiki/knowledge/PageRelationEntity.java`, `backend/src/main/java/com/zerowiki/knowledge/ChangeSetService.java`, `backend/src/main/java/com/zerowiki/knowledge/KnowledgeService.java`, `backend/src/main/java/com/zerowiki/search/SearchService.java`, `backend/src/test/java/com/zerowiki/ingest/IngestProjectionTest.java`, `backend/src/test/java/com/zerowiki/knowledge/ChangeSetServiceTest.java`, `.claude/team/backend/STATE.md`
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `python -B qa\\test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS; `python -B qa\\test_m6_search_ai_blackbox.py --self-check` → 6/6 PASS; `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- backend .claude/team/backend/STATE.md .claude/team/backend/WORKLOG.md` → whitespace 오류 없음.
+- 차단·남은 위험: `backend\\mvnw.cmd -q '-Dtest=IngestProjectionTest,ChangeSetServiceTest' test`는 testCompile 전 `spring-data-commons-4.1.0.jar` 접근/`Cannot close compiler resources` 오류로 중단됐다. parent 실행 환경에서 신규 단위 테스트 포함 전체 test와 PostgreSQL V1~V6/JPA validate/live M3·M6를 재실행해야 한다. 실제 DB에서 상태 전이와 relation acceptance는 아직 미검증이다.
+
+---
+
+## 2026-08-12 — M6 assistant Idempotency-Key 재생·충돌 보정
+
+- 무엇을 했는가: `POST /libraries/{libraryId}/conversations/{conversationId}/messages`가 선택적 `Idempotency-Key` header를 받도록 하고, 같은 owner·path·key를 기존 hash와 비교한다. 동일 request hash의 완료 요청은 기존 `userMessageId`·`assistantMessageId`·`QUEUED` 상태를 재사용하며, 다른 hash는 `409 IDEMPOTENCY_KEY_REUSED`, 미완료 레코드는 `409 IDEMPOTENCY_KEY_IN_PROGRESS`로 응답한다. 저장 결과는 짧은 URL/토큰 없이 message ID와 상태만 JSON으로 보관한다.
+- 저장소 판단: V1 migration에 이미 `idempotency_records(user_id, idempotency_key, request_path, request_body_hash, response_status, response_body, expires_at)`가 존재하므로 이를 JPA entity/repository로 재사용했다. V7은 중복 테이블 대신 `(user_id, request_path, idempotency_key)` unique index만 추가하고, 기존 ERD의 UNIQUE(user_id, idempotency_key) 제약은 유지했다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/assistant/AssistantController.java`, `AssistantService.java`, `IdempotencyRecordEntity.java`, `IdempotencyRecordRepository.java`, `backend/src/main/resources/db/migration/V7__idempotency_path_key_index.sql`, `backend/src/test/java/com/zerowiki/assistant/AssistantServiceTest.java`, `.claude/team/backend/STATE.md`
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\\mvnw.cmd -q '-Dtest=AssistantServiceTest' test` → testCompile 전 `spring-data-commons-4.1.0.jar` 접근/`Cannot close compiler resources`로 중단; `python -B qa\\test_m6_search_ai_blackbox.py --self-check` → 6/6 PASS; `python -B qa\\test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS; `git diff --check` → whitespace 오류 없음.
+- 남은 위험: 새 `AssistantServiceTest`(same-key 재생 및 body mismatch)와 앞선 M3 승인 경계/NEW_PAGE apply 테스트는 parent의 jar lock이 없는 환경에서 targeted/full `mvnw.cmd test`로 실행해야 한다. 실제 PostgreSQL JPA validate 및 live concurrent idempotency race는 아직 검증하지 않았다.
+
+---
+
+## 2026-08-12 — INGEST change set apply 후 job 완료 연결
+
+- 무엇을 했는가: API §6.1 상태 머신의 후속 상태를 반영해 `ChangeSetService.apply()` 성공 트랜잭션에서 `originType=INGEST` change set의 `originId`를 owner/library 경계로 조회하고, job이 `CHANGE_REVIEW`이면 `complete()` 후 저장하도록 연결했다. Phase 1에는 lint가 없으므로 apply 성공을 `COMPLETED` gate로 사용한다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/knowledge/ChangeSetService.java`, `backend/src/test/java/com/zerowiki/knowledge/ChangeSetServiceTest.java`, `.claude/team/backend/STATE.md`
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\\mvnw.cmd -q '-Dtest=ChangeSetServiceTest' test` → testCompile 전 `spring-data-commons-4.1.0.jar` 접근/`Cannot close compiler resources` 오류; `python -B qa\\test_m3_knowledge_blackbox.py --self-check` → 8/8 PASS; `git diff --check` → whitespace 오류 없음.
+- 남은 위험: targeted/full Maven tests와 실제 PostgreSQL apply transaction은 parent 환경에서 JAR lock이 없는 상태로 재실행해야 한다. lint worker가 도입되면 completion gate를 lint 성공까지 확장해야 한다.
+- 보정: completion은 `CHANGE_REVIEW` 조건부 무시가 아니라 `job.complete()`를 직접 호출한다. 예상 밖 상태면 상태 머신 예외로 apply 전체 트랜잭션을 rollback하여 성공으로 남기지 않는다.
+
+---
+
+## 2026-08-12 — M6 다단어 질의 CLAIM citation prefilter 보정
+
+- 무엇을 했는가: `SearchService.find()`에서 PostgreSQL `plainto_tsquery` 기반 page/claim/source ID prefilter를 제거했다. Phase 1은 owner/library 경계와 `PUBLISHED` 필터를 먼저 적용한 후보를 in-memory token OR scoring하므로, `phase1-unique-keyword-001`처럼 자연어 토큰이 섞인 질문도 유의미한 단일 토큰 CLAIM을 유지한다. native repository query 정의는 다른 호출이 생길 때까지 보존했고, 후보 전체 scan은 데이터 규모 증가 시 인덱스 도입이 필요한 O(N) ceiling으로 기록했다.
+- 테스트: `SearchServiceTest.multiword_question_keeps_claim_when_one_token_matches_and_exposes_citation`을 추가해 한 토큰만 일치하는 다단어 질문에서도 CLAIM·`sourceVersionId`·locator가 반환되는지 검증한다. 기존 mode/owner 경계 테스트의 native query stubbing은 제거했다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/search/SearchService.java`, `backend/src/test/java/com/zerowiki/search/SearchServiceTest.java`, `.claude/team/backend/STATE.md`
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\\mvnw.cmd -q '-Dtest=SearchServiceTest' '-Dmaven.compiler.fork=false' test` → 공유 Java 프로세스가 `spring-data-commons-4.1.0.jar`/`spring-boot-persistence-4.1.0.jar`를 잠가 `Fatal error compiling`/`Cannot close compiler resources`로 testCompile 전에 중단; `git diff --check -- backend .claude/team/backend/STATE.md .claude/team/backend/WORKLOG.md` → whitespace 오류 없음.
+- 남은 위험: targeted/full unit test는 parent가 API/worker Java 프로세스를 중지하거나 별도 Maven cache로 재실행해야 한다. in-memory scan은 Phase 1 규모에는 단순하지만 데이터 증가 시 검색 지연 ceiling이 있다.
+
+---
+
+## 2026-08-12 — M6 assistant CLAIM-only citation 검색 보정
+
+- 무엇을 했는가: `AssistantService.searchResults()`가 답변 검색 시 `PAGE`/`SOURCE`까지 요청하던 것을 `Set.of("CLAIM")`으로 제한했다. 답변 citation은 `claimId`·`pageVersionId`·`sourceVersionId`·locator와 evidence가 모두 필요하므로, 동일 score의 PAGE 후보가 limit 8을 먼저 채워 CLAIM을 절단하는 live AC 원인을 제거했다. 명시적인 referenced library 경계와 limit은 유지했다.
+- 테스트: `AssistantServiceTest.answer_searches_claims_only_so_citation_survives_page_candidates`를 추가해 search 호출 타입이 CLAIM-only이고, traceable result가 있으면 `MessageCitationEntity`가 저장되는지 검증한다.
+- 산출물 경로: `backend/src/main/java/com/zerowiki/assistant/AssistantService.java`, `backend/src/test/java/com/zerowiki/assistant/AssistantServiceTest.java`, `.claude/team/backend/STATE.md`
+- 검증: `backend\\mvnw.cmd -q -DskipTests compile` → exit 0; `backend\\mvnw.cmd -q '-Dtest=AssistantServiceTest' '-Dmaven.compiler.fork=false' test` → 공유 Java 프로세스가 `spring-data-commons-4.1.0.jar`를 잠가 `Fatal error compiling`/`Cannot close compiler resources`로 testCompile 전에 중단; 편집 파일 재독·`git diff --check -- backend .claude/team/backend/STATE.md .claude/team/backend/WORKLOG.md` → whitespace 오류 없음.
+- 남은 위험: targeted/full unit test는 parent 환경에서 API/worker Java 프로세스 또는 Maven jar lock이 없는 상태로 재실행해야 한다. 답변은 CLAIM-only 검색으로 고정했으므로 PAGE/SOURCE 자체를 citation 후보로 확장하는 계약이 필요하면 별도 설계가 필요하다.
+
+---
+
+## 2026-08-12 — Phase 0 holdout Batch 최종 결과·보안/비용 경계 검증
+
+- 무엇을 했는가: `backend/scripts/openai_batch_holdout.py`와 `backend/scripts/phase0_benchmark.py`를 재독해 shared Responses request body, `rubric-context-v3` holdout context 유지, gold/source/case ID prompt 비누출, `store=false`, strict JSON schema, 원문 미저장 경계를 확인했다. phase0 쪽의 미사용 Batch 상수와 `uuid` import는 제거했고, Batch 쪽에는 hard cap `$0.24356` 초과 거부, JSONL 50,000 line/200 MB guard, schema·custom ID·금지 필드 self-check를 최소 추가했다.
+- 실제 산출물: `evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-batch-metrics.json` 기준 `completed=70`, `failed=0`, input/output `53,504/5,136`, actual `$0.2108`, cap `$0.24356`, `batch_count=7`; dense `openai-predictions.csv`는 70 distinct case ID 전부 COMPLETED이다. `docs/Phase-0-벤치마크-결과.md` 9-7절에 submit/poll/collect·QA 재현 명령과 결과를 기록했다.
+- 검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; `python -B backend/scripts/openai_batch_holdout.py --self-check --output-dir evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1 --offset 0 --limit 20` → `BATCH_PREFLIGHT cases=20 bytes=79336 reservation_usd=0.11736250`; `python -B backend/scripts/openai_batch_holdout.py ... --max-cost-usd 0.3` → hard-cap 오류로 거부; `python -m py_compile backend/scripts/phase0_benchmark.py backend/scripts/openai_batch_holdout.py` → exit 0; QA verifier → `BENCHMARK_METRICS expected=70 completed=70 completion_rate=1.000`, `DENSE_METRICS expected=70 completed=70 failed=0`, `RESULT PASS failures=0`; `git diff --check` → whitespace 오류 없음.
+- 남은 위험: 이번 턴에는 유료 API 재제출을 하지 않았다. 다음 Batch 실행은 offset/limit tranche 중복을 피하고, 기존 actual/active reservation을 포함한 hard cap guard를 통과해야 한다. 전체 backend Maven/PostgreSQL 검증은 parent 환경에서 계속한다.
+- 추가 보정: Batch가 `failed`/`expired`/`cancelled`이거나 `output_file_id`가 없어도 selected case를 FAILED dense 행으로 기록하고 state를 collected로 남긴 후 비정상 종료하도록 해 실패·누락 행 보존 계약을 맞췄다. 공식 OpenAI Batches 문서의 `/v1/responses`·JSONL purpose=batch·24h 계약과 구현을 재대조했다.
+- 최종 재검증: `python -B backend/scripts/phase0_benchmark.py --self-check` → `self-check: PASS`; Batch preflight → `BATCH_PREFLIGHT cases=20 bytes=79336 reservation_usd=0.11736250`; `python -m py_compile backend/scripts/phase0_benchmark.py backend/scripts/openai_batch_holdout.py` → exit 0; holdout QA verifier → `70/70`, `failed=0`, `RESULT PASS failures=0`; tracked `git diff --check`와 untracked script trailing-whitespace check 모두 오류 없음.
+
+---
+
+## 2026-08-18 — Phase 1 최종 backend 감사·Maven→Gradle 전환
+
+- 무엇을 했는가: Spring Boot 4.1.0/Java 21 `pom.xml`의 dependency, runtime/test scope, main class를 Gradle native BOM 기반 최소 구성으로 1:1 이전했다. 공식 SHA-256을 검증한 Gradle 9.7.0 wrapper를 생성하고 `clean test`, `build`, executable `bootJar`를 통과시킨 뒤 Maven `pom.xml`·wrapper·`.mvn`과 생성 cache/`target`을 제거해 단일 build 체계로 전환했다. Maven `target/` 제거에 맞춰 local object store 기본 경로는 ignored `build/object-store`로 옮겼다.
+- 산출물 경로: `backend/build.gradle`, `backend/settings.gradle`, `backend/gradlew`, `backend/gradlew.bat`, `backend/gradle/wrapper/**`, `backend/.gitignore`, `backend/src/main/resources/application.yml`, `backend/src/main/java/com/zerowiki/source/LocalObjectStore.java`, `docs/검증-백엔드-ERD-API-정합성.md`, `.claude/team/backend/CLAUDE.md`, `.claude/team/backend/STATE.md`.
+- 검증: sandbox Java는 workspace/temp cache의 임의 dependency JAR에서 `AccessDeniedException`을 재현했으나, workspace 밖 `%LOCALAPPDATA%\ZeroWiki-Gradle-9.7` cache를 사용한 escalated `gradlew.bat clean test --no-daemon --non-interactive --console=plain`은 exit 0, Gradle test XML 15 suites/39 tests, failures/errors/skipped 0이다. 이어 `gradlew.bat build bootJar`는 exit 0이다. Phase 1 live `done=100/published=100/topics=6/citations=5`, M7 8/8, AC-5 70/70·recall 0.800·accuracy 0.843·FPR 0·Wilson 0.114·cost `$0.2108` 근거와 대조했다.
+- 미해결 사항: Phase 1 blocker는 없다. production provider/model 승격과 자동 모순 apply는 별도 운영 승인 대상이다. Windows IDE/sandbox가 Gradle dependency JAR를 잠그는 환경에서는 workspace 밖 Gradle user home을 사용해야 하며, 현재 API/PostgreSQL listener가 없으면 live suite 즉시 재현은 어렵다. 타 역할 소유 `docs/PM-Phase1-실행-계획.md`, `qa/README.md`, `qa/test_scenarios.md`와 리더 소유 통합 문서의 Maven 명령 교체는 각 소유자에게 요청한다.
+- 최종 재검증: local object store 기본 경로 변경까지 반영한 `gradlew.bat test bootJar`가 exit 0이며, 최종 test XML은 15 suites/39 tests, failures/errors/skipped 0이다. 활성 backend 정본의 이전 build 명령 검색은 0건이고 `git diff --check`도 exit 0이다.

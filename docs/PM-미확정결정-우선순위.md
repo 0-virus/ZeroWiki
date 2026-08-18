@@ -33,7 +33,7 @@
 - 제품/계약 정본의 기존 사용자 결정 5건은 UD-03·10·19·20·22로 유지한다.
 - 실제 외부 호출 전 **LLM provider/model**, 유료 API 사용 범위, 토큰·비용 예산은 사용자 결정·승인이 필요하다. 이는 평가 CSV 인수로 확정되는 기술 세부가 아니다.
 - mapping manifest와 100문서 harness는 완료했다. 과거 baseline 모순 결과는 accuracy 19.2%·sampled FPR 100%로 실패했으며, 최신 `rubric-context-v3` dev gate는 accuracy 0.923·sampled FPR 0으로 통과했다. holdout API와 production 승격은 아직 실행·확정하지 않았다.
-- **다음 한 걸음:** Spring Boot/Ingest 실행 scaffold 준비 후 Phase 1 core 첫 최소 vertical slice(`인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회`)를 구현한다. 모순 자동 판정·적용은 holdout 및 독립 production gate 전까지 차단한다.
+- **다음 한 걸음:** Phase 1 core와 holdout gate는 완료됐다. production provider/model·release와 모순 자동 판정·apply는 Phase 1 완료와 분리해 별도 승인한다.
 - AC-3과 UD-26은 Phase 4 사용자 검증 분기다.
 
 ---

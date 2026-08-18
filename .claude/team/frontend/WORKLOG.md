@@ -1260,3 +1260,277 @@
 - 브라우저 dev console에서 `HeaderBar`의 동일 `href: '/'` key로 React duplicate-key 경고가 발생한다. 렌더링과 첫 vertical slice 착수는 막지 않지만 API 연동 전 수정이 필요하다.
 - 모순 자동 판정·자동 적용은 holdout 승인/gold freeze와 holdout 실행·production gate 전까지 차단한다.
 
+## 2026-08-12 — Phase 1 frontend 전체 범위·연결 순서 계획
+
+**한 일**
+
+- 기획서 16절·23절, 요구사항 정의서 5.1~5.9·5.15·6.1·6.6·9절, API 명세 2~9·15~17절, `docs/검증-프론트엔드-화면-API-갭.md`를 교차 대조했다.
+- Phase 1 frontend 순서를 `인증·세션 → 도서관/헌법/온보딩 → 원본·업로드/Obsidian Import → Ingest 상태머신 → 지식 조회 → 변경 검토·발행 → 검색·AI 사서 → 공통 품질·인수`로 확정했다.
+- 기존 목업 `/`·`/review-changes`를 이 vertical slice의 초기 화면으로만 취급하고, 그래프·활동 잔디·Lint·알림·Export·Notion·URL clipping·삭제/복구는 해당 Phase 범위 밖으로 분리했다.
+- `Retry-After`, `QUESTION_REVIEW`, `PAUSED_QUOTA`, `MINOR | MAJOR`, client diff, `review_status` 재생성 polling, `UD-11·17·25·29` 서버 결과 소비 원칙을 계획에 반영했다.
+- 접근성(키보드·focus·semantic label·aria-live·모션 감소·터치 영역)과 보안(토큰·소유권·서명 URL·Markdown/링크·업로드 검증) 및 AC-1·2·4와 모순 자동 판정 차단 조건을 frontend 완료 gate로 명시했다.
+
+**산출물**
+
+- `.claude/team/frontend/STATE.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+**근거**
+
+- `docs/ZeroWiki-MVP-서비스-기획서.md` 16·23절
+- `docs/ZeroWiki-요구사항-정의서.md` 5.1~5.9·5.15·6.1·6.6·9절
+- `docs/ZeroWiki-API-명세-초안.md` 2~9·15~17절
+- `docs/검증-프론트엔드-화면-API-갭.md` 1~4절
+
+**검증**
+
+- `rg --files frontend/src frontend/screens` → 현재 App Router `/`, `/review-changes`와 목업·화면 설계 파일만 확인
+- `Get-Content frontend/package.json` → 이미 설치된 `diff`, `react-markdown`, `remark-gfm` 확인; 새 의존성 추가 계획 없음
+- `rg -n "fetch\\(|axios|mockLibraryHomeResponse|mockChangeSet" frontend/src` → Phase 1 실 API 호출 없음, 목업 직접 소비 확인
+
+**미해결 사항**
+
+- backend API 서버가 없어 실제 연결·브라우저·접근성 인수 검증은 미실행이다.
+- 글로벌 홈 횡단 요약 갭 #1, 변경 검토 영향 범위/`affectedPages` 갭 #22, 인증 refresh transport/CORS, change item 상세 schema는 리더/backend 계약 확인이 필요하다.
+- 갭 문서의 #4·#5·#12는 현재 API 7.1·7.2·6.1 정본과 잔존 서술이 섞여 있어 frontend 소유 문서 후속 정리가 필요하다.
+- `HeaderBar` 동일 `href: '/'` key duplicate-key 경고와 기존 mock 제거는 구현 slice에서 해결한다.
+
+## 2026-08-12 — Phase 1 계획 기록 재검증
+
+**한 일**
+
+- 계획 반영 후 frontend 소유 `STATE.md`와 append-only `WORKLOG.md`를 다시 읽어 순서·계약·완료 gate가 저장된 것을 확인했다. 구현 코드는 수정하지 않았다.
+
+**검증**
+
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- .claude/team/frontend/STATE.md .claude/team/frontend/WORKLOG.md` → whitespace 오류 없음(파일 개행 형식 경고만 출력)
+- `npm.cmd run build` (`frontend/`) → 종료 코드 0, Next 14.2.35 compile 성공·정적 페이지 5/5·`/`, `/_not-found`, `/review-changes` 생성
+- `npx.cmd tsc --noEmit` (`frontend/`) → 종료 코드 0, 출력 없음
+- `npm.cmd run lint` (`frontend/`) → 종료 코드 1, ESLint 설정 선택 프롬프트에서 종료; lint 자동 검증은 미통과
+- `rg -n "fetch\\(|axios|mockLibraryHomeResponse|mockChangeSet|mockChangeItemDiffData" frontend/src` → 실 API 호출 없음, 목업 직접 소비 확인
+
+**미해결 사항**
+
+- lint 설정은 리더 소유 범위와 충돌할 수 있어 frontend에서 임의 추가하지 않는다.
+- backend API 부재로 실제 API·브라우저·접근성·보안 인수는 미실행이다.
+
+## 2026-08-12 09:41 M1 인증·도서관 vertical slice 구현 및 최종 검증
+
+**작업 내용**
+
+- `frontend/src/components/HeaderBar.tsx`의 nav item에 고유 `id`를 부여하고 `key={item.id}`로 변경해 동일 `href`에서 발생하던 React duplicate-key root cause를 제거했다. 주요 메뉴 landmark와 `aria-current`도 유지했다.
+- `frontend/src/lib/api.ts`에 새 dependency 없는 native `fetch` 경계를 추가했다. Access Token은 module memory에만 저장하고, 모든 요청은 `credentials: 'include'`를 사용한다. 401이면 HttpOnly refresh cookie를 이용한 `/auth/refresh`를 한 번 호출한 뒤 원 요청을 한 번만 재시도하며, 실패하면 토큰을 지우고 안전한 `next`를 포함해 `/login`으로 이동한다. 401/403/404/409/422와 비정상 응답을 UI 메시지로 매핑한다.
+- `/login`은 `page.tsx` server `Suspense` wrapper와 `LoginForm.tsx` client child로 분리했다. 가입·로그인, `useSearchParams` 기반 내부 경로 이동, `role=status`/`role=alert`를 구현했다.
+- `/libraries`에서 목록·생성, `/libraries/[libraryId]`에서 상세·현재 헌법 조회를 API 4.1/4.2 계약의 응답 필드만 사용해 연결했다. loading/empty/error와 401/403/404/409/422 표시를 공통 client에 연결했다. 기존 `/`, `/review-changes` mock은 유지했다.
+- `frontend/.eslintrc.json`을 추가하고 `eslint@8.57.0`, `eslint-config-next@14.2.35`만 devDependencies에 추가해 lockfile을 갱신했다. 임시 `.npm-cache`는 검증 후 삭제했다.
+
+**검증**
+
+- `npm.cmd run build` (`frontend/`): exit 0. Next 14.2.35, `/login` 포함 static pages 7/7 생성. webpack cache snapshot warning은 있었으나 build 실패는 없었다.
+- `npx.cmd tsc --noEmit` (`frontend/`): exit 0, 출력 없음.
+- `npm.cmd run lint` (`frontend/`): exit 0, `✔ No ESLint warnings or errors`.
+- Browser/Chrome local dev (`http://localhost:3001`): `/login` heading·email/password textbox·로그인/가입 버튼 DOM 확인; backend 미기동 `/libraries`에서 `서버 응답을 읽을 수 없습니다.` alert와 다시 시도 버튼 확인; console error/warning 0건.
+- 최종 구현 파일과 package metadata를 재독했고, build → typecheck → lint를 순차 실행했다.
+
+**남은 사항**
+
+- backend가 미기동 상태라 실제 2xx 및 refresh cookie/CORS 통합 검증은 남아 있다.
+- API 명세 3.1 login 예시에 `data.accessToken`이 명시되지 않아 frontend는 토큰 누락을 `AUTH_TOKEN_MISSING`으로 fail-closed한다. backend/리더가 실제 login·refresh 응답 계약을 확정해야 한다.
+- npm audit에서 기존/전이 의존성 high 6건이 보고되었으나, 요청 범위를 벗어난 dependency 변경은 하지 않았다.
+## 2026-08-12 09:54 M1 최종 상태 보완
+
+- `frontend/src/app/login/LoginForm.tsx`의 `safeNext`가 single-leading-slash 내부 경로만 허용하고 backslash/control character를 거부하도록 보강했다. 외부 redirect 우회를 막기 위한 frontend 보안 gate다.
+- 구현 파일·`frontend/.eslintrc.json`·package metadata·STATE/WORKLOG를 다시 읽고 M1 산출물 인덱스를 STATE에 반영했다.
+- `npm.cmd run build`: exit 0, Next 14.2.35, 7/7 static pages 및 `/login` 생성. webpack `PackFileCacheStrategy` snapshot warning은 있었으나 exit 0인 비차단 warning이다.
+- `npx.cmd tsc --noEmit`: exit 0.
+- `npm.cmd run lint`: exit 0, `✔ No ESLint warnings or errors`.
+- `git diff --check -- frontend .claude/team/frontend/STATE.md .claude/team/frontend/WORKLOG.md`: whitespace 오류 없음(CRLF 변환 경고만 출력).
+
+## 2026-08-12 10:48 M2 원본·업로드·Obsidian Import·Ingest frontend slice
+
+**작업 내용**
+
+- native `fetch` client에 `/sources`, `/uploads` session·presigned PUT·complete·delete, `/libraries/{libraryId}/ingest-jobs` 목록·상세·retry 계약을 추가했다. Access Token/refresh 경계와 401 1회 retry는 M1 client를 재사용했다.
+- `/libraries/[libraryId]/sources`에 원본 목록과 Obsidian ZIP Import를 구현했다. SHA-256 계산, 1GB client guard, 제목 공백 방어, 서버 MIME·압축 해제 검증 안내, 단계별 `aria-live` 진행 상태, 실패 alert와 서버 upload cleanup을 포함한다.
+- `/libraries/[libraryId]/ingest`와 `/ingest/[jobId]`에 작업 목록·상세, documented status/nextAction label, progressbar, `Retry-After` 우선 polling, FAILED retry와 `PAUSED_QUOTA` 경고를 구현했다.
+- 도서관 상세에 원본·Ingest 링크를 추가하고 기존 CSS 변수·native browser API를 재사용했다. 새 runtime/test dependency는 추가하지 않았다.
+- API 정본에 없는 upload session response key는 `uploadId`·`uploadUrl` 존재를 확인한 뒤 `UPLOAD_CONTRACT_MISSING`으로 실패시켜 계약 밖 값을 만들지 않도록 했다.
+
+**검증**
+
+- `npm.cmd run build` (`frontend/`) → 최종 순차 검증 예정; 이전 M2 실행은 exit 0, Next 14.2.35, static pages 7/7이었다.
+- `npx.cmd tsc --noEmit` (`frontend/`) → 최종 순차 검증 예정; 이전 M2 실행은 exit 0이었다.
+- `npm.cmd run lint` (`frontend/`) → 최종 순차 검증 예정; 이전 M2 실행은 exit 0, `✔ No ESLint warnings or errors`였다.
+- local HTTP route check → `GET /libraries/demo/sources`, `/ingest`, `/ingest/job` 모두 200, app shell·route chunk 확인.
+- in-app Browser → `agent.browsers.list()`가 빈 목록을 반환해 visual/keyboard 통합 검증 불가.
+- backend source tree read-only 확인 → auth/library 구현은 있으나 M2 endpoint 구현·presigned response schema는 확인되지 않았다.
+
+**남은 사항 / 리더 보고**
+
+- backend는 `/sources`, `/uploads`, `/libraries/{libraryId}/ingest-jobs`의 실제 응답 schema와 presigned URL method/header/CORS를 확정·구현해야 한다. 특히 API 5.2에 `uploadId`·`uploadUrl` wire key가 없어 현재 frontend는 누락 시 fail-closed한다.
+- 실제 backend 2xx/401/403/404/409/422, refresh cookie/CORS, presigned upload와 Ingest polling/retry는 backend 기동 후 브라우저에서 통합 검증해야 한다.
+- PLAN_REVIEW는 job plan을 표시하고 nextAction을 안내하는 최소 범위로 두었으며, 승인 endpoint UI는 후속 계약 확인 범위다.
+
+## 2026-08-12 10:52 M2 최종 순차 검증 보완
+
+- `npm.cmd run build` (`frontend/`) → exit 0. Next 14.2.35, static pages 7/7, M2 route 포함. `PackFileCacheStrategy` snapshot warning은 출력됐지만 비차단이다.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0, 출력 없음.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- build → typecheck → lint 순서를 지켜 `.next` 경합 없이 재검증했다. 최종 편집 파일과 STATE/WORKLOG를 재독했다.
+- M2 실제 API·브라우저 통합 gate는 backend endpoint/schema와 in-app Browser 빈 목록으로 잔여다. backend 계약 이슈는 위 M2 기록대로 리더에게 보고한다.
+
+## 2026-08-12 10:58 M2 API 경계 최종 보완
+
+- 401 refresh 후 원 요청 재시도에도 `onResponse`를 전달해 Ingest `Retry-After`가 재시도 응답에서 유지되도록 했다.
+- upload complete·ingest retry는 정본의 비동기 `202`에서 빈 본문을 반환할 수 있으므로 `allowEmptyResponse`를 사용한다. UI는 complete/retry 응답의 미확정 필드를 사용하지 않는다.
+- `PAUSED_QUOTA`는 처리량 구매 전 재개 대기 상태이므로 자동 polling을 중지하고 `PURCHASE_QUOTA` 안내를 표시한다.
+- 다시 `npm.cmd run build` → `npx.cmd tsc --noEmit` → `npm.cmd run lint`를 순차 실행했다. 각각 exit 0이며 build는 7/7 route, lint는 `✔ No ESLint warnings or errors`였다.
+
+## 2026-08-12 11:42 M3 페이지·Claim/Evidence·관계·모순 검토 frontend
+
+**작업 내용**
+
+- API 7.1~7.3에 맞춰 native client에 페이지 목록·상세, `claims?include=evidences`, 관계·모순 조회와 관계 feedback·모순 resolution 제안 API를 추가했다.
+- `/libraries/[libraryId]/pages`와 `/pages/[pageId]`에 loading/empty/error, `react-markdown` + `remark-gfm` 본문, Claim knowledge status·confidence, Evidence 원문·`excerptLanguage`·source version·locator·truncation 표시를 구현했다.
+- `/relations`에 6종 feedback reason과 `scope=LIBRARY` 검토 제안을, `/contradictions`에 정본 classification 5종과 `decision=CLASSIFY`·resolution note 제안을 구현했다. 자동 판정·자동 적용은 만들지 않았다.
+- API 5.2 최종 upload session 계약에 맞춰 `uploadId`, `uploadUrl`, `method`, `requiredHeaders`, `expiresAt`을 확인하고 서버 method/header를 그대로 전달하도록 M2 client를 정합화했다. signed URL은 로그·오류·영구 상태에 남기지 않는다.
+- 도서관 상세·페이지·검토 화면 간 링크와 반응형·접근성 상태/폼 스타일을 추가했다. 기존 M1/M2 mock 화면과 변경을 보존했으며 새 dependency는 추가하지 않았다.
+
+**검증**
+
+- `npm.cmd run build` (`frontend/`) → exit 0. Next 14.2.35, M3 dynamic route 포함 13개 route compile, webpack `PackFileCacheStrategy` snapshot warning은 비차단.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- 최종 편집 파일과 STATE/WORKLOG를 재독했다. dev server/browser route 검증은 시간 제한으로 완료하지 못했다.
+
+**미해결 사항 / 리더 보고**
+
+- API 7.3 관계 목록 응답 schema가 정본에 없어 `M3-API-GAP-RELATIONS` 가정을 명시했다. backend가 relation id·endpoint/title·type·rationale·confidence wire 필드를 확정해야 한다.
+- 현재 backend `SourceDtos.UploadPlanResponse`는 API 5.2 정본의 `requiredHeaders`를 반환하지 않는 것으로 확인됐다. backend owner가 정본 응답을 맞출 때까지 frontend는 fail-closed한다.
+- 실제 backend 응답과 브라우저 키보드/시각 인수는 backend 기동 후 남아 있다. 모순 자동 판정·자동 적용은 품질 gate 전까지 차단 상태다.
+
+## 2026-08-12 13:48 M4 backend DTO 정합화·변경 검토 frontend slice
+
+**작업 내용**
+
+- backend `KnowledgeDtos.PageResponse`, `PageVersionResponse`, `RelatedPageResponse`, `ClaimResponse`, `EvidenceResponse`, `RelationResponse`와 frontend `api.ts` 타입을 대조했다. 중첩 `version`, `topics: JsonNode`, related page `id`, relation endpoint/status/audit 필드를 사용하도록 정합화했고, `sourcePageTitle`·`targetPageTitle`·related rationale·`M3-API-GAP-RELATIONS` 가정을 제거했다.
+- Claim conditions와 Evidence locator의 JsonNode를 JSON 안전 표시로 바꾸고, 페이지 목록의 title/summary를 `version`에서 읽도록 수정했다.
+- API 명세 8.1의 `GET /change-sets`, detail, items와 `POST /reviews` native fetch client를 추가했다. 목록·상세 화면은 loading/empty/error, snapshot `DiffViewer`, raw evidence, AI confidence, 항목별 `APPROVE`·`REJECT`·`REQUEST_CHANGES`·`DEFER`, 거절/수정 요청 comment 필수 검증과 `expectedRevision` 제출을 제공한다.
+- 기존 `/review-changes` mock은 유지하고 apply/recalculate 및 자동 적용은 호출하지 않았다. 기존 `library.module.css`와 `DiffViewer`를 재사용하고 새 dependency는 추가하지 않았다.
+
+**검증**
+
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0, 출력 없음.
+- `npm.cmd run build` (`frontend/`) → exit 0. Next 14.2.35, 15 route 생성. `PackFileCacheStrategy` snapshot warning은 있었으나 비차단이다.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- 편집 파일 재독, `rg` 잔존 참조 확인, `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS -C C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check -- frontend .claude/team/frontend/STATE.md .claude/team/frontend/WORKLOG.md` → exit 0 (LF→CRLF 안내만 출력).
+- production `start` 및 `curl` route smoke는 stale `.next`/동시 dev cache의 `Cannot find module './682.js'`로 500을 반환했다. build 산출물 검증은 통과했지만 브라우저 keyboard/visual/a11y 통합은 backend change-set controller와 cache 정리 후 재검증해야 한다.
+
+**남은 사항 / 리더 보고**
+
+- backend에는 API 8.1 `/libraries/{libraryId}/change-sets` controller/DTO/reviews/apply/recalculate가 아직 없고 proposal entity/service만 있다. frontend는 계약 경계를 준비했으며 실제 연결 시 공통 404/인증/권한/충돌 오류 화면을 표시한다.
+- API 8.1 change item `evidenceSummary` 구조가 미확정이므로 raw JSON만 표시한다. apply/recalculate와 자동 적용은 backend 계약·승인 gate 전까지 연결하지 않는다.
+
+## 2026-08-12 13:51 M4 최종 순차 검증 보완
+
+- `npm.cmd run build` (`frontend/`) → exit 0, Next 14.2.35, 신규 change-set 2개 route를 포함한 15개 route compile. `PackFileCacheStrategy` snapshot warning 2건은 비차단.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0, 출력 없음.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- 위 세 명령을 `.next` 동시 실행 없이 `build → typecheck → lint` 순서로 순차 실행했다. 커밋은 만들지 않았다.
+
+## 2026-08-12 14:04 M6 검색·AI 사서 frontend slice
+
+### 작업 내용
+
+- API 명세 §9.1에 맞춰 `searchLibrary`와 `expandLibrarySearch` native client를 추가했다. 검색 mode는 `KEYWORD | SEMANTIC | HYBRID`를 그대로 전송하고, 기본 검색은 현재 도서관으로 한정한다. 참조 도서관은 사용자가 ID를 입력해 별도 `POST /search-expansions`를 요청할 때만 전송한다.
+- `/libraries/[libraryId]/search`에 검색어·mode, loading/empty/error, snippet 최대 범위 소비, score/locator, `CURRENT`·`REFERENCED` origin과 도서관 ID를 명시하는 결과 카드를 구현했다. 참조 결과는 별도 스타일로 시각 구분하고 현재 도서관 경계를 링크에 유지한다.
+- API 명세 §9.2에 맞춰 conversation 생성·질문·message 상태 조회·save-proposal native client와 `/assistant` 화면을 구현했다. 질문 body의 `answerMode`, `processingMode`, `searchScope.currentLibrary`, 명시된 `referencedLibraryIds`를 그대로 전송하며, assistant message는 `QUEUED → GENERATING → COMPLETED/FAILED`를 1초 간격으로 polling한다.
+- 완료 답변에서 citation page link/pageTitle/claimId/sourceVersionId/locator, `insufficientEvidence`, 참조 확장 제안, 웹 검색 승인 제안을 표시한다. 저장은 `NEW_PAGE`·`SYNTHESIS` 변경 세트 제안으로만 보내고 자동 적용하지 않는다. 서버가 citation `id`를 반환하지 않는 정본 예시에서는 저장 버튼을 비활성화한다.
+- feedback endpoint path는 client에 두었지만 API §9.2에 request body/enum이 없으므로 feedback 버튼을 계약 대기 상태로 표시했다. ERD enum을 API 계약으로 임의 확정하지 않았다. 모델명은 UI에 노출하지 않았다.
+- library detail에 검색·AI 사서 링크와 검색/대화·인용·참조 경계 CSS를 추가했다. 새 dependency는 추가하지 않았다.
+
+### 검증
+
+- `npm.cmd run build` (`frontend/`) → exit 0. Next 14.2.35, 검색·assistant 포함 17개 route 생성. `PackFileCacheStrategy` snapshot warning 2건은 비차단.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- 최종 검증은 `build → tsc → lint` 순서로 순차 실행했다. `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS -C C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` → exit 0.
+- in-app Browser connector가 현재 제공되지 않아 실제 backend HTTP·브라우저 keyboard/visual/a11y smoke는 수행하지 못했다. backend Search/Assistant endpoint 미구현 상태도 잔여 계약 이슈로 보고한다.
+
+## 2026-08-12 14:16 M6 feedback wire 정합화
+
+### 작업 내용
+
+- 리더가 확정한 API §9.2 답변 평가 계약(`rating: HELPFUL | NOT_HELPFUL` 필수, `comment` 선택, 성공 응답 `200 { data: { accepted: true } }`)을 `frontend/src/lib/api.ts`의 `ConversationFeedbackRequest`·`ConversationFeedbackResponse`와 client method에 반영했다.
+- AI 사서 feedback placeholder를 optional comment textarea와 `도움이 됐어요`·`아쉬워요` 전송 버튼으로 교체했다. message별 submitting/평가 완료 상태를 표시하고, `accepted !== true` 응답은 오류로 처리한다.
+- 기존 M6 상태의 “feedback body 미정·전송 비활성” 문구를 최신 확정 계약에 맞춰 STATE 최신 스냅샷에서 정정했다. citation ID 미정과 backend Search/Assistant endpoint 잔여 이슈는 유지했다.
+
+### 검증
+
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0.
+- 최종 `npm.cmd run build` → `npx.cmd tsc --noEmit` → `npm.cmd run lint` 순차 실행 결과를 아래 명령으로 확인한다.
+- `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS -C C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` 및 편집 파일 재독을 완료했다.
+
+## 2026-08-12 16:08 M6 feedback wire 최종 검증 보완
+
+- 첫 full `npm.cmd run build`는 기존 3001 dev server와 `.next`를 공유하는 상태에서 type-check 단계가 120초 timeout(exit 124)되었다. 이후 `npm.cmd run build -- --no-lint` exit 0으로 compile/typecheck/static generation을 확인하고, full `npm.cmd run build`를 다시 순차 실행해 exit 0을 확인했다.
+- 최종 `npm.cmd run build`는 Next 14.2.35, 17개 route, `PackFileCacheStrategy` snapshot warning 2건(비차단)을 출력했다.
+- 최종 `npx.cmd tsc --noEmit` exit 0, `npm.cmd run lint` exit 0(`✔ No ESLint warnings or errors`)를 확인했다.
+- 편집 파일(`frontend/src/lib/api.ts`, `frontend/src/app/libraries/[libraryId]/assistant/page.tsx`, frontend STATE/WORKLOG)을 재독했고 `git -c safe.directory=C:/Users/PC/Desktop/ZeroWiki-SaaS -C C:/Users/PC/Desktop/ZeroWiki-SaaS diff --check` exit 0이다. 커밋은 만들지 않았다.
+
+## 2026-08-18 20:12 Phase 1 frontend 최종 감사·STATE 정본 동기화
+
+### 무엇을 했는가
+
+- `frontend/src`를 `docs/ZeroWiki-MVP-서비스-기획서.md` 23절, `docs/ZeroWiki-API-명세-초안.md` 9.2·17절, `docs/PM-Phase1-실행-계획.md`와 대조했다.
+- AI 사서 feedback의 `HELPFUL | NOT_HELPFUL`, optional `comment`, 성공 응답 `data.accepted` 확인을 client 타입·호출부·UI까지 추적했다.
+- route 수와 semantic landmark, form label, live region, progressbar ARIA, reduced-motion, focus outline 유지 여부를 정적으로 감사했다.
+- `STATE.md`의 holdout 미실행·mock-only·backend 미구현·착수 계획 등 낡은 현재형 기록을 최신 스냅샷으로 대체했다. 과거 시점의 판단과 실행 이력은 이 append-only WORKLOG에 그대로 보존했다.
+- backend Maven→Gradle 전환 관련 문자열을 frontend 소유 활성 문서에서 검색했으며 현재형 Maven 의존·실행 명령이 없어 별도 문서 수정은 하지 않았다.
+- 구현 코드·package dependency는 변경하지 않았다.
+
+### 산출물 경로
+
+- `.claude/team/frontend/STATE.md`
+- `.claude/team/frontend/WORKLOG.md`
+
+### 검증
+
+- `npm.cmd run build` (`frontend/`) → exit 0, Next.js 14.2.35, `/_not-found` 포함 17개 route. webpack cache snapshot warning 뒤 compile·type validation·static generation과 최종 exit는 성공했다.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+- feedback wire → `ConversationFeedbackRating = 'HELPFUL' | 'NOT_HELPFUL'`, `ConversationFeedbackResponse.accepted: boolean`, UI는 `response.data.accepted`가 false면 `FEEDBACK_NOT_ACCEPTED` 오류 처리.
+- route 감사 → `page.tsx` 16개 + build의 `/_not-found` 1개 = 17개 route.
+- 접근성 기본 → `lang="ko"`, label 연결, status/alert live region, Ingest progressbar ARIA, Header navigation landmark, reduced-motion, focus outline 제거 없음.
+
+### 미해결 사항
+
+- Phase 1 완료 blocker는 없다.
+- 활성 `/`와 `/review-changes`는 legacy mock을 소비한다. 실제 Phase 1 API 흐름은 `/libraries/**`이며, PM 계획의 “mock 제거” 문구와 이 두 showcase route의 소스 현실은 정합하지 않는다.
+- 이번 턴에는 browser keyboard/visual 수동 인수를 재실행하지 않았다. 기존 M7 통합 PASS와 분리해 기록한다.
+- production provider/model 승격과 모순 자동 판정·자동 apply는 별도 운영 승인이다.
+
+## 2026-08-18 20:18 legacy route 접근성 감사 보완
+
+- Phase 1 실제 API 화면과 legacy showcase를 구분해 재확인했다. 실제 API 화면은 기본 landmark·label·live region을 갖췄지만, 활성 `/review-changes` mock 화면에는 `main` landmark가 없다.
+- Phase 1 실제 흐름(`/libraries/**`)의 완료 blocker는 아니며, legacy mock 제거 또는 제품 진입점 승격 시 함께 정리할 비차단 a11y 잔여로 STATE에 명시했다.
+
+## 2026-08-18 20:19 `/review-changes` main landmark 보완
+
+### 무엇을 했는가
+
+- `frontend/src/components/review-changes/index.tsx`의 기존 최상위 콘텐츠 wrapper를 `<div>`에서 semantic `<main>`으로 변경했다.
+- `reviewScreenContainer` class와 내부 구조·상태·동작은 그대로 유지했으며 새 코드 경계나 dependency를 추가하지 않았다.
+- STATE의 landmark 누락 잔여를 해소된 사실에 맞춰 제거했다. legacy mock 범위 설명은 유지했다.
+
+### 검증
+
+- a11y 검색: `<main className={styles.reviewScreenContainer}>`와 `</main>` 확인, 이전 `<div className={styles.reviewScreenContainer}>` 0건.
+- `npm.cmd run build` (`frontend/`) → exit 0, Next.js 14.2.35, 17개 route.
+- `npx.cmd tsc --noEmit` (`frontend/`) → exit 0.
+- `npm.cmd run lint` (`frontend/`) → exit 0, `✔ No ESLint warnings or errors`.
+
+### 미해결 사항
+
+- Phase 1 완료 blocker 없음.
+- `/`와 `/review-changes`의 legacy mock 범위는 실제 Phase 1 API 흐름(`/libraries/**`)과 별개로 유지한다.

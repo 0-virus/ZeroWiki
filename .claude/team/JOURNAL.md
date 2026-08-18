@@ -15,6 +15,38 @@
 
 ---
 
+## 2026-08-18
+
+### 1. Phase 1 최종 정본 감사·Maven에서 Gradle 전환
+
+**사용자 목표 추가:** Phase 1 인수 결과를 다시 검증하면서 backend 빌드 도구를 Maven에서 Gradle로 전환하도록 지시했다. Spring Boot 4.1.0 공식 지원 범위(Gradle 8.14+ 또는 9.x)와 Gradle current API를 확인해 final 9.7.0 wrapper를 선택했다.
+
+**전환과 검증:** backend는 기존 dependency·Java 21 toolchain·main class·JUnit Platform·executable jar 동작을 `build.gradle`과 `settings.gradle`에 1:1로 옮기고 Maven POM/wrapper를 제거했다. 공식 distribution·wrapper SHA-256을 검증했다. sandbox 내부 dependency cache는 VS Code Java language server 및 Windows 파일 접근 격리와 충돌했으므로 workspace 밖 cache로 같은 build를 재실행했고, Gradle test XML 15 suites/39 tests가 failures/errors/skips 0으로 통과했으며 executable boot JAR도 생성됐다.
+
+**리더 교차 검증:** frontend build/typecheck/lint 17 routes와 legacy `/review-changes`의 `<main>` 접근성 보완, QA static suite·70행 holdout validator, PM M0~M7/AC 정합성을 다시 대조했다. 요구사항 정의서 5.6·9절·12절의 낡은 holdout 미실행 현재형 문구는 70/70 실행 결과로 정정했다. Phase 1 인수 완료와 production provider/model 승격·자동 모순 apply·release 승인은 계속 분리한다.
+
+---
+
+## 2026-08-12
+
+### 1. Phase 1 계획 확정·M0~M2 착수
+
+**사용자 요청:** backend·frontend·qa·pm 네 역할을 모두 호출해 Phase 1 완료 목표와 계획을 세우고, 완료 기준 달성까지 작업을 계속하도록 지시했다. 커밋·브랜치 변경·push는 요청하지 않았다.
+
+**계획과 구현:** PM은 `docs/PM-Phase1-실행-계획.md`에 M0~M7과 인수 기준을 고정했다. backend는 Spring Boot API/Worker profile, Flyway, 인증·세션·도서관·헌법 M1과 원본·업로드·Obsidian·Ingest M2를 구현했다. frontend는 memory access token/HttpOnly refresh 경계와 M1 인증·도서관, M2 원본 업로드·Ingest 화면을 구현했다. QA는 정본 endpoint drift를 정리하고 stdlib M1~M2 black-box 검증기를 추가했다.
+
+**리더 검증과 시정:** backend 최종 M1 기준 compile과 9개 테스트를 재실행해 통과했고 PostgreSQL 17 컨테이너 준비 상태도 확인했다. M2에서 QA가 upload session 응답이 상대 local 경로를 presigned URL처럼 반환하는 문제와 정본 bulk answers endpoint 누락을 발견해 backend에 시정을 요청했다. 실제 PostgreSQL/Flyway·cookie/CORS·M2 live acceptance는 아직 통과 전이며, AC-1·2·4·5와 보안 gate가 모두 통과하기 전에는 Phase 1 완료로 판정하지 않는다.
+
+### 2. Phase 1 M1~M7 구현·100문서 live 통과, AC-5 Batch 진행
+
+**역할 구현:** backend는 Flyway V1~V7, owner-scoped 인증·도서관·원본·Ingest, DRAFT projection과 change set 승인/apply, 불변 page/library version·감사, 검색·AI 사서·인용·feedback·idempotency를 구현했다. frontend는 17개 route에서 같은 API를 연결했고 QA는 M1~M7 black-box와 100문서 단일 순차 acceptance를 추가했다. PM은 M0~M7 의존 사슬과 비용·인수 gate를 갱신했다.
+
+**리더 반복 검증과 시정:** 실제 100문서 run에서 첫째 PostgreSQL `plainto_tsquery` AND prefilter가 자연어 질문의 OR 후보를 제거하고, 둘째 PAGE/SOURCE 결과가 상위 8개를 소진해 citation 가능한 CLAIM을 제거하는 원인을 발견했다. 각각 Phase 1 owner-scoped PUBLISHED 집합의 in-memory OR scoring과 assistant CLAIM-only retrieval로 최소 수정하고 회귀 테스트를 추가했다. 최종 run은 `documents=100 done=100 publishedConcepts=100 topics=6 citations=5`, backend 15 suites/39 tests, M7 8/8, frontend build 17 routes·typecheck·lint를 통과했다.
+
+**최종 hard gate:** 공식 OpenAI Batch가 같은 `gpt-5.6-sol`·`/v1/responses`를 50% 가격으로 지원하므로 기존 잔여 cap `$0.24356` 안에서 실행했다. 전량 worst-case 예약 `$0.41179`는 cap을 넘으므로 tranche별 실제 usage를 차감하는 실행기를 추가했고, 최초 256-token 절단 1건만 512-token으로 재시도했다. 최종 70/70 completion, recall `0.800`, 6-class accuracy `0.843`, sampled FPR `0.000`, Wilson 95% upper `0.114`, macro-F1 `0.801`, 비용 `$0.2108`로 AC-5를 통과했다. 이로써 Phase 1 인수 gate는 완료했지만 production provider/model 승격과 모순 자동 apply는 별도 운영 승인으로 남긴다.
+
+---
+
 ## 2026-08-11
 
 ### 1. Phase 0 지속 작업·리더 의사결정 위임

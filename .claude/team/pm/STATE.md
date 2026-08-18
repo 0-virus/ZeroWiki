@@ -1,82 +1,76 @@
 # pm 현재 상태
 
-> **덮어쓰기 스냅샷.** 매 턴 종료 전에 이 파일 전체를 최신 상태로 갱신한다(헌법 제4조 1항).
-> 시간순 기록은 `WORKLOG.md`에 append 한다.
+> 덮어쓰기 스냅샷. 시간순 판단과 변경 사유는 `WORKLOG.md`에 append-only로 남긴다.
 
-마지막 갱신: 2026-08-11 23:02 +09:00 (Phase 1 즉시 착수 가능성·계약 차단 감사)
+마지막 갱신: 2026-08-18 20:38 +09:00 (Gradle 전환·정본 v1.5·Phase 1 최종 감사 반영)
 
 ## 현재 단계
 
-**Phase 0 기술 검증·`rubric-context-v3` dev gate 완료 — Phase 1 core는 계약·scaffold 준비 가능, feature 구현은 Spring Boot/Ingest scaffold 부재로 미착수 — holdout API·production 승격 차단**
+**Phase 1: M0~M7 및 AC-1·2·4·5 최종 `PASS/완료`.**
 
-`rubric-context-v3`는 26/26 완료, conflict recall `0.9565217`, accuracy `0.9230769`, sampled FPR `0`, macro-F1 `0.902`로 dev gate를 통과했다. QA의 70-case 한국어 review와 machine gold는 실제 파일상 사용자 승인 70건·정확한 UTF-8 헤더로 동결되어 있으나, holdout API/validator는 실행하지 않았다. production LLM provider/model·승격은 확정하지 않는다.
+- M1/M2 live suite는 exit 0이며 필수 assertion 14/14가 PASS했다. 선택 expired-upload fixture 1건은 skip이고 V1~V5 Flyway history는 success=true다.
+- M3 Ingest/100-doc live는 `done=100`, post-apply job `COMPLETED`, `published=100`, `topics=6`, `citations=5`로 PASS했다.
+- M4 knowledge static 8/8 및 통합 trace/owner evidence, M5 change-set static 3/3 및 apply/version evidence, M6 search/AI static 6/6 및 3 search mode/citation evidence를 최종 bundle에 묶어 PASS했다.
+- M7 security는 8/8 PASS다. backend Gradle 9.7.0 wrapper `clean test`는 15 suites/39 tests, failures/errors/skips 0이고 `build bootJar`도 PASS했으며 frontend build 17 routes/typecheck/lint도 PASS다.
+- backend의 “M3 knowledge”와 PM/API 17절의 M3 Ingest·M4 knowledge 명칭은 모순으로 남아 리더 정합화가 필요하지만 Phase 1 완료를 막지 않는다.
 
-## 진행 중 작업
+## AC·보안 최종 상태
 
-Phase 1 구현 순서를 기획서 23절·API 명세 17절·요구사항 정의서 12절과 대조해, 현재 즉시 가능한 범위를 계약·설계·scaffold 준비로 한정했다. `backend/`에는 `contracts/`·`scripts/`만 있고 Spring Boot build 파일·Java source·Ingest Worker가 없어 실제 feature 구현은 시작할 수 없다.
+- AC-1: **PASS** — 100-doc `done=100/100`.
+- AC-2: **PASS** — `published=100`, `topics=6`.
+- AC-4: **PASS** — `citations=5`와 page/claim/source version/locator trace.
+- AC-5: **PASS** — Batch 70/70, recall 0.800, accuracy 0.843, sampled FPR 0, Wilson 95% upper 0.114, macro-F1 0.801.
+- 보안: M7 8/8 PASS 및 NFR/API evidence bundle 완료.
+- Phase 1 최종 판정: **PASS/완료**.
 
-## 완료 항목
+## AC-5 비용·승인 상태
 
-1. Phase 0 결과와 역할 STATE/실제 산출물을 대조했다.
-2. `rubric-context-v3` dev 결과를 QA validator로 재실행해 `RESULT PASS failures=0`을 확인했다.
-3. Backend self-check와 evaluation validator를 각각 exit 0으로 재실행했다.
-4. Frontend `npm.cmd run build`와 `npx.cmd tsc --noEmit`를 각각 exit 0으로 확인했다. 화면은 목업 데이터 기반이며 실 API는 없다.
-5. QA holdout review/gold를 직접 읽어 70행·사용자 결정 `승인` 70건·목표 분포·BOM 없는 UTF-8 헤더를 확인했다. QA STATE의 과거 “진행 중” 기록은 현재 상단 스냅샷 및 실제 파일의 완료 상태와 분리해 해석한다.
-6. 첫 최소 vertical slice를 `인증 + 도서관 소유권 경계 + 공통 원본 메타데이터/불변 버전 조회`로 권고했다. 이는 미확정 UD-03·10·19·20·22의 Phase 1 실행 경로를 포함하지 않는다.
+- 실행 전 정본 수치: v3 26건 actual `$0.149060`, 누적 `$0.55644`, cap `$0.80`, 잔여 `$0.24356`.
+- Batch 실제 70건 비용: **`$0.2108`**. 실행 전 잔여 cap 안이다.
+- 실행 후 누적: `$0.55644 + $0.2108 = $0.76724`; cap 잔여: `$0.80 - $0.76724 = $0.03276`.
+- 기존 provider/model/cap을 변경하지 않고 `gpt-5.6-sol` + `/v1/responses` Batch를 사용했다. AC-5 결과는 holdout gate PASS이나 production provider/model 승격을 의미하지 않는다.
+- production provider/model, 자동 모순 판정·apply, production release는 별도 사용자/리더 운영 승인이다.
 
-## 다음 작업
+## Milestone 최종 snapshot
 
-1. Spring Boot API·Ingest Worker 실행 scaffold가 마련되고 구현 단계 전환이 승인되면 첫 vertical slice를 구현한다.
-2. API 명세 17절 순서(`인증·사용자·도서관·운영 헌법 → 업로드·원본 연결 → Ingest 승인 상태 머신 → 지식 조회 → 변경 세트 → 검색`)에 따라 의존 기능을 확장한다.
-3. 실제 API integration에서 citation/search 포함 p95를 재검증한다.
-4. 별도 실행 승인을 받은 뒤 frozen gold로 holdout API/validator를 실행하고, 결과 전에는 모순 자동 판정·자동 적용·production 승격을 하지 않는다.
-5. 사용자 결정 UD-03·10·19·20·22와 Phase 4 AC-3·UD-26을 정본 기준으로 계속 추적한다.
-
-## 차단 요인
-
-- **실행 scaffold:** `backend/`에 Spring Boot build 파일·Java source·Ingest Worker가 없어 Phase 1 feature 구현·빌드 검증을 시작할 수 없다.
-- **제품 승격:** v3 dev gate PASS만으로 production을 확정할 수 없다. holdout API/validator, 원본 Claim mapping, production provider/model·비용 승인과 독립 gate가 남아 있다.
-- **미확정 사용자 결정:** UD-03은 Phase 1 요금제별 도서관 한도(구현 시)와 Phase 2 처리량 과금, UD-10·UD-19는 Phase 2, UD-20은 Phase 2 감사 정책, UD-22는 Phase 3 신고 절차를 막는다.
-- **Phase 4:** AC-3 U-1 사용자 평가와 UD-26 승인 상한 테스트는 기획서 23절상 Phase 4다.
-- **입력·통합 위험:** NoteWiki inventory 누락 17건·평가 불가 relation 11행, API 실연동·citation/search integration 미검증, Frontend HeaderBar duplicate-key 경고가 남아 있다.
-
-## 핵심 권고·의존 사슬
-
-**권고:** scaffold를 먼저 마련하고 첫 slice를 작게 구현한다. 모순 자동 판정·적용은 사용자 검토 제안으로만 둔다.
-
-**의존 사슬:** `scaffold → 인증/도서관/헌법 → 원본/불변 버전 → Import/Ingest 승인 → 페이지·Claim·Evidence·관계·모순 조회 → ChangeSet 검토·적용·버전 → 검색 → integration p95/citation → holdout gate → production 검토`.
-
-## 소유 산출물
-
-| 경로 | 상태 | 산출물 유형 |
+| Milestone | 최종 상태 | 근거 |
 | --- | --- | --- |
-| `docs/ZeroWiki-MVP-서비스-기획서.md` | 변경 없음 | 기획서 (진실 1순위) |
-| `docs/PM-미확정결정-우선순위.md` | 2026-08-11 갱신 | 사용자 결정 요청·Phase 의존성 |
-| `docs/PM-종합-현황.md` | 2026-08-11 23:02 갱신 | 종합 현황·첫 slice·의존 사슬·위험 |
-| `.claude/team/pm/CLAUDE.md` | 변경 없음 | 역할 지침 |
-| `.claude/team/pm/WORKLOG.md` | 2026-08-11 23:02 append | 시간순 기록 |
+| M0 | 완료 | Gradle wrapper 단일 build·계약·`clean test`·`build bootJar` 증거 |
+| M1 | 완료·PASS | auth/library/owner isolation live 및 M7 보안 재확인 |
+| M2 | 완료·PASS | 필수 live 14/14, optional expiry 1 skip |
+| M3 Ingest | 완료·PASS | 100-doc `done=100`, `published=100`, post-apply `COMPLETED` |
+| M4 knowledge | 완료·PASS | static 8/8, owner/trace 통합 evidence |
+| M5 change-set | 완료·PASS | static 3/3, apply/version/audit evidence |
+| M6 search/AI | 완료·PASS | static 6/6, search 3종, citations 5 |
+| M7 final | 완료·PASS | security 8/8, AC-1·2·4·5, build/typecheck/lint |
 
-## 검증 근거
+의존 사슬: **M0 → M1 → M2 → M3 100-doc → M4 → M5 → M6 → M7 security/AC → AC-5 Batch/validator PASS → Phase 1 PASS/완료 → production 별도 운영 승인**.
 
-```text
-python qa/verify_phase0_benchmark.py ...rubric-context-v3... --expected-documents 26
-→ DENSE_METRICS completed=26/26 recall=0.957 sampled_fpr=0.000 accuracy=0.923 macro_f1=0.902
-→ RESULT PASS failures=0 (exit 0)
+## 다음 작업·남은 위험
 
-python -B backend/scripts/phase0_benchmark.py --self-check
-→ self-check: PASS (exit 0)
+Phase 1의 필수 다음 작업은 없다. 다음 운영 단계에서만 다음을 별도 승인·기록한다.
 
-python -B evaluation/validate_evaluation.py
-→ 검증 완료: 오류 0건 (exit 0)
+1. production provider/model 승격 및 production release.
+2. 자동 모순 판정·apply 여부.
+3. backend “M3 knowledge”와 PM/API milestone 명칭 정합화.
+4. 현재 API/PostgreSQL listener가 없을 때 동일 live run 재현이 어려운 환경 risk.
+5. legacy `/`·`/review-changes`는 mock showcase다. 실제 Phase 1 API 흐름은 `/libraries/**`이며 완료 blocker는 아니지만 제품 진입점으로 사용할 때 정리가 필요하다.
 
-frontend: npm.cmd run build; npx.cmd tsc --noEmit
-→ Next 14 build 성공·static pages 5/5·두 명령 모두 exit 0
+실제 Phase 1 blocker: **없음**. expired-upload fixture skip은 선택 subgate이며 필수 14/14 PASS를 뒤집지 않는다.
 
-holdout artifact audit (Python stdlib, read-only)
-→ review/gold rows=70/70, 사용자 승인=70, 목표 분포 일치, exact UTF-8 headers, BOM 없음
+## 검증 명령과 결과
 
-backend scaffold inventory
-→ pom.xml/build.gradle/settings.gradle/gradlew/src/main/java 모두 없음
-```
+- `backend\gradlew.bat -g %LOCALAPPDATA%\ZeroWiki-Gradle-9.7 clean test --no-daemon --non-interactive --console=plain` → exit 0; 15 suites/39 tests, failures/errors/skips 0.
+- 같은 Gradle cache로 `build bootJar` → exit 0; executable `bootJar` 생성.
+- `frontend npm.cmd run build` → exit 0; Next 14.2.35, 17 routes.
+- `frontend npx.cmd tsc --noEmit` → exit 0.
+- `frontend npm.cmd run lint` → exit 0.
+- M1/M2 live → 14/14 PASS + optional expiry fixture 1 skip.
+- Phase 1 100-doc live → PASS (`done=100`, `published=100`, `topics=6`, `citations=5`).
+- M7 security → 8/8 PASS.
+- AC-5 Batch → 70/70 PASS; recall 0.800, accuracy 0.843, FPR 0, Wilson upper 0.114, macro-F1 0.801, cost `$0.2108`.
+- 비용 → 실행 전 잔여 `$0.24356`, 실행 후 누적 `$0.76724`, 잔여 `$0.03276`.
 
-홀드아웃 API·validator는 위 검증에 포함되지 않았으며 실행하지 않았다.
+## 소유·변경 경계
+
+PM 소유는 `docs/PM-*.md`와 `.claude/team/pm/**`다. backend/frontend/qa 파일과 정본 계약 문서는 읽고 대조만 했다. 이번 갱신에서 타 역할 변경 되돌리기·커밋은 없다.

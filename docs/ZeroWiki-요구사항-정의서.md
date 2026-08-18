@@ -312,7 +312,7 @@ pm은 이를 **기획서 20절 내부 불일치의 명확화**로 판정했다 �
 | FR-KNW-12 | 관계 유형 초기 목록과 사용자 정의 허용 시점은 `UD-16` | M | 1 | ERD 8절 6번 | — |
 | FR-KNW-13 | 동일 원본도 도서관 목적에 따라 다르게 컴파일되어야 한다 | M | 1 | 5절 PR-7, 6.2 | A-2 |
 
-**FR-KNW-05는 비용·품질의 핵심 분기점이다.** `UD-11`은 Phase 0에서 중요한 주장만 생성하는 것으로 확정했다. `rubric-context-v3` 개발 gate와 70건 holdout 데이터 사용자 승인은 통과했지만 holdout API·validator는 미실행이므로, 모순 자동 판정은 비활성화하고 사용자 검토 제안으로만 제공한다.
+**FR-KNW-05는 비용·품질의 핵심 분기점이다.** `UD-11`은 Phase 0에서 중요한 주장만 생성하는 것으로 확정했다. `rubric-context-v3` 개발 gate와 사용자 승인 70건 holdout의 Batch API·validator gate는 모두 통과했다. 다만 FR-KNW-08·UD-06에 따라 자동 적용은 하지 않고 사용자 검토 제안으로만 제공하며, production provider/model 승격은 별도 운영 승인 대상이다.
 
 ### 5.7 변경 승인과 버전 (FR-CHG)
 
@@ -636,7 +636,7 @@ pm이 기획서 17절을 **닫힌 목록**으로 판정했고("MVP는 서비스 
 | **3. 공개 지식** | 지식의 외부 공유 | FR-PUB 전체 | 공개 전 검사 통과, 포크·비교·신고 동작 |
 | **4. 시각화와 검증** | 사용자 검증과 가격 조정 | FR-UIX-04~06, AC-3·AC-6·AC-7 | 5~10명 사용자 테스트 완료, 가격·범위 조정 |
 
-Phase를 앞당기지 않는다(헌법 제2조 4항). Phase 0 기술 검증은 2026-08-11 완료했다. 모순 분류 개발 gate와 holdout 데이터 승인은 통과했지만 holdout 실행 gate가 남아 있으므로 Phase 1의 자동 판정·적용은 계속 차단한다.
+Phase를 앞당기지 않는다(헌법 제2조 4항). Phase 0 기술 검증은 2026-08-11 완료했다. 모순 분류 개발 gate와 사용자 승인 70건 holdout의 Batch API·validator gate도 통과했다. Phase 1 인수 통과는 production provider/model 승격이나 자동 적용 승인을 뜻하지 않으며, 자동 적용은 FR-KNW-08·UD-06에 따라 계속 금지한다.
 
 ---
 
@@ -691,7 +691,7 @@ Phase를 앞당기지 않는다(헌법 제2조 4항). Phase 0 기술 검증은 2
 | ~~UD-08~~ | ~~공개 URL slug 충돌·변경 정책~~ | API 18절 8 | 기술 | **확정 (2026-07-30, 리더):** 충돌 시 애플리케이션 계층에서 숫자 suffix(`-2`, `-3`) 부여. slug는 변경 불가이며 바꾸려면 기존 발행을 내리고(`unpublished_at` 기록) 새로 발행한다. `page_publications.public_slug` UNIQUE로 강제 |
 | ~~UD-09~~ | ~~관리자·운영 API 분리 여부~~ | API 18절 9 | 기술 | **확정 (2026-07-30, 리더):** 별도 spec으로 분리하지 않고 `Admin` 태그로 구분한다. Phase 1에는 관리자 API를 만들지 않으며 Phase 2 감사 로그 API와 함께 설계한다 |
 | UD-10 | Notion OAuth·결제 공급자 선정 | API 18절 10 | 사용자 | FR-INP-03, FR-BIL-09 |
-| ~~UD-11~~ | ~~Claim 생성 범위 (모든 문장 vs 중요 주장)~~ | **확정 (2026-08-11, Phase 0): 중요한 주장만 생성.** 100문서에서 관측 문장 7,501개 대비 중요 주장 100개를 생성했다. `rubric-context-v3` 개발 gate와 holdout 데이터 승인은 통과했지만 holdout API·validator는 미실행이므로 자동 판정·적용은 비활성화한다 | 벤치마크 | FR-KNW-05, FR-KNW-11 |
+| ~~UD-11~~ | ~~Claim 생성 범위 (모든 문장 vs 중요 주장)~~ | **확정 (2026-08-11, Phase 0): 중요한 주장만 생성.** 100문서에서 관측 문장 7,501개 대비 중요 주장 100개를 생성했다. `rubric-context-v3` 개발 gate와 사용자 승인 70건 holdout의 Batch API·validator gate를 통과했다. 자동 적용은 FR-KNW-08·UD-06에 따라 비활성화하며 production provider/model 승격은 별도 운영 승인 대상이다 | 벤치마크 | FR-KNW-05, FR-KNW-11 |
 | ~~UD-12~~ | ~~페이지 버전별 Claim 복제 vs 재사용~~ | ERD 8절 2 | 기술 | **확정 (2026-07-30, 리더):** **재사용**. `claims`에서 `page_version_id` FK를 제거해 Claim을 버전 비종속으로 만들고, 버전별 상태는 신규 `claim_statuses`(`claim_id`, `page_version_id`, `knowledge_status`, `valid_from`, `valid_to`)에 둔다. `evidences.claim_id`는 유지한다. **단 버전 간 Claim 동일성 판정 메커니즘은 `UD-29`로 분리했다** — 그것이 정해지기 전에는 이 구조로 마이그레이션만 하고 자동 매칭을 구현하지 않는다 |
 | ~~UD-13~~ | ~~도서관 버전 과거 조회 (이벤트 재생 vs 스냅샷)~~ | ERD 8절 3 | 기술 | **확정 (2026-07-30, 리더):** Phase 1은 이벤트 재생(`library_versions.change_set_id`에서 `APPLIED` 변경 세트를 순방향 재생). **Phase 0 벤치마크에서 과거 버전 재생 시간을 반드시 측정하고**(도서관당 500건 이상 변경 세트 기준), 1초를 넘으면 Phase 2에 스냅샷을 추가한다. `change_sets`는 계정 보존 기간 동안 유지되므로 삭제 정책(ERD 7절)과 충돌하지 않는다 |
 | ~~UD-14~~ | ~~원본 발췌문 저장의 저작권·개인정보상 최대 범위~~ | ERD 8절 4 | 사용자 | **확정 (2026-07-30, 사용자):** **400자**. `UD-07`(노출 길이)과 동일한 값으로, 저장 범위와 노출 범위를 일치시켜 저작권 정책을 단일 규칙으로 유지한다 |
@@ -788,3 +788,4 @@ Phase를 앞당기지 않는다(헌법 제2조 4항). Phase 0 기술 검증은 2
 | 1.2 | 2026-08-11 | **Phase 0 리더 계약 정합화.** 사용자가 필요한 의사결정을 리더에게 위임한 지시에 따라 Phase 1 변경 위험도 wire enum을 `MINOR`·`MAJOR` 2종으로 확정하고 UI의 `SAFE`·`DANGER`는 표시명으로 한정했다. 질문 대기 상태는 `QUESTION_REVIEW`로 통일했다. FR-LIB-11의 구조화 헌법 Schema 참조를 잘못 연결된 UD-05에서 UD-15로 정정했다. AC-4의 QA 대응을 실제 citation 테스트 A-3으로 정정하고, AC-3은 자동 검증이 아니므로 Phase 1 자동 완료 판정에서 제외해 Phase 4 U-1로 명시했다. | 리더 |
 | 1.3 | 2026-08-11 | **Phase 0 기술 검증 완료·품질 gate 판정.** 100문서 2단계 Ingest 100%, 평균 token·단계별 시간, 관계 embedding 2종, Markdown 왕복, 1,000 change set replay, constitution schema를 실측했다. UD-11(중요 주장), UD-17(MiniLM 384), UD-25(reference budget 15/20초), UD-29(AI 제안+사용자 승인)를 확정했다. 모순은 recall 100%지만 classification accuracy 19.2%·sampled FPR 100%여서 자동 판정·적용을 Phase 1에서 차단한다. 상세는 `docs/Phase-0-벤치마크-결과.md` | 리더 |
 | 1.4 | 2026-08-11 | **모순 분류 후속 개발 gate·holdout 승인 반영.** `rubric-context-v3`는 accuracy 92.3%·conflict recall 95.7%·sampled FPR 0%로 26건 개발 gate를 통과했다. 사용자가 한국어 70건 holdout review를 전체 승인해 QA machine gold를 동결했다. holdout API·validator는 미실행이므로 production 자동 판정·적용 차단은 유지한다. | 리더 |
+| 1.5 | 2026-08-18 | **Phase 1 holdout 실행 결과 반영.** 사용자 승인 70건을 `gpt-5.6-sol` Responses Batch로 실행해 completion 70/70, conflict recall 80.0%, 6-class accuracy 84.3%, sampled FPR 0%, Wilson 95% upper 11.4%, macro-F1 80.1%, 비용 `$0.2108`로 AC-5 hard gate를 통과했다. FR-KNW-08·UD-06의 사용자 최종 결정·자동 적용 금지와 production provider/model 별도 승인 경계는 유지한다. | 리더 |

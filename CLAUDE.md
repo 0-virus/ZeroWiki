@@ -55,8 +55,8 @@ ZeroWiki-SaaS/
 │       ├── JOURNAL.md            네 역할을 관통하는 시간순 통합 업무 기록 (리더 소유)
 │       └── {역할}/               CLAUDE.md · STATE.md · WORKLOG.md (각 역할 소유)
 ├── docs/                         기준 문서·검증 문서 (아래 표 참조)
-├── backend/                      Phase 0 stdlib benchmark harness·constitution JSON Schema (Spring Boot 앱·Ingest Worker는 미생성)
-├── frontend/                     Next.js + TypeScript 프로젝트. 도서관 홈 화면 1차 구현 + 화면 설계 4종
+├── backend/                      Gradle 9.7 wrapper 기반 Spring Boot API·Ingest Worker Phase 1 구현 + Phase 0/holdout benchmark harness·constitution JSON Schema
+├── frontend/                     Next.js + TypeScript. Phase 1 인증·도서관·Ingest·지식·검색·AI 사서 화면 + 기존 화면 설계
 │   ├── screens/                  화면 설계·와이어프레임: 도서관 홈·변경 검토·원문 발췌 표기·Ingest 진행 (frontend 소유)
 │   │   └── design-source/        외부에서 가져온 디자인 시안 원본 (frontend 소유)
 │   └── src/                      컴포넌트·타입·목업 데이터 (frontend 소유)
@@ -64,7 +64,7 @@ ZeroWiki-SaaS/
 └── qa/                           테스트 시나리오·인수 보고서·독립 검증기·한국어 holdout review·machine gold
 ```
 
-`backend/`에는 Phase 0 기술 검증용 stdlib harness와 constitution JSON Schema만 있다. Spring Boot API·Ingest Worker는 아직 없다. `evaluation/`에는 정답 라벨과 모델 입력용 중립 context·gold 없는 holdout 입력·model-specific 결과가 있다. `qa/`에는 이 산출물을 독립 검증하는 실행기, 사용자가 전체 승인한 한국어 holdout review, 동결된 machine gold가 있다. 2026-08-11 `rubric-context-v3` 개발 gate와 holdout 데이터 승인은 통과했지만 holdout API·validator는 미실행이므로 모순 자동 판정·적용은 차단한다. `frontend/`는 Next.js 도서관 홈 화면 컴포넌트(목업 데이터 기반, 실 API 미연동)와 화면 설계 문서를 보유하며 build·typecheck는 통과했다. 없는 구현을 있다고 가정하지 않는다.
+`backend/`에는 Gradle 9.7 wrapper 기반 Spring Boot API/Worker profile과 인증·도서관·헌법·원본·업로드·Ingest, 지식 projection, 변경 검토·버전·감사, 검색·AI 사서까지 Phase 1 구현과 benchmark harness가 있다. Maven build는 제거했으며 `gradlew.bat clean test build` 기준을 사용한다. `evaluation/`에는 정답 라벨과 모델 입력용 중립 context·gold 없는 holdout 입력·model-specific 결과가 있다. `qa/`에는 독립 검증기, 사용자가 전체 승인한 한국어 holdout review, 동결된 machine gold, M1~M7 black-box와 100문서 순차 acceptance가 있다. 2026-08-12 AC-1·2·4는 100문서 live에서 통과했고 M7 security 8/8, backend 39 tests, frontend 17 routes build/typecheck/lint가 통과했다. AC-5도 `gpt-5.6-sol` Batch 70/70에서 recall 0.800·accuracy 0.843·FPR 0·Wilson upper 0.114, 비용 $0.2108로 통과해 Phase 1 인수 gate를 완료했다. production provider/model 승격과 모순 자동 적용은 별도 운영 승인이다. `frontend/`는 Phase 1 API 화면과 기존 목업·화면 설계를 보유한다. 없는 구현을 있다고 가정하지 않는다.
 
 ## 기준 문서
 
