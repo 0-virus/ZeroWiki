@@ -94,6 +94,21 @@ frontend와 backend가 각자 `docs/검증-프론트엔드-화면-API-갭.md`와
 | A-4 | 의도적 모순 탐지율 80% 이상 | 평가 세트 conflict 23건을 mapping manifest로 Ingest 결과와 조인 | 23건 중 19건 이상 자동 탐지. manifest 준비 전 Ingest-level 판정 차단 | ✅ 자동 테스트 |
 | A-5 | 엣지케이스 에러 처리 | API 400/413/422/429 응답 | 잘못된 입력, 크기 초과, 할당량 초과 시 정의된 오류 코드 반환 | ✅ 자동 테스트 |
 
+M3 실행 계약은 `qa/test_m3_knowledge_blackbox.py`에 고정한다. API 7.1~7.3의
+페이지 목록·상세, Claim-Evidence-sourceVersion 재조회, 관계·모순 `OPEN` 검토를
+stdlib static/live 계층으로 나누며, API 또는 fixture 부재는 `BLOCKED_M3_*`로
+기록한다. A-1·A-2·A-3의 wire 입력은 각각 ingest items 100건/`COMPLETED >= 95`,
+`home.topics` 최소 5개/문서 분류율 95%, citation의
+`pageId + claimId + sourceVersionId + locator`로 검증한다. `insufficientEvidence=true`
+답변은 모른다는 문장을 포함해야 하며 citation을 만들지 않는다.
+
+파일 업로드 인수는 API 5.2의 응답 필드 `uploadId`, 절대 `uploadUrl`, `method`,
+`requiredHeaders`, `expiresAt`을 모두 요구한다. local/test adapter도 상대 URL을
+반환하지 않고 만료·업로드 세션 소유자 검증을 지켜야 한다. 다른 세션의 PUT/complete,
+만료 URL PUT은 거부되고, signed URL은 로그·오류 응답·영구 저장소에 남지 않아야 한다.
+`qa/test_m1_m2_blackbox.py`의 static check가 이 계약과 backend route/DTO를 검사하고,
+현재 `requiredHeaders`·expiry 누락은 FAIL로 유지한다.
+
 **A-4 독립 인수 명령:** `qa/verify_phase0_benchmark.py`에 backend schema v1
 manifest, generated claim CSV, benchmark output, contradiction output 경로를 인자로
 전달한다. 검증기는 26개 `case_id` 전체 대응·gold/generated claim join·manifest hash를
@@ -257,6 +272,37 @@ holdout review `qa/contradiction-holdout-review.csv`는 사용자에게 보여�
 
 기준: 기획서 24절 "가장 큰 제품 리스크", API 명세 15절 "보안 요구사항"
 
+### Phase 1 보안 gate 식별자 매핑
+
+아래 `S-*`는 `qa/test_scenarios.md`의 **QA 시나리오 식별자**다. 요구사항
+정본의 `NFR-SEC-*` ID나 API 명세 15절의 항목 번호를 대신하지 않는다. Phase
+판정은 정본 요구사항·API 항목으로 하고, 기존 QA 시나리오 ID는 실행 사례를
+찾는 별칭으로만 사용한다. Phase 2·3 사례는 보존하지만 Phase 1 gate에는
+포함하지 않는다.
+
+| 기존 QA 시나리오 ID | 요구사항 6.1 개념 S 표기 | 정본 NFR/기능 요구사항 | API 명세 근거 | Phase 1 gate |
+| --- | --- | --- | --- | --- |
+| S-1 프롬프트 인젝션 | S-6 | NFR-SEC-06, FR-ING-17·18 | 15-6·8 | 포함 |
+| S-2 ZIP 경로 탐색 | — | FR-INP-12 | 15-4 | 포함 |
+| S-3 SSRF | — | FR-INP-13 | 15-5 | 제외 — Phase 2 |
+| S-4 비밀 저장 | S-3 (저장 전 차단) | NFR-SEC-04·05 | 15-9 | 포함 |
+| S-5 사용자·도서관 격리 | S-1 | NFR-SEC-01·02 | 15-1 | 포함 |
+| S-6 저작권 과도 재현 | S-9 | NFR-SEC-07, FR-PUB-02 | 14.1 | 제외 — Phase 3 |
+| S-7 비동기 중복 비용·감사 | S-7 | NFR-SEC-08, NFR-OPS-03, FR-ING-24 | 2.5, 15-10·12 | 포함 |
+| S-8 토큰 수명·회전 | — | FR-ACC-02 | 2.1, 3.1 | 포함 |
+| S-9 공개 응답 캐시 | S-9 | NFR-SEC-07 | 14.1 | 제외 — Phase 3 |
+| S-10 오류·로그 redaction | S-3 (오류·로그) | NFR-SEC-09 | 15-11 | 포함 |
+| S-11 사용자 간 원본 dedup 금지 | — | FR-SRC-05 | 15-13 | 포함 |
+| S-12 참조 범위 초과 | S-2 | NFR-SEC-03, FR-LIB-04·05·07 | 15-14 | 포함 |
+| S-13 공개 응답 내부 ID | S-1 (파생) | NFR-SEC-01, FR-PUB-01·05 | 15-15 | 제외 — Phase 3 |
+| S-14 멱등성 캐시의 단기 값 | — | NFR-SEC-09, FR-ING-24 | 2.5, 15-2·12 | 제외 — 현재 시나리오는 Phase 2 Export |
+| S-15 Notion 계정 경계 | — | FR-INP-03, UD-18 | 6.2 | 제외 — Phase 2 |
+| S-16 알림 보존 | — | FR-NTF-04, UD-23 | 11 | 제외 — Phase 2 |
+
+`NFR-SEC-10`은 `UD-20`(감사 로그 보존·관리자 접근) 미확정 항목이므로 Phase 1
+gate에 임의 편입하지 않는다. 요구사항 6.1의 개념 S 표기는 정본 추적용이고,
+실행 시에는 첫 열의 기존 QA ID를 사용한다.
+
 ### 4.1 보안 위협 모델과 방어
 
 | ID | 위협 시나리오 | 영향 | 기획서 방어 | API 명세 방어 | 검증 방법 |
@@ -301,12 +347,12 @@ holdout review `qa/contradiction-holdout-review.csv`는 사용자에게 보여�
 | 상태 | 코드 | 시나리오 | 테스트 케이스 |
 | --- | --- | --- | --- |
 | **400** | `VALIDATION_FAILED` | JSON 필드 타입 오류 (예: `"limit": "twenty"`) | `POST /libraries` + 잘못된 templateType |
-| **400** | `INVALID_STATE_TRANSITION` | 상태 기계 위반 (예: COMPLETED → QUEUED) | `PATCH /ingest-jobs/{id}` + 불가능한 상태 |
+| **400** | `INVALID_STATE_TRANSITION` | 상태 기계 위반 (예: COMPLETED → QUEUED) | `POST /libraries/{libraryId}/ingest-jobs/{jobId}/plan-approval` + 완료 작업에 승인 요청 |
 | **401** | (없음) | 만료된 Access Token, 없는 token | expired JWT 사용 시 401 반환 |
 | **403** | `FORBIDDEN` | 다른 사용자 도서관 수정 시도 | `PATCH /libraries/{otherUserLibraryId}` |
-| **404** | `RESOURCE_NOT_FOUND` | 존재하지 않는 페이지 | `GET /libraries/{id}/pages/{nonexistentId}` |
+| **404** | `RESOURCE_NOT_FOUND` | 존재하지 않는 페이지 | `GET /libraries/{libraryId}/pages/{nonexistentPageId}` |
 | **409** | `DUPLICATE_SOURCE` | 같은 URL을 두 번 클리핑 | `POST /web-clips` + 중복 URL (초 내 재요청) |
-| **409** | `VERSION_CONFLICT` | 기준 버전 변경됨 | `PUT /libraries/{id}/constitution` + 구버전 expectedVersion |
+| **409** | `VERSION_CONFLICT` | 기준 버전 변경됨 | `PUT /libraries/{libraryId}/constitution` + 구버전 expectedVersion |
 | **409** | `IDEMPOTENCY_KEY_REUSED` | 같은 키 + 다른 본문 | 멱등성 키 불일치 감지 |
 | **413** | (없음) | 최대 파일 크기 초과 (200MB) | 300MB 파일 업로드 시도 |
 | **422** | `SECRET_DETECTED` | 비밀번호·API 키 탐지 | `.env` 파일 업로드 시도 |
@@ -351,7 +397,7 @@ holdout review `qa/contradiction-holdout-review.csv`는 사용자에게 보여�
 | --- | --- | --- | --- |
 | **기술 검증** (Phase 0) | A-1~A-10 자동화 테스트, 품질 벤치마크 | backend + qa | 구현 전 |
 | **사용자 검증** | U-1~U-6 검증 사용자 5~10명 테스트 | 제품 오너 + qa | Phase 1 완료 후 2주 |
-| **보안 감사** | S-1~S-14 침투 테스트 | qa + 외부 보안 검토 | MVP 릴리스 전 |
+| **보안 감사** | S-1~S-16 침투 테스트 (Phase 1 매핑표의 포함 항목) | qa + 외부 보안 검토 | MVP 릴리스 전 |
 | **계약 확정** | frontend·backend 권고안 통합, 교차 검증 | qa | 본 문서 최종 (2026-07-31 예상) |
 
 ---
