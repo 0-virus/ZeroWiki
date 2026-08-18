@@ -96,7 +96,7 @@ erDiagram
 | 컬럼 | 타입 | 제약/설명 |
 | --- | --- | --- |
 | `id` | uuid | PK |
-| `email` | citext | UNIQUE, 로그인 식별자 |
+| `email` | varchar(320) | `lower(email)` UNIQUE index, 로그인 식별자 |
 | `password_hash` | text | 소셜 로그인 도입 전 비밀번호 해시 |
 | `display_name` | varchar(80) | 표시 이름 |
 | `locale` | varchar(10) | 기본 `ko-KR` |
@@ -129,7 +129,7 @@ erDiagram
 | `user_id` | uuid | FK → `users.id` |
 | `idempotency_key` | varchar(255) | 클라이언트 지정 키 |
 | `request_path` | text | 엔드포인트 경로 |
-| `request_body_hash` | char(64) | SHA-256 (요청 본문 해시). 같은 키로 다른 본문 재전송 시 409 IDEMPOTENCY_KEY_REUSED |
+| `request_body_hash` | varchar(64) | SHA-256 (요청 본문 해시). 같은 키로 다른 본문 재전송 시 409 IDEMPOTENCY_KEY_REUSED |
 | `response_status` | integer | 이전 응답 상태 코드 |
 | `response_body` | jsonb | 이전 응답 본문 캐시. **서명 URL·다운로드 URL·토큰 등 단기 수명 값은 제외하고 저장한다.** 재요청 시 서버가 해당 필드를 새로 발급해 채운다 (NFR-SEC-09, API 2.5절, API 15절 2번) |
 | `created_at` | timestamptz | 생성 시각 |
@@ -172,18 +172,7 @@ erDiagram
 | `id` | uuid | PK |
 | `library_id` | uuid | FK → `libraries.id` |
 | `version_no` | integer | 도서관 내 순번, UNIQUE(`library_id`, `version_no`) |
-| `purpose` | text | 목적과 주요 질문 |
-| `audience` | text | 예상 독자 |
-| `knowledge_level` | varchar(20) | 설명 수준 |
-| `source_policy` | jsonb | 출처 우선순위와 신뢰도 기준 |
-| `taxonomy_policy` | jsonb | 페이지 유형과 분류 규칙 |
-| `link_policy` | jsonb | 자동 연결 범위 |
-| `staleness_policy` | jsonb | 분야별 노후화 기준 |
-| `risk_policy` | jsonb | 위험 변경 판정 기준 |
-| `privacy_policy` | jsonb | 민감정보 처리 규칙 |
-| `rejected_patterns` | jsonb | 거절한 연결과 이유의 요약 |
-| `natural_language_rules` | text | 사용자에게 보여주는 자연어 규칙 |
-| `change_reason` | text | 생성 또는 변경 이유 |
+| `constitution_document` | jsonb | 운영 헌법 v1 문서. `backend/contracts/library-constitution.schema.json`의 12개 필드와 `additionalProperties=false`를 따른다(UD-15, Phase 0 확정) |
 | `created_by_type` | varchar(20) | `ONBOARDING`, `USER`, `FEEDBACK`, `SYSTEM` |
 | `revision` | bigint | 낙관적 잠금용 버전. 선택(현재 버전 사용 시에만 증가) (검증 3.1절) |
 | `created_at` | timestamptz | 생성 시각 |
@@ -230,7 +219,7 @@ erDiagram
 | `id` | uuid | PK |
 | `source_id` | uuid | FK → `sources.id` |
 | `version_no` | integer | 원본 내 순번 |
-| `content_hash` | char(64) | SHA-256 |
+| `content_hash` | varchar(64) | SHA-256 |
 | `storage_key` | text | S3 호환 저장소 키 |
 | `media_type` | varchar(120) | MIME type |
 | `byte_size` | bigint | 파일 크기 |
@@ -364,7 +353,7 @@ erDiagram
 | `title` | text | 제목 |
 | `markdown_body` | text | 사용자 표시 본문. **한국어로 작성** (FR-UIX-12, UD-24 확정) |
 | `summary` | text | 검색·목록용 요약 |
-| `content_hash` | char(64) | 내용 해시 |
+| `content_hash` | varchar(64) | 내용 해시 |
 | `change_set_id` | uuid | 이 버전을 만든 변경 세트 |
 | `created_by_type` | varchar(20) | `AI`, `USER`, `IMPORT`, `SYSTEM` |
 | `created_by_user_id` | uuid | 사용자 변경이면 FK |
@@ -397,7 +386,7 @@ erDiagram
 | `id` | uuid | PK |
 | `claim_id` | uuid | FK → `claims.id` |
 | `page_version_id` | uuid | FK → `page_versions.id` |
-| `knowledge_status` | varchar(30) | `VERIFIED_FACT`, `SOURCE_CLAIM`, `AI_INFERENCE`, `USER_JUDGMENT`, `HYPOTHESIS` (버전별로 다를 수 있음) |
+| `knowledge_status` | varchar(30) | `VERIFIED_FACT`, `SOURCE_CLAIM`, `AI_SYNTHESIS`, `USER_JUDGMENT`, `HYPOTHESIS` (버전별로 다를 수 있음; API 2.8절과 동일) |
 | `confidence` | numeric(4,3) | 해당 버전에서의 확도 (0~1) |
 | `valid_from` | date | 적용 시작일, 선택 |
 | `valid_to` | date | 적용 종료일, 선택 |
@@ -508,7 +497,7 @@ erDiagram
 | `change_set_id` | uuid | FK |
 | `change_item_id` | uuid | 개별 판단이면 FK, 전체 판단이면 NULL |
 | `reviewer_id` | uuid | FK → `users.id` |
-| `decision` | varchar(30) | `APPROVE`, `REJECT`, `REQUEST_REVISION`, `DEFER` |
+| `decision` | varchar(30) | `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `DEFER` (API 8.1절과 동일) |
 | `comment` | text | 거절·수정 사유 |
 | `created_at` | timestamptz | 생성 시각 |
 
@@ -766,7 +755,7 @@ MVP 키워드 검색은 `page_versions.title`, `page_versions.markdown_body`, `s
 | `content_type` | varchar(20) | `PAGE_VERSION`, `CLAIM`, `SOURCE_CHUNK` |
 | `content_id` | uuid | 대상 ID |
 | `chunk_no` | integer | 청크 번호 |
-| `content_hash` | char(64) | 재임베딩 판단 |
+| `content_hash` | varchar(64) | 재임베딩 판단 |
 | `embedding_model` | varchar(80) | 내부 모델 식별자 |
 | `embedding` | vector | 차원은 모델 확정 후 결정 |
 | `created_at` | timestamptz | 생성 시각 |
@@ -864,3 +853,5 @@ FK는 기본적으로 `RESTRICT`를 사용한다. 계정 완전 삭제 작업에
 | 1.5 | 2026-07-30 | **테넌시 앵커 추가:** `claims.page_id` FK 신규(NOT NULL). 1) Claim 소유자 접근을 4홉(claim_statuses→page_versions→pages→libraries)에서 1홉(claims.page_id→pages.library_id)으로 단축. 2) 다른 도서관의 버전에서 Claim을 참조하는 것을 구조로 차단 (정보 노출 방지). 3) 정합성 규칙 8·9 보강: evidences·contradictions의 Claim이 현재 도서관에 속함을 명시. 4) 규칙 10 신규: claim_statuses.page_version_id는 claims.page_id와 동일 페이지의 버전이어야 함. 5) claim_statuses 인덱스 `(claim_id, page_version_id)` 추가 — 버전 범위 검증 최적화 | backend |
 | 1.6 | 2026-08-11 | **변경 위험 wire enum 정정:** `change_sets.risk_level`·`change_items.risk_level`을 `MINOR`·`MAJOR`로 통일하고 UI 표시 `SAFE`·`DANGER`와 분리. 질문 대기 상태는 `QUESTION_REVIEW`를 canonical로 유지 | backend |
 | 1.7 | 2026-08-11 | **Phase 0 실행 결과 반영:** UD-13 이벤트 replay 유지(1,000 change sets p95 1초 미만), UD-15 12필드 JSON Schema v1, UD-17 MiniLM 384d 기준선, UD-29 자동 Claim 동일성 판정 금지. 모순 6-class accuracy 0.192로 제품 게이트는 조건부 FAIL이며 Phase 1 코어만 허용 | backend |
+| 1.8 | 2026-08-12 | **M0+M1 API 계약 정합화:** `library_constitution_versions`의 개별 헌법 필드 12개를 `constitution_document jsonb` v1 문서로 대체하고, `knowledge_status`를 API wire enum `AI_SYNTHESIS`, 검토 `decision`을 `REQUEST_CHANGES`로 통일했다. 대체 이유와 근거는 backend WORKLOG에 기록했다 | backend |
+| 1.9 | 2026-08-12 | **M1 PostgreSQL migration 정합화:** `users.email`의 `citext` 의존성을 제거하고 `varchar(320)` 및 `lower(email)` unique index로 명시했다. 애플리케이션의 normalized email 정책과 일치하며 extension 권한을 요구하지 않는다 | backend |

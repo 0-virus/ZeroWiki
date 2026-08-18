@@ -552,6 +552,24 @@ GET /sources?type=WEB&libraryId=<uuid>&q=consensus&limit=20
 }
 ```
 
+업로드 세션 응답:
+
+```json
+{
+  "data": {
+    "uploadId": "cab7d1a2-ec79-4e91-8484-1c1933ea0cb2",
+    "uploadUrl": "https://object.example/upload/opaque-signed-value",
+    "method": "PUT",
+    "requiredHeaders": {
+      "Content-Type": "application/zip"
+    },
+    "expiresAt": "2026-07-27T04:15:00Z"
+  }
+}
+```
+
+`uploadUrl`은 절대 URL이며 만료 시각과 업로드 세션에 묶인 일회성 signed URL이어야 한다. production은 S3-compatible object storage URL을 사용한다. local/test profile이 API 서버의 임시 저장 endpoint를 사용하더라도 같은 wire 계약과 만료·세션 검증을 지키고 상대 경로를 반환하지 않는다. 클라이언트는 `method`와 `requiredHeaders`를 그대로 사용하며 URL을 로그·오류 응답·영구 저장소에 남기지 않는다.
+
 완료 요청:
 
 ```json
@@ -1174,6 +1192,18 @@ GET /libraries/{libraryId}/search?q=raft+leader+election&types=PAGE,CLAIM,SOURCE
 | `GET` | `/libraries/{libraryId}/conversations/{conversationId}/messages/{messageId}` | 생성 상태·답변 |
 | `POST` | `/libraries/{libraryId}/messages/{messageId}/save-proposal` | 답변을 위키에 반영할 변경 세트 생성 |
 | `POST` | `/libraries/{libraryId}/messages/{messageId}/feedback` | 답변 평가 |
+
+답변 평가 요청은 Phase 1에서 다음 최소 계약을 사용한다. `rating`은 필수이고
+`HELPFUL | NOT_HELPFUL` 중 하나이며, `comment`는 선택 문자열이다.
+
+```json
+{
+  "rating": "HELPFUL",
+  "comment": "근거 위치가 명확합니다."
+}
+```
+
+서버는 저장 성공 시 `200`과 `{ "data": { "accepted": true } }`를 반환한다.
 
 질문:
 

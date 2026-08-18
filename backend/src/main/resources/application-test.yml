@@ -1,0 +1,5 @@
+zerowiki:
+  jwt:
+    secret: test-only-zero-wiki-jwt-secret-with-32-bytes-minimum
+  auth:
+    refresh-cookie-secure: false

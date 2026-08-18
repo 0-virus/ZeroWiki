@@ -1,7 +1,7 @@
 # 백엔드 ERD·API 정합성 검증
 
 작성일: 2026-07-27  
-상태: 백엔드 관점 교차 검증  
+상태: M0+M1 backend 구현 기준 재검증 완료(Phase 1 후속 slice는 별도)
 기준 문서:
 - `ZeroWiki-ERD-초안.md`
 - `ZeroWiki-API-명세-초안.md`
@@ -362,18 +362,18 @@ If-Match: "7"  (또는)
 expectedRevision: 4
 ```
 
-**ERD 설계:** 
-- 엔터티별 revision 필드 있는가? → **미정의**
+**ERD 설계:**
+- `libraries`, `change_sets`, `library_constitution_versions`에 `revision`이 정의되어 있다(ERD 4.2·4.6절, 1.8 개정).
 
-**문제:** MAJOR
+**검증 결과:** 해결됨
 
 ERD 초안에서 revision 필드를 명시한 엔터티:
 - `libraries` - 응답에 `revision: 1` 포함 (API 명세 4.1절)
 - `change_sets` - 응답에 `expectedChangeSetRevision` 사용 (API 명세 8.1절)
 
-하지만 ERD 4.2절과 4.6절에서 **revision 또는 version 컬럼이 정의되지 않음**
+초기 검증에서 지적한 revision 부재는 ERD 1.8 개정과 M1 PostgreSQL migration에서 반영했다.
 
-**필요한 스키마 수정:**
+**반영된 스키마:**
 
 ```markdown
 #### `libraries` 추가 컬럼
@@ -408,7 +408,7 @@ ERD 초안에서 revision 필드를 명시한 엔터티:
 - 다른 본문으로 다시 보내면 `409 IDEMPOTENCY_KEY_REUSED`
 
 **ERD 설계:**
-- 멱등성 키 저장 테이블 **미정의**
+- `idempotency_records`가 정의되어 있으며 M1 migration에서 저장 구조를 생성한다(ERD 4.1절, 1.8 개정).
 
 **필요한 스키마 (신규 엔터티):**
 
@@ -421,7 +421,7 @@ ERD 초안에서 revision 필드를 명시한 엔터티:
 | `user_id` | uuid | FK → `users.id` |
 | `idempotency_key` | varchar(255) | UNIQUE(`user_id`, `idempotency_key`) |
 | `request_path` | text | 엔드포인트 경로 |
-| `request_body_hash` | char(64) | SHA-256 (요청 본문) |
+| `request_body_hash` | varchar(64) | SHA-256 (요청 본문) |
 | `response_status` | integer | 응답 상태 코드 |
 | `response_body` | jsonb | 응답 본문 저장 |
 | `created_at` | timestamptz | 생성 시각 |
@@ -730,17 +730,17 @@ GROUP BY operation_type;
 | --- | --- | --- | --- |
 | #5 양방향 매핑 | - | ✓ 양호 | API 구현 가능 |
 | #6 상태 머신 | MINOR | ⚠ 미확정 | risk_level 판정 기준 필요 |
-| #7 동시성 제어 | MAJOR | ❌ 불일치 | revision 필드 추가 필요 |
-| #8 인덱스·쿼리 | MAJOR | ❌ 불일치 | 15개 이상 인덱스 정의 필요 |
+| #7 동시성 제어 | MAJOR | ✓ M0+M1 해결 | core revision·expected version 반영, 후속 ChangeSet 범위 남음 |
+| #8 인덱스·쿼리 | MAJOR | ✓ M0+M1 해결 | identity/library core index 반영, 후속 전체 엔터티 범위 남음 |
 
 ### 5.2 구현 차단 사항
 
-**BLOCKER 없음** - 모든 불일치는 ERD 업데이트로 해결 가능
+**M0+M1 BLOCKER 없음** - core migration과 계약 drift는 ERD 1.8/1.9 및 구현에 반영했다. 전체 Phase 1 후속 엔터티 검증은 각 slice에서 갱신한다.
 
-**MAJOR (즉시 수정 필요):**
-1. revision 필드 추가 (libraries, change_sets, library_constitution_versions)
-2. idempotency_records 엔터티 신규 추가
-3. 복합 인덱스 15개 이상 정의
+**후속 범위:**
+1. ChangeSet·library version의 전체 revision/apply 경로
+2. idempotency_records의 실제 API 재생 동작
+3. source/knowledge/search 후속 엔터티의 복합 인덱스
 
 ---
 
@@ -922,7 +922,7 @@ GROUP BY operation_type;
 **qa 권고:** 콘텐츠 해시 + 외부 ID 결합
 
 **ERD 설계 확인 (4.3절):**
-- `source_versions.content_hash` (char(64) SHA-256) — 247행
+- `source_versions.content_hash` (varchar(64) SHA-256) — 247행
 - `source_versions.source_metadata` (jsonb) — 외부 ID 저장 가능 — 239행
 - `sources.owner_id` (FK) — 사용자 식별 — 213행
 - 인덱스: `(content_hash)` 이미 정의 — 5.1절 755행
@@ -1378,4 +1378,39 @@ python -B qa/verify_phase0_benchmark.py ... --expected-documents 100
 - UD-29 결과 전까지 Claim 자동 동일성 판정·자동 `claim_key` 매칭은 금지한다. 현재 generated claim ID는 평가 조인용이며 production identity가 아니다.
 - UD-11은 중요한 주장만 생성하는 기준선(100문서에서 7,501 관측 문장 대비 100 important claims)으로 기록한다. UD-25의 p95는 Phase 1 integration에서 citation·검색을 포함해 재검증한다.
 - 누락 원본 17건과 relation 제외 분모 11건은 성공으로 위장하지 않는다. AC-5 조인은 QA 출력 구조를 통과했지만 원본 Claim의 실서비스 대응은 별도 근거 manifest가 필요하다.
+
+---
+
+## 11. 2026-08-12 M0+M1 backend 재검증
+
+### 11.1 ERD·계약 drift 해소
+
+M1 migration과 구현은 다음 세 가지 drift를 ERD 1.8 및 상위 API/요구사항 정본에 맞춰 해소했다.
+
+| 항목 | 기존 ERD 표현 | 현재 정합 표현 | 근거 |
+| --- | --- | --- | --- |
+| claim wire status | `AI_INFERENCE` | `AI_SYNTHESIS` | API 명세 2.8 |
+| review decision | `REQUEST_REVISION` | `REQUEST_CHANGES` | API 명세 8.1 |
+| constitution 저장 | scalar 운영 헌법 fields | `constitution_document jsonb` | 요구사항 UD-15·schema v1 |
+
+`backend/contracts/library-constitution.schema.json`은 12개 top-level field와 nested `additionalProperties=false`를 유지한다. onboarding의 `sourceTypes`는 기존 `sourcePolicy.priority`, `trustedSources`와 `cautionAreas`는 `naturalLanguageRules` 문자열로 보존해 schema를 임의 확장하지 않는다.
+
+### 11.2 M1 구현 계약 검증
+
+- `POST /auth/sign-up`은 201 account `data`만 반환하며 refresh cookie/session을 발급하지 않는다. login/refresh만 토큰을 발급한다.
+- logout-all은 인증 필요이며, bearer token은 `auth_sessions`의 matching user/session·ACTIVE·non-revoked·unexpired 조건을 통과해야 한다.
+- `GET /libraries/{libraryId}`의 `home`은 topics/recentRelations/openQuestions/knowledgeGaps/recentActivities 빈 배열과 두 count 0을 항상 포함한다. create 응답은 `currentVersion: null`, zero counts를 포함하고 PRIVATE를 기본값으로 사용한다.
+- 모든 library constitution/reference 조회는 owner 경계를 확인하며 reference는 source→target 단방향이다.
+- V1은 PostgreSQL `email varchar(320)`과 `lower(email)` unique index를 사용하고 citext extension 권한을 요구하지 않는다. constitution version UPDATE/DELETE는 trigger로 거부한다.
+
+### 11.3 실행 검증
+
+```text
+backend\gradlew.bat -g %LOCALAPPDATA%\ZeroWiki-Gradle-9.7 clean test --no-daemon --non-interactive --console=plain
+→ exit 0; Gradle 9.7.0, Java 21.0.10; 15 suites / 39 tests, failures 0, errors 0, skipped 0
+backend\gradlew.bat -g %LOCALAPPDATA%\ZeroWiki-Gradle-9.7 build bootJar --no-daemon --non-interactive --console=plain
+→ exit 0; build 및 executable bootJar 생성
+```
+
+Gradle 전환은 Spring Boot 4.1.0, Java 21, runtime/test dependency와 `ZeroWikiApplication` main class를 그대로 보존했다. 최신 Phase 1 live evidence는 100문서 `done=100`, `published=100`, `topics=6`, `citations=5`이며, AC-5 Batch 70/70도 별도 validator를 통과했다. production provider/model 승격과 자동 모순 apply는 별도 운영 승인 대상이다.
 
