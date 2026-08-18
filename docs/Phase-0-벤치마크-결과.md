@@ -316,3 +316,45 @@ python -B qa/verify_phase0_benchmark.py `
 오분류는 `CT-017`(gold `VIEWPOINT_DIFF`, prediction `POSSIBLE_CONFLICT`)과
 `CT-021`(gold `POSSIBLE_CONFLICT`, prediction `NO_CONFLICT`) 두 건뿐이다. 이 실행은
 개발 비교 gate PASS를 의미하지만, holdout은 실행하지 않았고 production 승격을 확정하지 않는다.
+
+### 9-7. GPT-5.6 Sol holdout Batch 실행 결과
+
+holdout 70건은 `rubric-context-v3` 입력으로 OpenAI Batch `/v1/responses`에 tranche 단위로
+제출했다. JSONL은 `custom_id=HT-NNN`, `purpose=batch`, `completion_window=24h`,
+`store=false`, strict JSON schema를 사용하며, gold classification·`판단_이유`·source reference와
+case ID는 prompt에 넣지 않는다. API 응답 원문은 저장하지 않고 aggregate usage와 기존
+`openai-predictions.csv` dense contract만 기록한다. 실패·누락 case도 FAILED 행으로 보존한다.
+
+```powershell
+python -B backend/scripts/openai_batch_holdout.py `
+  --benchmark-input evaluation/contradiction-holdout-input.csv `
+  --gold-labels qa/contradiction-holdout-gold.csv `
+  --output-dir evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1 `
+  --offset 0 --limit 20 --max-output-tokens 256 --max-cost-usd 0.24356 `
+  --self-check
+
+# 실제 제출은 같은 명령에서 --self-check를 제거하고, 각 offset/limit tranche를
+# 한 번 제출한 뒤 같은 명령을 반복해 poll/collect한다. API key는 .env에서만 읽는다.
+python -B backend/scripts/openai_batch_holdout.py `
+  --benchmark-input evaluation/contradiction-holdout-input.csv `
+  --gold-labels qa/contradiction-holdout-gold.csv `
+  --output-dir evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1 `
+  --offset 0 --limit 20 --max-output-tokens 256 --max-cost-usd 0.24356
+
+python -B qa/verify_phase0_benchmark.py `
+  --manifest evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-manifest.json `
+  --generated-claims evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-generated-claims.csv `
+  --benchmark-output evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/phase0-benchmark.csv `
+  --dense-predictions evaluation/results/phase1-holdout-gpt-5_6-sol-batch-r1/openai-predictions.csv `
+  --holdout-input evaluation/contradiction-holdout-input.csv `
+  --holdout-labels qa/contradiction-holdout-gold.csv `
+  --expected-documents 70
+```
+
+실행 결과는 `7`개 Batch state를 합쳐 distinct case ID `70`건 중 `70/70 completed`,
+`failed=0`이다. usage는 input `53,504`, output `5,136` tokens이고 Batch 50% 가격 기준
+실제 비용은 `$0.2108`로 잔여 hard cap `$0.24356` 이하이다. QA validator 결과:
+`BENCHMARK_METRICS expected=70 completed=70 completion_rate=1.000`,
+`DENSE_METRICS expected=70 completed=70 failed=0`, `RESULT PASS failures=0`.
+Preflight는 `BATCH_PREFLIGHT cases=20 bytes=79336 reservation_usd=0.11736250`을 반환했고,
+각 제출 전 tranche worst reservation이 hard cap 잔액을 넘으면 중단한다.

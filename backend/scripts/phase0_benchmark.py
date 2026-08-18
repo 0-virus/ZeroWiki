@@ -119,6 +119,8 @@ OPENAI_PREDICTION_HEADER = [
 ]
 OPENAI_BENCHMARK_MODEL = "gpt-5.6-sol"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
+OPENAI_FILES_URL = "https://api.openai.com/v1/files"
+OPENAI_BATCHES_URL = "https://api.openai.com/v1/batches"
 OPENAI_INPUT_USD_PER_MILLION = 5.0
 OPENAI_OUTPUT_USD_PER_MILLION = 30.0
 OPENAI_MAX_OUTPUT_TOKENS = 256
@@ -856,22 +858,24 @@ def build_openai_prompt(
             "claim_A": {
                 "statement": claim_a,
                 "time_or_version": context.get(
-                    "claim_A_time_or_version", "NOT_PROVIDED"
+                    "claim_A_time_or_version", context.get("time_or_version", "NOT_PROVIDED")
                 ).strip()
                 or "NOT_PROVIDED",
                 "environment_or_condition": context.get(
-                    "claim_A_environment_or_condition", "NOT_PROVIDED"
+                    "claim_A_environment_or_condition",
+                    context.get("environment_or_condition", "NOT_PROVIDED"),
                 ).strip()
                 or "NOT_PROVIDED",
             },
             "claim_B": {
                 "statement": claim_b,
                 "time_or_version": context.get(
-                    "claim_B_time_or_version", "NOT_PROVIDED"
+                    "claim_B_time_or_version", context.get("time_or_version", "NOT_PROVIDED")
                 ).strip()
                 or "NOT_PROVIDED",
                 "environment_or_condition": context.get(
-                    "claim_B_environment_or_condition", "NOT_PROVIDED"
+                    "claim_B_environment_or_condition",
+                    context.get("environment_or_condition", "NOT_PROVIDED"),
                 ).strip()
                 or "NOT_PROVIDED",
             },
@@ -882,6 +886,45 @@ def build_openai_prompt(
             input_payload, ensure_ascii=False, separators=(",", ":")
         )
     return rubric + "\nA: " + claim_a + "\nB: " + claim_b
+
+
+def contradiction_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "classification": {"type": "string", "enum": sorted(CLASSIFICATIONS)},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        },
+        "required": ["classification", "confidence"],
+        "additionalProperties": False,
+    }
+
+
+def build_openai_request_body(
+    prompt: str,
+    schema: dict[str, Any],
+    *,
+    max_output_tokens: int = OPENAI_MAX_OUTPUT_TOKENS,
+    system_prompt: str = OPENAI_SYSTEM_PROMPT,
+) -> dict[str, Any]:
+    """Sync Responses와 Batch `/v1/responses`가 공유하는 요청 body."""
+    return {
+        "model": OPENAI_BENCHMARK_MODEL,
+        "store": False,
+        "input": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        "max_output_tokens": max_output_tokens,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "contradiction_classification",
+                "strict": True,
+                "schema": schema,
+            }
+        },
+    }
 
 
 def openai_json(
@@ -896,23 +939,12 @@ def openai_json(
     request = urllib.request.Request(
         OPENAI_RESPONSES_URL,
         data=json.dumps(
-            {
-                "model": OPENAI_BENCHMARK_MODEL,
-                "store": False,
-                "input": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-                "max_output_tokens": max_output_tokens,
-                "text": {
-                    "format": {
-                        "type": "json_schema",
-                        "name": "contradiction_classification",
-                        "strict": True,
-                        "schema": schema,
-                    }
-                },
-            },
+            build_openai_request_body(
+                prompt,
+                schema,
+                max_output_tokens=max_output_tokens,
+                system_prompt=system_prompt,
+            ),
             ensure_ascii=False,
         ).encode("utf-8"),
         headers={
@@ -1440,7 +1472,7 @@ def execute_openai_contradictions(args: argparse.Namespace) -> None:
         label_ids = {row["case_id"] for row in labels}
         if set(contexts) != label_ids:
             raise HarnessError("context case_id 집합이 labels와 다름")
-    elif prompt_variant == "rubric-context-v3":
+    elif prompt_variant == "rubric-context-v3" and not args.benchmark_input:
         contexts = load_contexts_v3(args.openai_contexts)
         label_ids = {row["case_id"] for row in labels}
         if set(contexts) != label_ids:
@@ -1460,15 +1492,7 @@ def execute_openai_contradictions(args: argparse.Namespace) -> None:
     output = args.openai_output_dir
     output.mkdir(parents=True, exist_ok=True)
 
-    contradiction_schema = {
-        "type": "object",
-        "properties": {
-            "classification": {"type": "string", "enum": sorted(CLASSIFICATIONS)},
-            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-        },
-        "required": ["classification", "confidence"],
-        "additionalProperties": False,
-    }
+    contradiction_output_schema = contradiction_schema()
     prompt_specs = []
     for label in labels:
         prompt = build_openai_prompt(label, prompt_variant, contexts.get(label["case_id"]))
@@ -1535,7 +1559,7 @@ def execute_openai_contradictions(args: argparse.Namespace) -> None:
                     result, attempt_records = openai_json_with_retry(
                         api_key,
                         spec["prompt"],
-                        contradiction_schema,
+                        contradiction_output_schema,
                         expected_input_tokens=expected_input_tokens,
                         budget_usd=args.max_cost_usd
                         - actual_cost_total
@@ -2099,6 +2123,26 @@ def self_check() -> None:
             assert "SELF_CHECK_GOLD" not in holdout_prompt
             assert "판단_이유" not in holdout_prompt
             assert "source_ref" not in holdout_prompt
+            holdout_v3_prompt = build_openai_prompt(
+                joined[0], "rubric-context-v3", holdout_contexts[joined[0]["case_id"]]
+            )
+            holdout_v3_payload = json.loads(
+                holdout_v3_prompt.split("\nInput JSON:\n", 1)[1]
+            )
+            first_holdout_context = holdout_contexts[joined[0]["case_id"]]
+            assert holdout_v3_payload["claim_A"]["time_or_version"] == first_holdout_context["time_or_version"]
+            assert holdout_v3_payload["claim_B"]["time_or_version"] == first_holdout_context["time_or_version"]
+            assert holdout_v3_payload["claim_A"]["environment_or_condition"] == first_holdout_context[
+                "environment_or_condition"
+            ]
+            assert holdout_v3_payload["claim_B"]["environment_or_condition"] == first_holdout_context[
+                "environment_or_condition"
+            ]
+            assert holdout_v3_payload["subject"] == first_holdout_context["subject"]
+            assert joined[0]["case_id"] not in holdout_v3_prompt
+            assert "SELF_CHECK_GOLD" not in holdout_v3_prompt
+            assert "판단_이유" not in holdout_v3_prompt
+            assert "source_ref" not in holdout_v3_prompt
 
 
 def parse_args() -> argparse.Namespace:

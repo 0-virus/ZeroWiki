@@ -1,0 +1,1553 @@
+{
+  "schema_version": 1,
+  "manifest_id": "sha256:ae94d6bf59f942eadb8ed7a1ee6cab1fbf381308110b6567d23f6406639fa14b",
+  "generated_at": "2026-08-12T10:34:10.534411+00:00",
+  "run_id": "phase1-holdout-gpt-5_6-sol-batch-r1",
+  "case_count": 70,
+  "cases": [
+    {
+      "case_id": "HT-001",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-001-a",
+          "page_slug": "seed-ht-001-a",
+          "claim_id": "gold-ht-001-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-001-b",
+          "page_slug": "seed-ht-001-b",
+          "claim_id": "gold-ht-001-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "Servlet 스펙은 원래 Oracle(Sun)이 Java EE 일부로 관리했다",
+        "claim_b_statement": "Servlet 스펙은 현재 Jakarta EE가 이어받았다"
+      },
+      "generated_claim_ids": [
+        "claim-ded018a8fc488de1",
+        "claim-44963b20f87f69c4"
+      ]
+    },
+    {
+      "case_id": "HT-002",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-002-a",
+          "page_slug": "seed-ht-002-a",
+          "claim_id": "gold-ht-002-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-002-b",
+          "page_slug": "seed-ht-002-b",
+          "claim_id": "gold-ht-002-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Outbox는 DB 변경과 외부 메시지를 같은 로컬 트랜잭션에 기록한다",
+        "claim_b_statement": "최종 일관성은 재시도가 성공하면 시스템 상태가 결국 수렴한다고 설명한다"
+      },
+      "generated_claim_ids": [
+        "claim-9b95cb12b88827c9",
+        "claim-4aa12b84ddc51ca6"
+      ]
+    },
+    {
+      "case_id": "HT-003",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-003-a",
+          "page_slug": "seed-ht-003-a",
+          "claim_id": "gold-ht-003-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-003-b",
+          "page_slug": "seed-ht-003-b",
+          "claim_id": "gold-ht-003-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "Promise는 ES6에서 비동기 작업의 성공·실패와 결과를 담는 객체로 등장했다",
+        "claim_b_statement": "async/await은 ES2017에 등장해 Promise를 동기 코드처럼 읽히게 했다"
+      },
+      "generated_claim_ids": [
+        "claim-76590c781f7ee2e8",
+        "claim-bf14a615635b387e"
+      ]
+    },
+    {
+      "case_id": "HT-004",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-004-a",
+          "page_slug": "seed-ht-004-a",
+          "claim_id": "gold-ht-004-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-004-b",
+          "page_slug": "seed-ht-004-b",
+          "claim_id": "gold-ht-004-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "Spring Boot 2.x까지 Servlet API 패키지는 javax.servlet.*였다",
+        "claim_b_statement": "Spring Boot 3.x부터 Servlet API 패키지는 jakarta.servlet.*로 바뀌었다"
+      },
+      "generated_claim_ids": [
+        "claim-8c290910eaaadaac",
+        "claim-5ee295442599f370"
+      ]
+    },
+    {
+      "case_id": "HT-005",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-005-a",
+          "page_slug": "seed-ht-005-a",
+          "claim_id": "gold-ht-005-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-005-b",
+          "page_slug": "seed-ht-005-b",
+          "claim_id": "gold-ht-005-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "Spring Framework 5.0은 2017년에 Reactive와 Kotlin을 도입했다",
+        "claim_b_statement": "Spring Framework 6.0은 2022년에 Java 17 최소 버전과 Jakarta EE 전환을 가져왔다"
+      },
+      "generated_claim_ids": [
+        "claim-12322e49dbdbbeb5",
+        "claim-d02bc98f357582f9"
+      ]
+    },
+    {
+      "case_id": "HT-006",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-006-a",
+          "page_slug": "seed-ht-006-a",
+          "claim_id": "gold-ht-006-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-006-b",
+          "page_slug": "seed-ht-006-b",
+          "claim_id": "gold-ht-006-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "데이터베이스 마이그레이션은 스키마 변경 이력을 버전으로 관리한다",
+        "claim_b_statement": "Flyway는 데이터베이스 마이그레이션 도구다"
+      },
+      "generated_claim_ids": [
+        "claim-6d91fad6c66f0a5a",
+        "claim-366fe2a187075372"
+      ]
+    },
+    {
+      "case_id": "HT-007",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-007-a",
+          "page_slug": "seed-ht-007-a",
+          "claim_id": "gold-ht-007-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-007-b",
+          "page_slug": "seed-ht-007-b",
+          "claim_id": "gold-ht-007-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "Filter는 Spring DispatcherServlet 뒤에서만 동작한다",
+        "claim_b_statement": "Spring Security는 Controller에 도착하기 전 Filter 체인에서 보안을 검사한다"
+      },
+      "generated_claim_ids": [
+        "claim-6a92a5f2d0bfc29d",
+        "claim-bfe87114755cd6fd"
+      ]
+    },
+    {
+      "case_id": "HT-008",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-008-a",
+          "page_slug": "seed-ht-008-a",
+          "claim_id": "gold-ht-008-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-008-b",
+          "page_slug": "seed-ht-008-b",
+          "claim_id": "gold-ht-008-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "SOP는 CORS가 허용한 교차 출처 요청도 항상 차단한다",
+        "claim_b_statement": "CORS는 서버가 허용한 다른 출처 요청을 조건부로 통과시킨다"
+      },
+      "generated_claim_ids": [
+        "claim-b195e888830346c7",
+        "claim-2d08551afde488bd"
+      ]
+    },
+    {
+      "case_id": "HT-009",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-009-a",
+          "page_slug": "seed-ht-009-a",
+          "claim_id": "gold-ht-009-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-009-b",
+          "page_slug": "seed-ht-009-b",
+          "claim_id": "gold-ht-009-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "HTTP GET은 서버의 리소스를 반드시 변경한다",
+        "claim_b_statement": "REST에서 GET은 리소스를 조회하는 메서드로 사용한다"
+      },
+      "generated_claim_ids": [
+        "claim-2d1a6266b111a1ab",
+        "claim-cb5f31c7353e07fc"
+      ]
+    },
+    {
+      "case_id": "HT-010",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-010-a",
+          "page_slug": "seed-ht-010-a",
+          "claim_id": "gold-ht-010-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-010-b",
+          "page_slug": "seed-ht-010-b",
+          "claim_id": "gold-ht-010-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "ETag는 캐시된 표현의 버전을 검증하는 식별자다",
+        "claim_b_statement": "Cache-Control은 브라우저가 응답을 재사용할 정책을 정한다"
+      },
+      "generated_claim_ids": [
+        "claim-f8112d578688d5bf",
+        "claim-da31f1e2f54e3ab9"
+      ]
+    },
+    {
+      "case_id": "HT-011",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-011-a",
+          "page_slug": "seed-ht-011-a",
+          "claim_id": "gold-ht-011-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-011-b",
+          "page_slug": "seed-ht-011-b",
+          "claim_id": "gold-ht-011-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "Forward는 브라우저가 새 요청을 보내 URL을 바꾼다",
+        "claim_b_statement": "Redirect는 서버 내부에서 브라우저 모르게 이동한다"
+      },
+      "generated_claim_ids": [
+        "claim-b6e93ac34152da93",
+        "claim-ed425f939802d7d1"
+      ]
+    },
+    {
+      "case_id": "HT-012",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-012-a",
+          "page_slug": "seed-ht-012-a",
+          "claim_id": "gold-ht-012-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-012-b",
+          "page_slug": "seed-ht-012-b",
+          "claim_id": "gold-ht-012-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Forward는 서버 내부에서 다음 자원으로 넘긴다",
+        "claim_b_statement": "Redirect는 브라우저가 Location을 받아 다시 요청한다"
+      },
+      "generated_claim_ids": [
+        "claim-16f147cd045a362c",
+        "claim-ede1438670d04fe9"
+      ]
+    },
+    {
+      "case_id": "HT-013",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-013-a",
+          "page_slug": "seed-ht-013-a",
+          "claim_id": "gold-ht-013-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-013-b",
+          "page_slug": "seed-ht-013-b",
+          "claim_id": "gold-ht-013-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "커넥션 풀은 요청마다 새 DB Connection을 만든다",
+        "claim_b_statement": "커넥션 풀은 미리 만든 Connection을 빌려주고 반납받는다"
+      },
+      "generated_claim_ids": [
+        "claim-a356de1dc0a37712",
+        "claim-7f45d8009b5cd371"
+      ]
+    },
+    {
+      "case_id": "HT-014",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-014-a",
+          "page_slug": "seed-ht-014-a",
+          "claim_id": "gold-ht-014-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-014-b",
+          "page_slug": "seed-ht-014-b",
+          "claim_id": "gold-ht-014-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "스레드 풀은 스레드 생성 비용을 줄이기 위해 스레드를 재사용한다",
+        "claim_b_statement": "커넥션 풀은 DB Connection을 자원 캐시로 재사용한다"
+      },
+      "generated_claim_ids": [
+        "claim-a4cfc9a4d07139f2",
+        "claim-06061d962bea9743"
+      ]
+    },
+    {
+      "case_id": "HT-015",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-015-a",
+          "page_slug": "seed-ht-015-a",
+          "claim_id": "gold-ht-015-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-015-b",
+          "page_slug": "seed-ht-015-b",
+          "claim_id": "gold-ht-015-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "인덱스가 없으면 조건에 맞는 행을 찾을 때 전체 행을 확인할 수 있다",
+        "claim_b_statement": "인덱스는 정렬된 구조로 탐색 범위를 줄인다"
+      },
+      "generated_claim_ids": [
+        "claim-d2bbc6eb85e10540",
+        "claim-349f97e61d5ad7cf"
+      ]
+    },
+    {
+      "case_id": "HT-016",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-016-a",
+          "page_slug": "seed-ht-016-a",
+          "claim_id": "gold-ht-016-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-016-b",
+          "page_slug": "seed-ht-016-b",
+          "claim_id": "gold-ht-016-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "EXPLAIN은 쿼리가 사용할 실행 계획을 보여준다",
+        "claim_b_statement": "인덱스가 실제로 선택됐는지는 EXPLAIN으로 진단할 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-d29635a4c80da2f2",
+        "claim-4098ca579ea864da"
+      ]
+    },
+    {
+      "case_id": "HT-017",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-017-a",
+          "page_slug": "seed-ht-017-a",
+          "claim_id": "gold-ht-017-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-017-b",
+          "page_slug": "seed-ht-017-b",
+          "claim_id": "gold-ht-017-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "카디널리티가 낮아도 인덱스는 모든 조회를 항상 빠르게 만든다",
+        "claim_b_statement": "낮은 카디널리티에서는 인덱스 이점이 사라질 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-15de355f6b0d346b",
+        "claim-f3eebb8313d6b44a"
+      ]
+    },
+    {
+      "case_id": "HT-018",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-018-a",
+          "page_slug": "seed-ht-018-a",
+          "claim_id": "gold-ht-018-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-018-b",
+          "page_slug": "seed-ht-018-b",
+          "claim_id": "gold-ht-018-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "커버링 인덱스는 모든 쿼리에서 반드시 테이블 접근을 없앤다",
+        "claim_b_statement": "커버링 인덱스라도 조회 열과 조건에 따라 적용되지 않을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-4f940266616e0262",
+        "claim-d22b19c23b80619a"
+      ]
+    },
+    {
+      "case_id": "HT-019",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-019-a",
+          "page_slug": "seed-ht-019-a",
+          "claim_id": "gold-ht-019-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-019-b",
+          "page_slug": "seed-ht-019-b",
+          "claim_id": "gold-ht-019-b"
+        },
+        "classification": "TRUE_CONFLICT",
+        "claim_a_statement": "낙관적 락은 충돌을 막기 위해 항상 데이터베이스 행을 먼저 잠근다",
+        "claim_b_statement": "낙관적 락은 버전 충돌을 저장 시점에 감지한다"
+      },
+      "generated_claim_ids": [
+        "claim-16bf3ed240cbb9f6",
+        "claim-32b41d961e26f1eb"
+      ]
+    },
+    {
+      "case_id": "HT-020",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-020-a",
+          "page_slug": "seed-ht-020-a",
+          "claim_id": "gold-ht-020-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-020-b",
+          "page_slug": "seed-ht-020-b",
+          "claim_id": "gold-ht-020-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "ddl-auto: update는 로컬 개발에서 부족한 테이블과 컬럼을 추가한다",
+        "claim_b_statement": "ddl-auto: validate는 운영에서 스키마를 바꾸지 않고 불일치만 검증한다"
+      },
+      "generated_claim_ids": [
+        "claim-5474272ae3b544a8",
+        "claim-3d18c3ca937cb3dc"
+      ]
+    },
+    {
+      "case_id": "HT-021",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-021-a",
+          "page_slug": "seed-ht-021-a",
+          "claim_id": "gold-ht-021-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-021-b",
+          "page_slug": "seed-ht-021-b",
+          "claim_id": "gold-ht-021-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "10:00:00에는 내부 DB 변경과 Outbox 메시지 생성이 커밋된다",
+        "claim_b_statement": "10:00:15에 재시도가 성공하면 외부 시스템에도 변경이 반영된다"
+      },
+      "generated_claim_ids": [
+        "claim-d05831e8d303c557",
+        "claim-846e587cf044fe6e"
+      ]
+    },
+    {
+      "case_id": "HT-022",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-022-a",
+          "page_slug": "seed-ht-022-a",
+          "claim_id": "gold-ht-022-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-022-b",
+          "page_slug": "seed-ht-022-b",
+          "claim_id": "gold-ht-022-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "트랜잭션은 DB 작업을 전부 성공하거나 전부 실패하게 만든다",
+        "claim_b_statement": "Outbox는 DB 변경과 외부 메시지를 같은 로컬 트랜잭션에 저장한다"
+      },
+      "generated_claim_ids": [
+        "claim-047e324069a31a79",
+        "claim-8e49bfd21194dd38"
+      ]
+    },
+    {
+      "case_id": "HT-023",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-023-a",
+          "page_slug": "seed-ht-023-a",
+          "claim_id": "gold-ht-023-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-023-b",
+          "page_slug": "seed-ht-023-b",
+          "claim_id": "gold-ht-023-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "첫 결제 요청에서는 상태 변경과 처리 완료 기록을 같은 트랜잭션으로 커밋한다",
+        "claim_b_statement": "응답 유실 뒤 같은 Idempotency-Key가 재요청되면 서버는 원래 응답을 다시 돌려준다"
+      },
+      "generated_claim_ids": [
+        "claim-58f7d372021cf1ab",
+        "claim-ce0fceba5fc42f7a"
+      ]
+    },
+    {
+      "case_id": "HT-024",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-024-a",
+          "page_slug": "seed-ht-024-a",
+          "claim_id": "gold-ht-024-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-024-b",
+          "page_slug": "seed-ht-024-b",
+          "claim_id": "gold-ht-024-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "멱등성 키는 이미 처리한 요청을 기록해 재시도를 안전하게 만든다",
+        "claim_b_statement": "응답 유실 뒤 호출자는 같은 요청을 다시 보낼 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-9573957e52c65d17",
+        "claim-238dc4b3d65008c0"
+      ]
+    },
+    {
+      "case_id": "HT-025",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-025-a",
+          "page_slug": "seed-ht-025-a",
+          "claim_id": "gold-ht-025-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-025-b",
+          "page_slug": "seed-ht-025-b",
+          "claim_id": "gold-ht-025-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "로그인 뒤 서버는 Access Token과 Refresh Token을 발급한다",
+        "claim_b_statement": "Access Token이 만료된 뒤 클라이언트는 Refresh Token으로 새 Access Token을 요청한다"
+      },
+      "generated_claim_ids": [
+        "claim-aec8b03c570f5e2f",
+        "claim-a659f27e6b76de82"
+      ]
+    },
+    {
+      "case_id": "HT-026",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-026-a",
+          "page_slug": "seed-ht-026-a",
+          "claim_id": "gold-ht-026-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-026-b",
+          "page_slug": "seed-ht-026-b",
+          "claim_id": "gold-ht-026-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "JDBC 직접 연결에서 Connection을 닫지 않으면 DB max_connections를 소진할 수 있다",
+        "claim_b_statement": "Connection Pool에서 Connection을 닫지 않으면 maximumPoolSize가 소진되어 timeout된다"
+      },
+      "generated_claim_ids": [
+        "claim-5123cd0e727164f6",
+        "claim-527cb7cdd224e79f"
+      ]
+    },
+    {
+      "case_id": "HT-027",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-027-a",
+          "page_slug": "seed-ht-027-a",
+          "claim_id": "gold-ht-027-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-027-b",
+          "page_slug": "seed-ht-027-b",
+          "claim_id": "gold-ht-027-b"
+        },
+        "classification": "TIME_CHANGE",
+        "claim_a_statement": "Spring과 Tomcat을 따로 쓰던 배포에서는 .war를 Tomcat의 webapps에 올렸다",
+        "claim_b_statement": "Spring Boot 방식에서는 .jar를 빌드해 java -jar로 실행한다"
+      },
+      "generated_claim_ids": [
+        "claim-96a32ff0a07004cb",
+        "claim-9cc8a78f5f277256"
+      ]
+    },
+    {
+      "case_id": "HT-028",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-028-a",
+          "page_slug": "seed-ht-028-a",
+          "claim_id": "gold-ht-028-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-028-b",
+          "page_slug": "seed-ht-028-b",
+          "claim_id": "gold-ht-028-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Forward Proxy는 클라이언트의 외부 IP 노출을 줄일 수 있다",
+        "claim_b_statement": "Reverse Proxy는 외부에 실제 백엔드 대신 프록시만 보이게 할 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-d65cc26b06346b24",
+        "claim-3e960aaa0d46bccb"
+      ]
+    },
+    {
+      "case_id": "HT-029",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-029-a",
+          "page_slug": "seed-ht-029-a",
+          "claim_id": "gold-ht-029-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-029-b",
+          "page_slug": "seed-ht-029-b",
+          "claim_id": "gold-ht-029-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "Vertical Scaling은 한 서버의 CPU와 RAM과 디스크를 키우는 방법이다",
+        "claim_b_statement": "Horizontal Scaling은 여러 서버를 추가하고 Load Balancer로 요청을 나누는 방법이다"
+      },
+      "generated_claim_ids": [
+        "claim-8ff6a7a46df0bfec",
+        "claim-a7c845079f876572"
+      ]
+    },
+    {
+      "case_id": "HT-030",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-030-a",
+          "page_slug": "seed-ht-030-a",
+          "claim_id": "gold-ht-030-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-030-b",
+          "page_slug": "seed-ht-030-b",
+          "claim_id": "gold-ht-030-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Nginx는 웹 서버 역할을 할 수 있다",
+        "claim_b_statement": "Nginx는 리버스 프록시와 로드 밸런서 역할도 할 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-7610fb559d8700fb",
+        "claim-7a279c6de7b01428"
+      ]
+    },
+    {
+      "case_id": "HT-031",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-031-a",
+          "page_slug": "seed-ht-031-a",
+          "claim_id": "gold-ht-031-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-031-b",
+          "page_slug": "seed-ht-031-b",
+          "claim_id": "gold-ht-031-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "MyBatis는 개발자가 직접 SQL을 작성해 복잡한 쿼리를 통제한다",
+        "claim_b_statement": "JPA는 객체 모델을 기준으로 SQL 생성을 프레임워크에 맡긴다"
+      },
+      "generated_claim_ids": [
+        "claim-212bc7480593c276",
+        "claim-7aa98f05d9209f26"
+      ]
+    },
+    {
+      "case_id": "HT-032",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-032-a",
+          "page_slug": "seed-ht-032-a",
+          "claim_id": "gold-ht-032-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-032-b",
+          "page_slug": "seed-ht-032-b",
+          "claim_id": "gold-ht-032-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "JPA는 객체와 관계형 DB 매핑 규칙을 정의하는 명세다",
+        "claim_b_statement": "MyBatis는 XML이나 어노테이션의 SQL을 실행하도록 연결한다"
+      },
+      "generated_claim_ids": [
+        "claim-7f3f514c4c5e4d56",
+        "claim-b4c3fcf2e952a0ca"
+      ]
+    },
+    {
+      "case_id": "HT-033",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-033-a",
+          "page_slug": "seed-ht-033-a",
+          "claim_id": "gold-ht-033-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-033-b",
+          "page_slug": "seed-ht-033-b",
+          "claim_id": "gold-ht-033-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "PoC와 소규모 검색에서는 Chroma의 로컬 파일 구성이 충분하다",
+        "claim_b_statement": "기존 PostgreSQL을 사용하는 팀에서는 pgvector 통합이 운영을 단순화한다"
+      },
+      "generated_claim_ids": [
+        "claim-5915a01a0193528e",
+        "claim-bc78af672ca3427a"
+      ]
+    },
+    {
+      "case_id": "HT-034",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-034-a",
+          "page_slug": "seed-ht-034-a",
+          "claim_id": "gold-ht-034-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-034-b",
+          "page_slug": "seed-ht-034-b",
+          "claim_id": "gold-ht-034-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "QueryDSL은 Java 코드로 타입 안전한 쿼리를 조립한다",
+        "claim_b_statement": "JPQL은 엔티티 객체를 대상으로 하는 객체 지향 쿼리다"
+      },
+      "generated_claim_ids": [
+        "claim-4d0a6ae98fb66e01",
+        "claim-b5ef915545013f8e"
+      ]
+    },
+    {
+      "case_id": "HT-035",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-035-a",
+          "page_slug": "seed-ht-035-a",
+          "claim_id": "gold-ht-035-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-035-b",
+          "page_slug": "seed-ht-035-b",
+          "claim_id": "gold-ht-035-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "Cache-Control: private는 개인 브라우저 캐시에만 저장한다",
+        "claim_b_statement": "Cache-Control: public은 proxy 캐시 서버에도 저장을 허용한다"
+      },
+      "generated_claim_ids": [
+        "claim-03a6fb4ae3795df3",
+        "claim-76cf531d2166686f"
+      ]
+    },
+    {
+      "case_id": "HT-036",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-036-a",
+          "page_slug": "seed-ht-036-a",
+          "claim_id": "gold-ht-036-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-036-b",
+          "page_slug": "seed-ht-036-b",
+          "claim_id": "gold-ht-036-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "String Pool은 같은 문자열 리터럴을 공유한다",
+        "claim_b_statement": "String이 불변이기 때문에 문자열 공유 최적화가 가능하다"
+      },
+      "generated_claim_ids": [
+        "claim-6f81938a3032d3c3",
+        "claim-4912f49974d49489"
+      ]
+    },
+    {
+      "case_id": "HT-037",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-037-a",
+          "page_slug": "seed-ht-037-a",
+          "claim_id": "gold-ht-037-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-037-b",
+          "page_slug": "seed-ht-037-b",
+          "claim_id": "gold-ht-037-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "count++처럼 복합 연산의 원자성을 보장하려면 synchronized나 원자 클래스가 필요하다",
+        "claim_b_statement": "단일 상태 플래그는 volatile로 다른 스레드에 변경 가시성을 전달할 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-7581f00882110d04",
+        "claim-f039aeaafd9861a7"
+      ]
+    },
+    {
+      "case_id": "HT-038",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-038-a",
+          "page_slug": "seed-ht-038-a",
+          "claim_id": "gold-ht-038-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-038-b",
+          "page_slug": "seed-ht-038-b",
+          "claim_id": "gold-ht-038-b"
+        },
+        "classification": "CONDITION_DIFF",
+        "claim_a_statement": "작업이 반복되어 스레드 생성 비용을 줄여야 하는 환경에서는 Thread Pool이 미리 만든 Worker를 재사용한다",
+        "claim_b_statement": "비동기 작업의 결과나 예외를 회수해야 하는 환경에서는 ExecutorService의 Future를 사용한다"
+      },
+      "generated_claim_ids": [
+        "claim-ff38b517aac0dfd5",
+        "claim-db0218880b6914c3"
+      ]
+    },
+    {
+      "case_id": "HT-039",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-039-a",
+          "page_slug": "seed-ht-039-a",
+          "claim_id": "gold-ht-039-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-039-b",
+          "page_slug": "seed-ht-039-b",
+          "claim_id": "gold-ht-039-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "JPA는 Entity 필드 중심 유지보수와 DB 벤더 독립성을 우선하는 선택이다",
+        "claim_b_statement": "MyBatis는 개발자가 SQL을 직접 제어해 복잡한 쿼리를 다루는 선택이다"
+      },
+      "generated_claim_ids": [
+        "claim-b9cb493bce5531d1",
+        "claim-a9dcde9771e6fdad"
+      ]
+    },
+    {
+      "case_id": "HT-040",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-040-a",
+          "page_slug": "seed-ht-040-a",
+          "claim_id": "gold-ht-040-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-040-b",
+          "page_slug": "seed-ht-040-b",
+          "claim_id": "gold-ht-040-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "JSON 직렬화는 객체를 전송 가능한 텍스트 표현으로 바꾼다",
+        "claim_b_statement": "역직렬화는 표현을 객체 구조로 복원한다"
+      },
+      "generated_claim_ids": [
+        "claim-5a412c57432ae19c",
+        "claim-283354ba1d2ab0bf"
+      ]
+    },
+    {
+      "case_id": "HT-041",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-041-a",
+          "page_slug": "seed-ht-041-a",
+          "claim_id": "gold-ht-041-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-041-b",
+          "page_slug": "seed-ht-041-b",
+          "claim_id": "gold-ht-041-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "불변 객체는 여러 스레드가 읽을 때 동기화 부담을 줄이는 설계를 강조한다",
+        "claim_b_statement": "가변 객체는 반복 수정에서 중간 객체 생성을 줄이는 설계를 강조한다"
+      },
+      "generated_claim_ids": [
+        "claim-08288306824cb3fd",
+        "claim-ad22ea5074deb26d"
+      ]
+    },
+    {
+      "case_id": "HT-042",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-042-a",
+          "page_slug": "seed-ht-042-a",
+          "claim_id": "gold-ht-042-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-042-b",
+          "page_slug": "seed-ht-042-b",
+          "claim_id": "gold-ht-042-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "Spring Boot는 starter와 자동 설정으로 빠른 기본 실행을 우선하는 접근이다",
+        "claim_b_statement": "순수 Spring 구성은 의존성과 Bean을 직접 지정해 명시적 제어를 우선하는 접근이다"
+      },
+      "generated_claim_ids": [
+        "claim-128391d08ca20cd7",
+        "claim-7380f85bc30481e4"
+      ]
+    },
+    {
+      "case_id": "HT-043",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-043-a",
+          "page_slug": "seed-ht-043-a",
+          "claim_id": "gold-ht-043-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-043-b",
+          "page_slug": "seed-ht-043-b",
+          "claim_id": "gold-ht-043-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "화면 흐름을 단순하게 설명하려는 설계 관점은 MVC의 Controller·View·Model 분리를 강조한다",
+        "claim_b_statement": "변경 영향을 계층별로 격리하려는 설계 관점은 3-tier의 Web·Service·Repository 분리를 강조한다"
+      },
+      "generated_claim_ids": [
+        "claim-8e838a12f54600d1",
+        "claim-8a58e5c7f6aa996d"
+      ]
+    },
+    {
+      "case_id": "HT-044",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-044-a",
+          "page_slug": "seed-ht-044-a",
+          "claim_id": "gold-ht-044-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-044-b",
+          "page_slug": "seed-ht-044-b",
+          "claim_id": "gold-ht-044-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Docker 이미지는 특정 시점의 실행 파일과 설정을 담은 불변 스냅샷이다",
+        "claim_b_statement": "Docker 컨테이너는 이미지를 실행한 뒤 상태가 생기는 인스턴스다"
+      },
+      "generated_claim_ids": [
+        "claim-e1ea6d93c0a22ccc",
+        "claim-eb0d04ec9072a599"
+      ]
+    },
+    {
+      "case_id": "HT-045",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-045-a",
+          "page_slug": "seed-ht-045-a",
+          "claim_id": "gold-ht-045-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-045-b",
+          "page_slug": "seed-ht-045-b",
+          "claim_id": "gold-ht-045-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "Criteria API는 동적 쿼리를 Java 코드로 조립해 타입 안전성을 우선한다",
+        "claim_b_statement": "QueryDSL은 동적 쿼리에서 가독성과 실무 사용성을 우선하는 선택이다"
+      },
+      "generated_claim_ids": [
+        "claim-a300db902ee99bbf",
+        "claim-ac249e5ac3372d5c"
+      ]
+    },
+    {
+      "case_id": "HT-046",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-046-a",
+          "page_slug": "seed-ht-046-a",
+          "claim_id": "gold-ht-046-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-046-b",
+          "page_slug": "seed-ht-046-b",
+          "claim_id": "gold-ht-046-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "HTTP 상태 코드는 응답 상황을 나타내는 세 자리 표준 신호다",
+        "claim_b_statement": "REST API는 HTTP 메서드와 상태 코드의 의미를 활용한다"
+      },
+      "generated_claim_ids": [
+        "claim-e278ce026d8b16be",
+        "claim-1c0585c88bca0415"
+      ]
+    },
+    {
+      "case_id": "HT-047",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-047-a",
+          "page_slug": "seed-ht-047-a",
+          "claim_id": "gold-ht-047-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-047-b",
+          "page_slug": "seed-ht-047-b",
+          "claim_id": "gold-ht-047-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "Proxy를 익명화와 접근 제어를 위한 중간자로 강조할 수 있다",
+        "claim_b_statement": "Proxy를 캐싱과 트래픽 최적화를 위한 중간자로 강조할 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-d03ad00920a644e1",
+        "claim-e75d10f9c7e7b308"
+      ]
+    },
+    {
+      "case_id": "HT-048",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-048-a",
+          "page_slug": "seed-ht-048-a",
+          "claim_id": "gold-ht-048-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-048-b",
+          "page_slug": "seed-ht-048-b",
+          "claim_id": "gold-ht-048-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "RAG는 검색된 외부 문서를 생성 context로 함께 넣는다",
+        "claim_b_statement": "벡터 DB는 query 벡터와 유사한 벡터를 검색한다"
+      },
+      "generated_claim_ids": [
+        "claim-6ae7d765927eadfb",
+        "claim-5dfe9f6e1edb5f31"
+      ]
+    },
+    {
+      "case_id": "HT-049",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-049-a",
+          "page_slug": "seed-ht-049-a",
+          "claim_id": "gold-ht-049-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-049-b",
+          "page_slug": "seed-ht-049-b",
+          "claim_id": "gold-ht-049-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "같은 동시성 제어 비교에서 한 리뷰어는 DB 락 없이 처리량을 높이는 낙관적 락의 장점을 더 중요하게 평가한다",
+        "claim_b_statement": "같은 비교에서 다른 리뷰어는 충돌을 사전에 차단하는 비관적 락의 안정성을 더 중요하게 평가한다"
+      },
+      "generated_claim_ids": [
+        "claim-73aafe6f8dafdc13",
+        "claim-a228f625e1623b1c"
+      ]
+    },
+    {
+      "case_id": "HT-050",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-050-a",
+          "page_slug": "seed-ht-050-a",
+          "claim_id": "gold-ht-050-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-050-b",
+          "page_slug": "seed-ht-050-b",
+          "claim_id": "gold-ht-050-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Embedding은 텍스트를 검색 가능한 벡터 표현으로 바꾼다",
+        "claim_b_statement": "벡터 DB는 그런 임베딩 벡터를 저장하고 검색한다"
+      },
+      "generated_claim_ids": [
+        "claim-d5f67e5828ced397",
+        "claim-cbad1f94fc55dd4e"
+      ]
+    },
+    {
+      "case_id": "HT-051",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-051-a",
+          "page_slug": "seed-ht-051-a",
+          "claim_id": "gold-ht-051-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-051-b",
+          "page_slug": "seed-ht-051-b",
+          "claim_id": "gold-ht-051-b"
+        },
+        "classification": "VIEWPOINT_DIFF",
+        "claim_a_statement": "Last-Modified는 수정 시각을 비교하는 단순한 캐시 검증 방식을 선호할 때 적합하다",
+        "claim_b_statement": "ETag는 버전 해시를 비교해 더 정밀하게 캐시를 검증하는 방식을 선호할 때 적합하다"
+      },
+      "generated_claim_ids": [
+        "claim-a9537ed232301dc5",
+        "claim-08444417a338dbe5"
+      ]
+    },
+    {
+      "case_id": "HT-052",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-052-a",
+          "page_slug": "seed-ht-052-a",
+          "claim_id": "gold-ht-052-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-052-b",
+          "page_slug": "seed-ht-052-b",
+          "claim_id": "gold-ht-052-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "DI는 객체가 필요한 의존성을 외부에서 주입받게 한다",
+        "claim_b_statement": "IoC는 객체 생성과 제어의 책임이 프레임워크로 역전되는 개념이다"
+      },
+      "generated_claim_ids": [
+        "claim-241d3c06129dac5e",
+        "claim-9459b6746a4f326c"
+      ]
+    },
+    {
+      "case_id": "HT-053",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-053-a",
+          "page_slug": "seed-ht-053-a",
+          "claim_id": "gold-ht-053-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-053-b",
+          "page_slug": "seed-ht-053-b",
+          "claim_id": "gold-ht-053-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "Spring Boot 기동 실패는 classpath에 필요한 starter가 없어서 발생했을 수 있다",
+        "claim_b_statement": "같은 기동 실패는 application.properties 조건이 맞지 않아 자동 설정이 꺼져서 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-07d0e5cf92841124",
+        "claim-d8504c5812db63fc"
+      ]
+    },
+    {
+      "case_id": "HT-054",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-054-a",
+          "page_slug": "seed-ht-054-a",
+          "claim_id": "gold-ht-054-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-054-b",
+          "page_slug": "seed-ht-054-b",
+          "claim_id": "gold-ht-054-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Spring Boot는 자동 설정으로 애플리케이션 구성을 줄인다",
+        "claim_b_statement": "Maven은 Java 의존성과 빌드를 자동화하는 도구다"
+      },
+      "generated_claim_ids": [
+        "claim-0a1ae4741d5843cf",
+        "claim-a7f4548bcab4489c"
+      ]
+    },
+    {
+      "case_id": "HT-055",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-055-a",
+          "page_slug": "seed-ht-055-a",
+          "claim_id": "gold-ht-055-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-055-b",
+          "page_slug": "seed-ht-055-b",
+          "claim_id": "gold-ht-055-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "@Transactional 변경이 롤백되지 않은 원인은 checked 예외일 수 있다",
+        "claim_b_statement": "같은 변경이 롤백되지 않은 원인은 호출이 Spring Proxy를 거치지 않은 self-invocation일 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-2662f62f8278acdf",
+        "claim-bd6788fdbbe32969"
+      ]
+    },
+    {
+      "case_id": "HT-056",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-056-a",
+          "page_slug": "seed-ht-056-a",
+          "claim_id": "gold-ht-056-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-056-b",
+          "page_slug": "seed-ht-056-b",
+          "claim_id": "gold-ht-056-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "가변 객체는 생성 후 내부 상태를 바꿀 수 있다",
+        "claim_b_statement": "불변 객체는 생성 후 내부 상태를 바꿀 수 없다"
+      },
+      "generated_claim_ids": [
+        "claim-a8de17b63fd303d9",
+        "claim-b879faabc8112549"
+      ]
+    },
+    {
+      "case_id": "HT-057",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-057-a",
+          "page_slug": "seed-ht-057-a",
+          "claim_id": "gold-ht-057-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-057-b",
+          "page_slug": "seed-ht-057-b",
+          "claim_id": "gold-ht-057-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "Connection timeout은 pool 반납 누락으로 maximumPoolSize가 소진돼 발생했을 수 있다",
+        "claim_b_statement": "같은 timeout은 DB 서버가 max_connections를 넘겨 연결을 거부해 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-a195b0794470ce76",
+        "claim-4c05e40795a18ece"
+      ]
+    },
+    {
+      "case_id": "HT-058",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-058-a",
+          "page_slug": "seed-ht-058-a",
+          "claim_id": "gold-ht-058-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-058-b",
+          "page_slug": "seed-ht-058-b",
+          "claim_id": "gold-ht-058-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "브라우저 SOP는 다른 출처 리소스와의 상호작용을 기본적으로 제한한다",
+        "claim_b_statement": "CORS는 허용된 다른 출처 요청을 조건부로 열 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-d36c2e4109ce48a6",
+        "claim-8b00d1db445aeb9e"
+      ]
+    },
+    {
+      "case_id": "HT-059",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-059-a",
+          "page_slug": "seed-ht-059-a",
+          "claim_id": "gold-ht-059-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-059-b",
+          "page_slug": "seed-ht-059-b",
+          "claim_id": "gold-ht-059-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "브라우저의 CORS 오류는 캐시된 응답에 CORS 허용 헤더가 없어서 발생했을 수 있다",
+        "claim_b_statement": "같은 CORS 오류는 서버의 허용 origin 설정이 요청 출처와 맞지 않아 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-c1b2fb095f8cbc7b",
+        "claim-4f6d9576143193ed"
+      ]
+    },
+    {
+      "case_id": "HT-060",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-060-a",
+          "page_slug": "seed-ht-060-a",
+          "claim_id": "gold-ht-060-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-060-b",
+          "page_slug": "seed-ht-060-b",
+          "claim_id": "gold-ht-060-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "Cache-Control은 캐시 재사용 정책을 전달한다",
+        "claim_b_statement": "ETag는 캐시된 표현이 최신인지 검증하는 버전 도장이다"
+      },
+      "generated_claim_ids": [
+        "claim-0c05004c547eca9a",
+        "claim-b2012bb338aac9f8"
+      ]
+    },
+    {
+      "case_id": "HT-061",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-061-a",
+          "page_slug": "seed-ht-061-a",
+          "claim_id": "gold-ht-061-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-061-b",
+          "page_slug": "seed-ht-061-b",
+          "claim_id": "gold-ht-061-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "Flyway 기동 실패는 이미 적용된 migration 파일의 checksum이 바뀌어서 발생했을 수 있다",
+        "claim_b_statement": "같은 실패는 MySQL URL에 SSL 또는 공개 키 검색 설정이 빠져서 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-1623e570124656bc",
+        "claim-ed768d36463506e7"
+      ]
+    },
+    {
+      "case_id": "HT-062",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-062-a",
+          "page_slug": "seed-ht-062-a",
+          "claim_id": "gold-ht-062-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-062-b",
+          "page_slug": "seed-ht-062-b",
+          "claim_id": "gold-ht-062-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "HTTP 404는 요청한 리소스를 찾지 못한 상태다",
+        "claim_b_statement": "HTTP 500은 서버 내부 오류를 나타내는 상태다"
+      },
+      "generated_claim_ids": [
+        "claim-3e3e2be504b2e9e5",
+        "claim-eb78f88a93c42d0d"
+      ]
+    },
+    {
+      "case_id": "HT-063",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-063-a",
+          "page_slug": "seed-ht-063-a",
+          "claim_id": "gold-ht-063-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-063-b",
+          "page_slug": "seed-ht-063-b",
+          "claim_id": "gold-ht-063-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "JPA 목록 조회 지연은 관계 접근마다 추가 SQL이 나가는 N+1 때문일 수 있다",
+        "claim_b_statement": "같은 지연은 DB Connection Pool 대기가 connectionTimeout에 가까워서 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-897f0a3cc78fdef1",
+        "claim-e468ed6a18681ada"
+      ]
+    },
+    {
+      "case_id": "HT-064",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-064-a",
+          "page_slug": "seed-ht-064-a",
+          "claim_id": "gold-ht-064-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-064-b",
+          "page_slug": "seed-ht-064-b",
+          "claim_id": "gold-ht-064-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "데이터베이스 마이그레이션은 환경별 스키마 상태를 같은 순서로 맞춘다",
+        "claim_b_statement": "Outbox는 DB 변경과 외부 메시지를 로컬 트랜잭션에 함께 기록한다"
+      },
+      "generated_claim_ids": [
+        "claim-821fc93fd1bfe309",
+        "claim-6c7bf1a43597385b"
+      ]
+    },
+    {
+      "case_id": "HT-065",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-065-a",
+          "page_slug": "seed-ht-065-a",
+          "claim_id": "gold-ht-065-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-065-b",
+          "page_slug": "seed-ht-065-b",
+          "claim_id": "gold-ht-065-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "RAG 답변 오류는 관련 chunk를 검색하지 못해서 발생했을 수 있다",
+        "claim_b_statement": "같은 오류는 관련 chunk를 찾았지만 LLM이 근거를 잘못 종합해서 발생했을 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-15919602edfccc4f",
+        "claim-bd043ece38d909e1"
+      ]
+    },
+    {
+      "case_id": "HT-066",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-066-a",
+          "page_slug": "seed-ht-066-a",
+          "claim_id": "gold-ht-066-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-066-b",
+          "page_slug": "seed-ht-066-b",
+          "claim_id": "gold-ht-066-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "영속성 컨텍스트는 엔티티를 보관하는 1차 캐시 작업대다",
+        "claim_b_statement": "EntityManager는 영속성 컨텍스트를 관리한다"
+      },
+      "generated_claim_ids": [
+        "claim-f14825baa77fa0c6",
+        "claim-2641eaec90551b4d"
+      ]
+    },
+    {
+      "case_id": "HT-067",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-067-a",
+          "page_slug": "seed-ht-067-a",
+          "claim_id": "gold-ht-067-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-067-b",
+          "page_slug": "seed-ht-067-b",
+          "claim_id": "gold-ht-067-b"
+        },
+        "classification": "POSSIBLE_CONFLICT",
+        "claim_a_statement": "JDBC 조회 실패는 ResultSet을 순회하는 rs.next 처리 오류 때문일 수 있다",
+        "claim_b_statement": "JDBC 조회 실패는 Connection을 닫지 않아 커넥션 풀이 고갈되었기 때문일 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-94efe3ec743e89c4",
+        "claim-d448fc2e5e93dd26"
+      ]
+    },
+    {
+      "case_id": "HT-068",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-068-a",
+          "page_slug": "seed-ht-068-a",
+          "claim_id": "gold-ht-068-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-068-b",
+          "page_slug": "seed-ht-068-b",
+          "claim_id": "gold-ht-068-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "커넥션 풀은 DB Connection을 빌려주고 반납받는다",
+        "claim_b_statement": "JDBC는 Connection과 PreparedStatement 같은 표준 객체를 제공한다"
+      },
+      "generated_claim_ids": [
+        "claim-eea91fe690d1b236",
+        "claim-e4f5a73648db41cd"
+      ]
+    },
+    {
+      "case_id": "HT-069",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-069-a",
+          "page_slug": "seed-ht-069-a",
+          "claim_id": "gold-ht-069-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-069-b",
+          "page_slug": "seed-ht-069-b",
+          "claim_id": "gold-ht-069-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "HTTP 404는 요청한 리소스를 찾지 못했음을 의미한다",
+        "claim_b_statement": "Docker image는 container 실행에 사용하는 불변 템플릿이다"
+      },
+      "generated_claim_ids": [
+        "claim-2237361ee44b5055",
+        "claim-66569b58088c8546"
+      ]
+    },
+    {
+      "case_id": "HT-070",
+      "gold": {
+        "claim_a": {
+          "page_id": "seed-ht-070-a",
+          "page_slug": "seed-ht-070-a",
+          "claim_id": "gold-ht-070-a"
+        },
+        "claim_b": {
+          "page_id": "seed-ht-070-b",
+          "page_slug": "seed-ht-070-b",
+          "claim_id": "gold-ht-070-b"
+        },
+        "classification": "NO_CONFLICT",
+        "claim_a_statement": "로드 밸런서는 여러 서버 앞에서 요청을 분산한다",
+        "claim_b_statement": "Reverse Proxy는 외부 요청을 받아 내부 서버로 넘길 수 있다"
+      },
+      "generated_claim_ids": [
+        "claim-d061bddc10e36e56",
+        "claim-7ddc48dee2e33f3e"
+      ]
+    }
+  ],
+  "benchmark_kind": "contradiction_holdout",
+  "prompt_variant": "rubric-context-v3-batch",
+  "provider": "openai-batch",
+  "prediction_rows": 70
+}

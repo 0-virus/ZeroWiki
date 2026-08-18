@@ -1,0 +1,21 @@
+{
+  "batch_id": "batch_6a7c3e4dbc748190b109b8cbb11f85c0",
+  "input_file_id": "file-95XvMq4B1gidjh3YMNKx3H",
+  "offset": 65,
+  "limit": 5,
+  "reservation_usd": 0.029359999999999997,
+  "status": "completed",
+  "created_at": 1786527309,
+  "output_file_id": "file-ShbJMhXHdXZ8hzMTWLKwaR",
+  "error_file_id": null,
+  "completed_at": 1786530618,
+  "request_counts": {
+    "total": 5,
+    "completed": 5,
+    "failed": 0
+  },
+  "actual_input_tokens": 3720,
+  "actual_output_tokens": 203,
+  "actual_cost_usd": 0.012345,
+  "collected": true
+}

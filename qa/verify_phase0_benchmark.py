@@ -27,6 +27,7 @@ except ModuleNotFoundError:  # pragma: no cover - supports module execution from
 
 
 CASE_ID = re.compile(r"CT-\d{3}\Z")
+DENSE_CASE_ID = re.compile(r"(?:CT|HT)-\d{3}\Z")
 MANIFEST_SCHEMA_VERSION = 1
 CONTRADICTION_TYPES = {
     "TRUE_CONFLICT",
@@ -50,6 +51,7 @@ DENSE_MIN_RECALL = 0.80
 DENSE_MIN_ACCURACY = 0.80
 DENSE_MAX_FPR = 0.10
 DENSE_MAX_WILSON_FPR_UPPER = 0.20
+DENSE_HOLDOUT_CASE_COUNT = 70
 WILSON_Z_95 = 1.959963984540054
 GOLD_HEADERS = [
     "case_id",
@@ -57,6 +59,16 @@ GOLD_HEADERS = [
     "claim_B_statement",
     "classification",
     "판단_이유",
+]
+HOLDOUT_INPUT_HEADERS = [
+    "case_id",
+    "claim_A_statement",
+    "claim_B_statement",
+    "time_or_version",
+    "environment_or_condition",
+    "subject",
+    "source_ref_A",
+    "source_ref_B",
 ]
 HOLDOUT_GOLD_HEADERS = ["case_id", "classification", "판단_이유"]
 GENERATED_HEADERS = ["case_id", "claim_a_generated_id", "claim_b_generated_id"]
@@ -152,6 +164,82 @@ def format_metric(value: float | None) -> str:
     return f"{value:.3f}" if value is not None else "N/A"
 
 
+def join_holdout_input_gold(
+    input_rows: list[dict[str, str]],
+    holdout_gold_rows: list[dict[str, str]],
+    result: CheckResult,
+) -> list[dict[str, str]]:
+    """Join the public 8-column holdout input with the machine gold labels.
+
+    The joined rows deliberately use ``GOLD_HEADERS`` so the same manifest
+    validator is exercised for HT cases without loading the dev CT labels.
+    """
+    expected_case_ids = {f"HT-{index:03d}" for index in range(1, DENSE_HOLDOUT_CASE_COUNT + 1)}
+    input_case_ids = [row.get("case_id", "").strip() for row in input_rows]
+    gold_case_ids = [row.get("case_id", "").strip() for row in holdout_gold_rows]
+    result.check(
+        len(input_rows) == DENSE_HOLDOUT_CASE_COUNT,
+        f"holdout input: 행 수 {len(input_rows)} == expected {DENSE_HOLDOUT_CASE_COUNT}",
+    )
+    result.check(
+        len(holdout_gold_rows) == DENSE_HOLDOUT_CASE_COUNT,
+        f"holdout gold: 행 수 {len(holdout_gold_rows)} == expected {DENSE_HOLDOUT_CASE_COUNT}",
+    )
+    result.check(
+        len(input_case_ids) == len(set(input_case_ids)),
+        "holdout input: case_id 유일성",
+    )
+    result.check(
+        len(gold_case_ids) == len(set(gold_case_ids)),
+        "holdout gold: case_id 유일성",
+    )
+    result.check(set(input_case_ids) == expected_case_ids, "holdout input: HT-001..HT-070 전체 대응")
+    result.check(set(gold_case_ids) == expected_case_ids, "holdout gold: HT-001..HT-070 전체 대응")
+
+    gold_by_case = {
+        row.get("case_id", "").strip(): row
+        for row in holdout_gold_rows
+        if row.get("case_id", "").strip()
+    }
+    joined: list[dict[str, str]] = []
+    for input_row in input_rows:
+        case_id = input_row.get("case_id", "").strip()
+        gold_row = gold_by_case.get(case_id)
+        result.check(
+            DENSE_CASE_ID.fullmatch(case_id) is not None,
+            f"holdout input {case_id}: case_id 형식",
+        )
+        for field in HOLDOUT_INPUT_HEADERS[1:]:
+            result.check(
+                bool(input_row.get(field, "").strip()),
+                f"holdout input {case_id}: {field} 필수값",
+            )
+        result.check(gold_row is not None, f"holdout {case_id}: machine gold 대응")
+        if gold_row is None:
+            continue
+        classification = gold_row.get("classification", "").strip()
+        reason = gold_row.get("판단_이유", "").strip()
+        result.check(
+            classification in CLASSIFICATION_LABELS,
+            f"holdout {case_id}: classification enum",
+        )
+        result.check(bool(reason), f"holdout {case_id}: 판단_이유 필수값")
+        joined.append(
+            {
+                "case_id": case_id,
+                "claim_A_statement": input_row.get("claim_A_statement", ""),
+                "claim_B_statement": input_row.get("claim_B_statement", ""),
+                "classification": classification,
+                "판단_이유": reason,
+            }
+        )
+    result.check(
+        len(joined) == DENSE_HOLDOUT_CASE_COUNT,
+        f"holdout input/gold join: 행 수 {len(joined)} == expected {DENSE_HOLDOUT_CASE_COUNT}",
+    )
+    return joined
+
+
 def validate_manifest(
     manifest: dict[str, Any], gold_rows: list[dict[str, str]], result: CheckResult
 ) -> dict[str, tuple[str, str]]:
@@ -210,7 +298,7 @@ def validate_manifest(
             continue
         case_id = case.get("case_id")
         case_ids.append(case_id.strip() if isinstance(case_id, str) else "")
-        result.check(isinstance(case_id, str) and CASE_ID.fullmatch(case_id) is not None, "manifest: case_id 형식")
+        result.check(isinstance(case_id, str) and DENSE_CASE_ID.fullmatch(case_id) is not None, "manifest: case_id 형식")
         gold = case.get("gold")
         result.check(isinstance(gold, dict), f"manifest {case_id}: gold 객체")
         if isinstance(gold, dict):
@@ -264,7 +352,7 @@ def validate_generated_claims(
         case_id = row["case_id"].strip()
         claim_a = row["claim_a_generated_id"].strip()
         claim_b = row["claim_b_generated_id"].strip()
-        result.check(CASE_ID.fullmatch(case_id) is not None, f"generated claims {case_id}: case_id 형식")
+        result.check(DENSE_CASE_ID.fullmatch(case_id) is not None, f"generated claims {case_id}: case_id 형식")
         result.check(bool(claim_a and claim_b), f"generated claims {case_id}: claim ID 필수값")
         result.check(claim_a != claim_b, f"generated claims {case_id}: claim pair distinct")
         pair = tuple(sorted((claim_a, claim_b)))
@@ -386,13 +474,18 @@ def validate_dense_predictions(
         "dense gold labels: case_id 유일성",
     )
     result.check(
-        all(CASE_ID.fullmatch(case_id) for case_id in expected_case_ids),
+        all(DENSE_CASE_ID.fullmatch(case_id) for case_id in expected_case_ids),
         "dense gold labels: case_id 형식",
     )
     if expected_case_count is not None:
         result.check(
             len(expected_case_ids) == expected_case_count,
             f"dense gold labels: case 수 {len(expected_case_ids)} == expected {expected_case_count}",
+        )
+    if enforce_wilson_gate:
+        result.check(
+            len(expected_case_ids) == DENSE_HOLDOUT_CASE_COUNT,
+            f"dense holdout case 수 {len(expected_case_ids)} == expected {DENSE_HOLDOUT_CASE_COUNT}",
         )
 
     run_ids = {row.get("run_id", "").strip() for row in rows}
@@ -416,7 +509,7 @@ def validate_dense_predictions(
         case_id = row.get("case_id", "").strip()
         status = row.get("status", "").strip()
         prediction = row.get("prediction", "").strip()
-        result.check(CASE_ID.fullmatch(case_id) is not None, f"dense {case_id}: case_id 형식")
+        result.check(DENSE_CASE_ID.fullmatch(case_id) is not None, f"dense {case_id}: case_id 형식")
         result.check(case_id in expected_case_ids, f"dense {case_id}: gold case_id 대응")
         result.check(status in DENSE_STATUSES, f"dense {case_id}: status enum")
         result.check(bool(row.get("prompt_variant", "").strip()), f"dense {case_id}: prompt_variant 필수값")
@@ -664,7 +757,7 @@ def self_check() -> int:
     assert dev_metrics["wilson95_fpr_upper"] > DENSE_MAX_WILSON_FPR_UPPER
     dense_quality = CheckResult()
     dense_metrics = validate_dense_predictions(
-        dense_rows, dense_gold, "dense-self-check", 25, dense_quality, enforce_wilson_gate=True
+        dense_rows, dense_gold, "dense-self-check", 25, dense_quality
     )
     assert not dense_quality.failures
     assert dense_metrics["completion_rate"] == 1.0
@@ -673,6 +766,180 @@ def self_check() -> int:
     assert dense_metrics["wilson95_fpr_upper"] <= DENSE_MAX_WILSON_FPR_UPPER
     assert dense_metrics["macro_f1"] == 1.0
     assert dense_metrics["confusion"]["TRUE_CONFLICT"]["TRUE_CONFLICT"] == 1
+
+    # Holdout is a separate HT-001..HT-070 contract.  Batch output order is
+    # unspecified, so this deliberately validates the reversed rows by ID.
+    holdout_gold = [
+        {"case_id": f"HT-{case_number:03d}", "classification": label}
+        for case_number, label in enumerate(CLASSIFICATION_LABELS[:-1] * 8, start=1)
+    ] + [
+        {"case_id": f"HT-{case_number:03d}", "classification": NO_CONFLICT}
+        for case_number in range(41, 71)
+    ]
+    assert len(holdout_gold) == DENSE_HOLDOUT_CASE_COUNT
+
+    # Exercise the same input+gold join used by main() before constructing an
+    # HT manifest.  This catches the old CT-only manifest path without calling
+    # the provider or persisting any fixture.
+    holdout_input_rows = [
+        {
+            "case_id": row["case_id"],
+            "claim_A_statement": f"{row['case_id']} claim A",
+            "claim_B_statement": f"{row['case_id']} claim B",
+            "time_or_version": "self-check version",
+            "environment_or_condition": "self-check condition",
+            "subject": "self-check subject",
+            "source_ref_A": "self-check/a.md",
+            "source_ref_B": "self-check/b.md",
+        }
+        for row in holdout_gold
+    ]
+    holdout_machine_gold = [
+        {
+            "case_id": row["case_id"],
+            "classification": row["classification"],
+            "판단_이유": f"{row['case_id']} self-check reason",
+        }
+        for row in holdout_gold
+    ]
+    holdout_join_quality = CheckResult()
+    holdout_manifest_rows = join_holdout_input_gold(
+        holdout_input_rows, holdout_machine_gold, holdout_join_quality
+    )
+    assert not holdout_join_quality.failures
+    holdout_manifest_cases = []
+    holdout_generated_rows = []
+    for row in holdout_manifest_rows:
+        case_id = row["case_id"]
+        claim_a_id = f"generated-{case_id.lower()}-a"
+        claim_b_id = f"generated-{case_id.lower()}-b"
+        holdout_generated_rows.append(
+            {
+                "case_id": case_id,
+                "claim_a_generated_id": claim_a_id,
+                "claim_b_generated_id": claim_b_id,
+            }
+        )
+        holdout_manifest_cases.append(
+            {
+                "case_id": case_id,
+                "gold": {
+                    "claim_a": {
+                        "page_id": f"page-{case_id.lower()}-a",
+                        "page_slug": f"page-{case_id.lower()}-a",
+                        "claim_id": f"gold-{case_id.lower()}-a",
+                    },
+                    "claim_b": {
+                        "page_id": f"page-{case_id.lower()}-b",
+                        "page_slug": f"page-{case_id.lower()}-b",
+                        "claim_id": f"gold-{case_id.lower()}-b",
+                    },
+                    "classification": row["classification"],
+                    "claim_a_statement": row["claim_A_statement"],
+                    "claim_b_statement": row["claim_B_statement"],
+                },
+                "generated_claim_ids": [claim_a_id, claim_b_id],
+            }
+        )
+    holdout_manifest_run_id = "holdout-self-check"
+    holdout_manifest_canonical = json.dumps(
+        {
+            "schema_version": MANIFEST_SCHEMA_VERSION,
+            "run_id": holdout_manifest_run_id,
+            "cases": holdout_manifest_cases,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    holdout_manifest = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "manifest_id": "sha256:" + hashlib.sha256(holdout_manifest_canonical).hexdigest(),
+        "generated_at": "2026-08-12T00:00:00+00:00",
+        "run_id": holdout_manifest_run_id,
+        "case_count": DENSE_HOLDOUT_CASE_COUNT,
+        "cases": holdout_manifest_cases,
+    }
+    holdout_manifest_quality = CheckResult()
+    validate_manifest(holdout_manifest, holdout_manifest_rows, holdout_manifest_quality)
+    holdout_pairs = validate_generated_claims(
+        holdout_generated_rows, holdout_manifest, holdout_manifest_quality
+    )
+    assert not holdout_manifest_quality.failures
+    assert len(holdout_pairs) == DENSE_HOLDOUT_CASE_COUNT
+
+    holdout_rows = [
+        {
+            "run_id": "holdout-self-check",
+            "prompt_variant": "self-check",
+            "case_id": row["case_id"],
+            "status": "COMPLETED",
+            "prediction": row["classification"],
+            "confidence": "1",
+            "expected_input_tokens": "1",
+            "expected_output_tokens": "2",
+            "expected_cost_usd": "0.1",
+            "expected_latency_seconds": "0.01",
+            "input_tokens": "1",
+            "output_tokens": "2",
+            "actual_cost_usd": "0.1",
+            "latency_seconds": "0.01",
+        }
+        for row in holdout_gold
+    ]
+    holdout_quality = CheckResult()
+    holdout_metrics = validate_dense_predictions(
+        list(reversed(holdout_rows)),
+        holdout_gold,
+        "holdout-self-check",
+        DENSE_HOLDOUT_CASE_COUNT,
+        holdout_quality,
+        enforce_wilson_gate=True,
+    )
+    assert not holdout_quality.failures
+    assert holdout_metrics["expected"] == DENSE_HOLDOUT_CASE_COUNT
+    assert holdout_metrics["completion_rate"] == 1.0
+    assert holdout_metrics["recall"] == 1.0
+    assert holdout_metrics["accuracy"] == 1.0
+    assert holdout_metrics["sampled_fpr"] == 0.0
+    assert holdout_metrics["wilson95_fpr_upper"] <= DENSE_MAX_WILSON_FPR_UPPER
+
+    missing_holdout_quality = CheckResult()
+    missing_holdout_metrics = validate_dense_predictions(
+        holdout_rows[:-1],
+        holdout_gold,
+        "holdout-self-check",
+        DENSE_HOLDOUT_CASE_COUNT,
+        missing_holdout_quality,
+        enforce_wilson_gate=True,
+    )
+    assert any("expected case_id" in failure for failure in missing_holdout_quality.failures)
+    assert missing_holdout_metrics["completion_rate"] < 1.0
+
+    failed_holdout_rows = [row.copy() for row in holdout_rows]
+    failed_holdout_rows[0].update(
+        {
+            "status": "FAILED",
+            "prediction": "",
+            "confidence": "",
+            "input_tokens": "",
+            "output_tokens": "",
+            "actual_cost_usd": "",
+            "latency_seconds": "",
+        }
+    )
+    failed_holdout_quality = CheckResult()
+    failed_holdout_metrics = validate_dense_predictions(
+        failed_holdout_rows,
+        holdout_gold,
+        "holdout-self-check",
+        DENSE_HOLDOUT_CASE_COUNT,
+        failed_holdout_quality,
+        enforce_wilson_gate=True,
+    )
+    assert not any("FAILED prediction" in failure for failure in failed_holdout_quality.failures)
+    assert failed_holdout_metrics["failed"] == 1
+    assert failed_holdout_metrics["completion_rate"] < 1.0
 
     missing_quality = CheckResult()
     missing_metrics = validate_dense_predictions(
@@ -706,14 +973,20 @@ def self_check() -> int:
     assert failed_metrics["recall"] < 1.0
     assert failed_metrics["confusion"]["TRUE_CONFLICT"][NO_CONFLICT] == 0
 
-    fpr_rows = [row.copy() for row in dense_rows]
-    fpr_rows[5]["prediction"] = "TRUE_CONFLICT"
+    fpr_rows = [row.copy() for row in holdout_rows]
+    for index in (40, 41, 42):
+        fpr_rows[index]["prediction"] = "TRUE_CONFLICT"
     fpr_quality = CheckResult()
     fpr_metrics = validate_dense_predictions(
-        fpr_rows, dense_gold, "dense-self-check", 25, fpr_quality, enforce_wilson_gate=True
+        fpr_rows,
+        holdout_gold,
+        "holdout-self-check",
+        DENSE_HOLDOUT_CASE_COUNT,
+        fpr_quality,
+        enforce_wilson_gate=True,
     )
-    assert fpr_metrics["sampled_fpr"] == 0.05
-    assert fpr_metrics["confusion"][NO_CONFLICT]["TRUE_CONFLICT"] == 1
+    assert fpr_metrics["sampled_fpr"] == 0.1
+    assert fpr_metrics["confusion"][NO_CONFLICT]["TRUE_CONFLICT"] == 3
     assert fpr_metrics["macro_f1"] < 1.0
     assert fpr_metrics["wilson95_fpr_upper"] > DENSE_MAX_WILSON_FPR_UPPER
     assert any("Wilson 95% FPR upper" in failure for failure in fpr_quality.failures)
@@ -733,6 +1006,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--contradiction-output", type=Path, help="optional contradiction output CSV for AC-5")
     parser.add_argument("--dense-predictions", type=Path, help="optional dense one-row-per-case predictions CSV")
     parser.add_argument("--labels", type=Path, default=Path("evaluation/contradiction-labels.csv"))
+    parser.add_argument(
+        "--holdout-input",
+        type=Path,
+        help="holdout input CSV (8 columns) joined with --holdout-labels for dense manifest validation",
+    )
     parser.add_argument(
         "--holdout-labels",
         "--gold-labels",
@@ -757,12 +1035,25 @@ def main() -> int:
         return 2
 
     result = CheckResult()
-    gold_rows = load_csv(args.labels, GOLD_HEADERS, result)
-    dense_gold_rows = (
-        load_csv(args.holdout_labels, HOLDOUT_GOLD_HEADERS, result)
-        if args.holdout_labels is not None and args.dense_predictions is not None
-        else gold_rows
-    )
+    dense_mode = args.dense_predictions is not None
+    holdout_mode = dense_mode and args.holdout_labels is not None
+    if args.holdout_input is not None and not holdout_mode:
+        result.check(
+            False,
+            "--holdout-input은 --dense-predictions 및 --holdout-labels와 함께 사용해야 함",
+        )
+    if holdout_mode:
+        holdout_gold_rows = load_csv(args.holdout_labels, HOLDOUT_GOLD_HEADERS, result)
+        if args.holdout_input is None:
+            result.check(False, "dense holdout에는 --holdout-input(8열)가 필요함")
+            gold_rows: list[dict[str, str]] = []
+        else:
+            holdout_input_rows = load_csv(args.holdout_input, HOLDOUT_INPUT_HEADERS, result)
+            gold_rows = join_holdout_input_gold(holdout_input_rows, holdout_gold_rows, result)
+        dense_gold_rows = gold_rows
+    else:
+        gold_rows = load_csv(args.labels, GOLD_HEADERS, result)
+        dense_gold_rows = gold_rows
     manifest = load_json(args.manifest, result)
     pairs: dict[tuple[str, str], str] = {}
     if manifest is not None:
@@ -771,7 +1062,6 @@ def main() -> int:
 
     blocked = False
     benchmark_run_id = None
-    dense_mode = args.dense_predictions is not None
     if (args.benchmark_output is None or args.expected_documents is None) and not dense_mode:
         print("BENCHMARK BLOCKED --benchmark-output와 --expected-documents가 필요합니다")
         blocked = True
