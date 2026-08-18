@@ -82,7 +82,7 @@ export function ReviewChangesScreen() {
   return (
     <>
       <HeaderBar />
-      <div className={styles.reviewScreenContainer}>
+      <main className={styles.reviewScreenContainer}>
       {/* 헤더 */}
       <div className={styles.reviewHeader}>
         <div className={styles.headerBreadcrumb}>
@@ -149,7 +149,7 @@ export function ReviewChangesScreen() {
           {isSubmitting ? '제출 중...' : '승인 항목 적용'}
         </button>
       </div>
-    </div>
+      </main>
     </>
   );
 }
